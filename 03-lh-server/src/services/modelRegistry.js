@@ -12,15 +12,16 @@ const col = store.collection('models', []);
 const PRESETS = [
   {
     id: 'preset-qwen18b',
-    name: 'Qwen-1.8B-instruct（云端 · 赛题指定）',
+    name: '通义千问 Flash（云端 · 赛题 Qwen 系列）',
     provider: 'openai-compatible',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     apiKey: '',
-    model: 'qwen-1.8b-chat',
+    model: 'qwen-flash',
     enabled: true,
     isDefault: true,
     preset: true,
-    note: '赛题指定轻量模型，云端推理（阿里云百炼 DashScope）；在「模型设置」填入 API Key 即生效，本地不运行任何模型'
+    webSearch: true,
+    note: '赛题指定 Qwen 系列云端推理（阿里云百炼 DashScope）；qwen-1.8b-chat 已下线，升级为 qwen-flash；联网搜索已开启（enable_search）'
   },
   { id: 'preset-deepseek', name: 'DeepSeek Chat', provider: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', apiKey: '', model: 'deepseek-chat', enabled: false, isDefault: false, preset: true, note: '支持 Function Calling，推荐用于 MCP 编排' },
   { id: 'preset-qwen-plus', name: '通义千问 Plus', provider: 'openai-compatible', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: '', model: 'qwen-plus', enabled: false, isDefault: false, preset: true, note: '中文强，支持工具调用' },
@@ -164,6 +165,13 @@ async function callOpenAICompatible(m, messages, { temperature, maxTokens, tools
     max_tokens: maxTokens,
     stream: false,
   };
+  // 联网搜索（阿里云百炼 DashScope 专属参数）：模型可检索实时信息回答。
+  // ⚠️ 必须同时传 search_options.search_mode，否则搜索是「尽力而为」经常静默不触发
+  //    （实测：带 search_options 后 tools+search 同传 3/3 稳定返回真实检索结果）
+  if (m.webSearch === true || /dashscope\.aliyuncs\.com/.test(m.baseUrl || '')) {
+    body.enable_search = true;
+    body.search_options = { search_mode: 'balanced', enable_caching: true };
+  }
   if (tools && tools.length) {
     body.tools = tools;
     body.tool_choice = 'auto';

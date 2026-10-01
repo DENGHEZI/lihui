@@ -219,6 +219,13 @@ async function callTool(serverId, tool, args = {}) {
 
 async function callByQualifiedName(qualified, args = {}) {
   const [serverId, tool] = String(qualified).split('__');
+  // 工具名进入 OpenAI function-calling 时连字符被清洗为下划线（如 ip-anchor → ip_anchor），
+  // 回查服务时先按原 id 找，找不到再尝试「下划线还原为连字符」，否则带连字符的
+  // 服务（ip-anchor / life-circle / cost-optimizer / desktop-action…）永远 4002
+  if (!col.find((x) => x.id === serverId)) {
+    const alt = serverId.replace(/_/g, '-');
+    if (col.find((x) => x.id === alt)) return callTool(alt, tool, args);
+  }
   return callTool(serverId, tool, args);
 }
 

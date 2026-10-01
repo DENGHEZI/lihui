@@ -25,7 +25,7 @@ function systemPrompt({ careMode, plan, ctx }) {
     '1. 中文，分点，短句，每点不超过 30 字，不要写长段落。',
     '2. 先给结论，再给依据；涉及位置必须给「名称 + 距离」。',
     '3. 涉及出行或采购时，必须额外给出「省钱方案」与预计花费。',
-    '4. 不确定的信息不要编造，直接说「我查一下」。',
+    '4. 时效性信息（新闻、公交、天气、价格）优先调用工具或联网检索确认后再回答；工具与检索都无法确认时才说「我查一下」，并给出替代建议。',
     '5. 不涉及付款的可以直接建议；涉及付款必须提示用户确认。',
   ];
   if (careMode) {
@@ -163,10 +163,28 @@ async function chat({ text, sessionId = '', deviceId = 'anonymous', careMode = f
       } else {
         reply = first.text;
       }
+
+      // 防复读兜底话术：轻量模型偶尔无视指令只回「我查一下」——追问一轮逼出实质回答
+      if (reply && reply.length <= 40 && /我查一下/.test(reply)) {
+        messages.push({
+          role: 'user',
+          content: '请基于联网检索结果直接回答我刚才的问题；如确实查不到，给出你已知的最接近信息并注明「未经核实」，不要只说「我查一下」。',
+        });
+        const third = await modelRegistry.chat({ messages, deviceId, modelId: active.id });
+        if (third.text && !/我查一下/.test(third.text)) {
+          reply = third.text;
+          usage = addUsage(usage, third.usage);
+        }
+      }
     } catch (e) {
       logger.warn('agent', `model path failed: ${e.message}`);
       reply = '';
     }
+  }
+
+  // 4b) 清理兜底话术前缀（模型有时先说「我查一下」再给出实质内容，前缀会误导用户）
+  if (reply) {
+    reply = reply.replace(/^\s*我查一下[。.!！]?\s*/u, '').trim();
   }
 
   // 4) 无模型 / 模型失败：规则 + MCP 直调
