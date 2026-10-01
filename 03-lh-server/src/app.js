@@ -95,16 +95,19 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  if (!pathname.startsWith(API_PREFIX)) {
+  // 保底：容器平台（云托管 / 云厂商 / K8s）健康检查常探不带前缀的 /health、/ping。
+  // 必须在下面 API_PREFIX 检查之前放行，否则会被直接 404 拦掉。
+  const isPlainHealth = pathname === '/health' || pathname === '/ping';
+
+  if (!pathname.startsWith(API_PREFIX) && !isPlainHealth) {
     return fail(res, 4040, 'not found', 404);
   }
 
   const key = pathname.slice(API_PREFIX.length) || '/';
   let handler = ROUTES[`${req.method} ${key}`];
 
-  // 保底：容器平台（云托管 / K8s）健康检查常探不带前缀的 /health 或 /ping，
-  // 这里做同义映射，避免「服务活着但探活 404 → 判部署失败」。
-  if (!handler && (key === '/health' || key === '/ping')) {
+  // 同义映射，避免「服务活着但探活 404 → 平台判部署失败」
+  if (!handler && isPlainHealth) {
     handler = ROUTES['GET /health'];
   }
 
