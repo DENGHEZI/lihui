@@ -73,7 +73,7 @@ async function runToolCalls(toolCalls) {
 /* 规则意图（无模型时的兜底编排）                                        */
 /* ------------------------------------------------------------------ */
 const INTENTS = [
-  { key: 'medical', re: /医院|看病|诊所|社区卫生|药店|体检/, cat: '医疗' },
+  { key: 'medical', re: /医院|看病|诊所|社区卫生|药店|药房|买药|拿药|挂号|体检/, cat: '医疗' },
   { key: 'market', re: /菜市场|买菜|超市|便利店|生鲜/, cat: '商业' },
   { key: 'park', re: /公园|遛弯|广场|健身|散步/, cat: '休闲' },
   { key: 'transit', re: /公交|地铁|车站|怎么去|交通/, cat: '交通' },
@@ -81,7 +81,8 @@ const INTENTS = [
   { key: 'route', re: /路线|导航|怎么走|多远|多久|避堵/, cat: '路线' },
   { key: 'cost', re: /省钱|便宜|成本|划算|预算/, cat: '成本' },
   { key: 'emotion', re: /难过|烦|压力|孤独|累|抑郁|不开心/, cat: '情感' },
-  { key: 'buy', re: /买|下单|购物|网购/, cat: '购买' },
+  // 买药/买菜归入上面两类，「购买」意图只接日用品网购（负向先行排除）
+  { key: 'buy', re: /网购|下单|购物|采购|买(?!药|菜)/, cat: '购买' },
 ];
 
 function detectIntents(text) {
@@ -124,77 +125,49 @@ async function chat({ text, sessionId = '', deviceId = 'anonymous', careMode = f
     { role: 'user', content: text },
   ];
 
-  const tools = hub.toOpenAITools(plan);
   const active = modelRegistry.active();
   const canUseModel = active && (active.apiKey || active.provider === 'ollama');
 
-  // 3) 有模型：走 function-calling
+  // 3) 规则直调 MCP（方案 v2）：工具选择由意图规则确定性决定，
+  //    不再交给模型 function-calling 猜——杜绝误调工具 / 幻觉工具名 / 编排失败
+  const rule = await ruleOrchestrate({ text, ctx, plan, careMode });
+  cards.push(...rule.cards);
+  actions.push(...rule.actions);
+  toolCallsLog.push(...rule.toolCalls);
+
+  // 4) 有模型：云端 Qwen 把工具结果润色成人性化回复（联网搜索兜底时效信息）
   if (canUseModel) {
     try {
-      const first = await modelRegistry.chat({
-        messages,
-        tools: tools.length ? tools : undefined,
-        deviceId,
-        modelId: active.id,
-      });
-      model = first.model;
-      usage = first.usage;
-
-      if (first.toolCalls && first.toolCalls.length) {
-        const results = await runToolCalls(first.toolCalls);
-        toolCallsLog.push(...results.map((r) => ({ server: splitServer(r.name), tool: splitTool(r.name), ok: r.ok, ms: r.ms, error: r.error })));
-
-        // 结果回灌
-        messages.push({ role: 'assistant', content: first.text || '', tool_calls: first.toolCalls });
-        for (const r of results) {
-          messages.push({
-            role: 'tool',
-            tool_call_id: r.name,
-            content: JSON.stringify({ ok: r.ok, data: r.data || null, error: r.error || null }).slice(0, 8000),
-          });
-        }
-        const second = await modelRegistry.chat({ messages, deviceId, modelId: active.id });
-        reply = second.text;
-        usage = addUsage(usage, second.usage);
-        model = second.model;
-
-        // 从工具结果里抽取卡片/动作
-        for (const r of results) collectCards(r, cards, actions);
-      } else {
-        reply = first.text;
-      }
-
-      // 防复读兜底话术：轻量模型偶尔无视指令只回「我查一下」——追问一轮逼出实质回答
-      if (reply && reply.length <= 40 && /我查一下/.test(reply)) {
+      if (rule.toolData && rule.toolData.length) {
         messages.push({
           role: 'user',
-          content: '请基于联网检索结果直接回答我刚才的问题；如确实查不到，给出你已知的最接近信息并注明「未经核实」，不要只说「我查一下」。',
+          content:
+            '（系统注入的工具结果，非用户发言）已确定性调用以下工具：\n' +
+            JSON.stringify(rule.toolData).slice(0, 6000) +
+            '\n回答我上一个问题的要求：\n1. 名称、距离、价格等事实只能来自以上工具结果或联网检索，禁止凭记忆编造。\n2. 工具查不到的就明说查不到，给出替代建议。\n3. 不要只说「我查一下」。',
         });
-        const third = await modelRegistry.chat({ messages, deviceId, modelId: active.id });
-        if (third.text && !/我查一下/.test(third.text)) {
-          reply = third.text;
-          usage = addUsage(usage, third.usage);
-        }
+      }
+      const resp = await modelRegistry.chat({ messages, deviceId, modelId: active.id });
+      if (resp.text) {
+        reply = resp.text;
+        usage = resp.usage;
+        model = resp.model;
       }
     } catch (e) {
-      logger.warn('agent', `model path failed: ${e.message}`);
+      logger.warn('agent', `model polish failed: ${e.message}`);
       reply = '';
     }
   }
 
-  // 4b) 清理兜底话术前缀（模型有时先说「我查一下」再给出实质内容，前缀会误导用户）
-  if (reply) {
-    reply = reply.replace(/^\s*我查一下[。.!！]?\s*/u, '').trim();
+  // 4b) 模型不可用 / 失败：直接用规则编排的回复（免费基础版同款体验）
+  if (!reply) {
+    reply = rule.reply;
+    model = model || 'local-rule-orchestrator';
   }
 
-  // 4) 无模型 / 模型失败：规则 + MCP 直调
-  if (!reply) {
-    const r = await ruleOrchestrate({ text, ctx, plan, careMode });
-    reply = r.reply;
-    cards.push(...r.cards);
-    actions.push(...r.actions);
-    toolCallsLog.push(...r.toolCalls);
-    model = model || 'local-rule-orchestrator';
+  // 4c) 清理兜底话术前缀（模型有时先说「我查一下」再给出实质内容，前缀会误导用户）
+  if (reply) {
+    reply = reply.replace(/^\s*我查一下[。.!！]?\s*/u, '').trim();
   }
 
   // 5) 成本优化后处理
@@ -292,6 +265,7 @@ async function ruleOrchestrate({ text, ctx, plan }) {
   const cards = [];
   const actions = [];
   const toolCalls = [];
+  const toolData = []; // 原始工具结果，供云端模型润色回复时引用
   const lines = [];
   const p = ctx.location && ctx.location.point;
 
@@ -299,9 +273,12 @@ async function ruleOrchestrate({ text, ctx, plan }) {
     try {
       const r = await hub.callByQualifiedName(`${server}__${tool}`, args);
       toolCalls.push({ server, tool, ok: !r.isError, ms: r.ms });
-      return (r.data && (r.data.result || r.data)) || null;
+      const d = (r.data && (r.data.result || r.data)) || null;
+      toolData.push({ server, tool, ok: true, result: d });
+      return d;
     } catch (e) {
       toolCalls.push({ server, tool, ok: false, error: e.message });
+      toolData.push({ server, tool, ok: false, error: e.message });
       return null;
     }
   };
@@ -380,6 +357,7 @@ async function ruleOrchestrate({ text, ctx, plan }) {
     cards,
     actions,
     toolCalls,
+    toolData,
   };
 }
 
