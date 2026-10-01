@@ -54,6 +54,22 @@ App({
           })
         },
         fail: () => {
+          // 定位失败/被拒：先引导开启权限（只弹一次），再走服务端 IP 锚定兜底
+          wx.getSetting({
+            success: (s) => {
+              if (s.authSetting && s.authSetting['scope.userLocation'] === false && !this._locTipShown) {
+                this._locTipShown = true
+                wx.showModal({
+                  title: '开启定位',
+                  content: '开启定位后，鲤慧可以准确找到你身边的便民服务与出行方案。',
+                  confirmText: '去开启',
+                  success: (r) => {
+                    if (r.confirm) wx.openSetting({})
+                  }
+                })
+              }
+            }
+          })
           const { get } = require('./utils/request.js')
           get('/ip/locate')
             .then((d) => {

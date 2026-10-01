@@ -400,7 +400,9 @@
 
 /* ============================================================
  * 关怀模式（适老化）放大镜 —— 覆盖页面内主要文字
+ * 与普通模式差异：更大字号、更大触控区、更高对比、抽屉默认更高
  * ============================================================ */
+.care-mode .loc-text { font-size: 40rpx; }
 .care-mode .s-inp    { font-size: 38rpx; }
 .care-mode .s-city   { font-size: 36rpx; }
 .care-mode .q-name   { font-size: 30rpx; font-weight: 600; }
@@ -415,3 +417,13 @@
 .care-mode .p-go     { font-size: 30rpx; }
 .care-mode .w-temp   { font-size: 76rpx; }
 .care-mode .w-tip    { font-size: 30rpx; }
+
+/* 关怀模式：更大触控区与行距 */
+.care-mode .search-bar { height: 120rpx; border: 2rpx solid #C8CDD4; }
+.care-mode .s-inp { height: 116rpx; }
+.care-mode .s-mic { width: 88rpx; height: 88rpx; font-size: 38rpx; }
+.care-mode .quick-item { padding: 28rpx 0 36rpx; }
+.care-mode .q-ico { width: 104rpx; height: 104rpx; line-height: 104rpx; border-radius: 32rpx; }
+.care-mode .poi { padding: 36rpx 0; }
+.care-mode .p-ico { width: 96rpx; height: 96rpx; }
+.care-mode .sheet { border-top: 4rpx solid #C8CDD4; }

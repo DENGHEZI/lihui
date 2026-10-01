@@ -3,6 +3,7 @@ const config = require('../../utils/config.js')
 const api = require('../../utils/api.js')
 const bmap = require('../../utils/bmap.js')
 const { getCareMode, setCareMode } = require('../../utils/token.js')
+const { parseCity } = require('../../utils/city.js')
 const voice = require('../../utils/voice.js')
 
 Page({
@@ -50,7 +51,12 @@ Page({
   },
 
   onShow() {
-    this.setData({ careMode: getCareMode() })
+    const care = getCareMode()
+    this.setData({
+      careMode: care,
+      // 关怀模式：抽屉默认更高，减少翻找步骤
+      sheetMin: care ? 380 : 300
+    })
   },
 
   async bootstrap() {
@@ -75,7 +81,7 @@ Page({
     this.setData({
       center: { lng: Number(loc.lng), lat: Number(loc.lat) },
       cityText: cityText || '当前位置',
-      cityShort: (cityText || '当前位置').split(' ')[0].replace('市', '') || '当前',
+      cityShort: parseCity(cityText) || '当前',
       locSourceText: loc.source === 'gps' ? 'GPS 定位' : loc.source === 'ip' ? 'IP 锚定' : '默认城市'
     })
     this.updateMarkers()
@@ -182,7 +188,7 @@ Page({
 
   updatePoiMarkers() {
     const base = this.data.markers.filter((m) => m.id === 1)
-    const list = this.data.poiList.slice(0, 10).map((p, i) => ({
+    const list = this.data.poiList.slice(0, 20).map((p, i) => ({
       id: i + 100,
       longitude: p.lng,
       latitude: p.lat,

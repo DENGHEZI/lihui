@@ -55,11 +55,17 @@
       <text class="cong-text">当前路况：{{result.congestion}}</text>
     </view>
 
+    <!-- 公交不可达时的跨城出行意见 -->
+    <view class="fallback-tip" wx:if="{{fallbackDriving && fallbackTip}}">
+      <text class="fb-ico">💡</text>
+      <text class="fb-txt">{{fallbackTip}}</text>
+    </view>
+
     <view class="steps">
       <view class="step-row" wx:for="{{result.steps}}" wx:key="instruction">
         <view class="step-idx">{{index + 1}}</view>
         <view class="step-mid">
-          <text class="step-txt">{{item.instruction}}</text>
+          <rich-text class="step-txt" nodes="{{item.rich}}"></rich-text>
           <text class="lh-mini">{{item.distance}} 米 · 约 {{item.min}} 分钟</text>
         </view>
       </view>
@@ -73,7 +79,7 @@
       </view>
     </view>
 
-    <button class="lh-btn lh-btn--ghost ghost" bindtap="openNav">用百度地图开始导航</button>
+    <button class="lh-btn lh-btn--ghost ghost" bindtap="openNav">开始导航（内置地图，可选百度/高德）</button>
   </view>
 
   <view class="lh-card" wx:if="{{costPlan}}">

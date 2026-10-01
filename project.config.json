@@ -1,4 +1,6 @@
 {
+  "description": "鲤慧 LiHui · 仓库根入口 —— 打开整个仓库即可编译微信小程序（小程序正式目录：02-lh-wechat-mp）",
+  "miniprogramRoot": "02-lh-wechat-mp/",
   "setting": {
     "es6": true,
     "postcss": true,
@@ -6,6 +8,7 @@
     "uglifyFileName": false,
     "enhance": true,
     "packNpmRelationList": [],
+    "urlCheck": false,
     "babelSetting": {
       "ignore": [],
       "disablePlugins": [],
@@ -14,11 +17,20 @@
     "useCompilerPlugins": false
   },
   "compileType": "miniprogram",
+  "libVersion": "3.5.0",
   "simulatorPluginLibVersion": {},
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      { "type": "folder", "value": "00-设计文档" },
+      { "type": "folder", "value": "01-lh-uniapp-多端APP" },
+      { "type": "folder", "value": "03-lh-server" },
+      { "type": "folder", "value": "04-lh-mcp-servers" },
+      { "type": "folder", "value": "docs" },
+      { "type": "folder", "value": ".git" }
+    ],
     "include": []
   },
   "appid": "wxfc45acb99d454f8a",
+  "projectname": "lihui-monorepo",
   "editorSetting": {}
 }

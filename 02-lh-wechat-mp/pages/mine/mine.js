@@ -3,6 +3,7 @@ const config = require('../../utils/config.js')
 const api = require('../../utils/api.js')
 const { getDeviceId, getPlan, getCareMode, setCareMode } = require('../../utils/token.js')
 const { clearBizCache, getCacheSizeKB } = require('../../utils/request.js')
+const { parseCity, parseDistrict } = require('../../utils/city.js')
 
 const EMPTY_STATS = {
   total: { total: 0, calls: 0, costCny: 0 },
@@ -36,7 +37,11 @@ Page({
     this.loadStats()
     this.loadConfig()
     app.getLocation().then((l) => {
-      this.setData({ locText: [l.city, l.district].filter(Boolean).join(' ') || '未定位' })
+      const c = parseCity(l.city)
+      const d = parseDistrict(l.district)
+      this.setData({
+        locText: [c, d].filter(Boolean).join(' ') || (l.source === 'gps' ? 'GPS 已就绪' : '未定位')
+      })
     })
   },
 

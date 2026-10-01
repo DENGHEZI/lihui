@@ -135,6 +135,27 @@
   justify-content: space-between;
   padding: 16rpx 0;
 }
+.fallback-tip {
+  display: flex;
+  align-items: flex-start;
+  background: #FFF7E0;
+  border: 1rpx solid #FFE3A3;
+  border-radius: 20rpx;
+  padding: 20rpx 24rpx;
+  margin: 16rpx 0 8rpx;
+}
+.fb-ico {
+  font-size: 30rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+.fb-txt {
+  flex: 1;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: #8A6116;
+}
+
 .ghost {
   background: #FFFFFF;
   color: #1677FF;

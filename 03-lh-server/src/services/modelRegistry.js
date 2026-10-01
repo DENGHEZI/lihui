@@ -10,11 +10,22 @@ const tokenMeter = require('./tokenMeter');
 
 const col = store.collection('models', []);
 const PRESETS = [
-  { id: 'preset-qwen18b', name: 'Qwen-1.8B-instruct（免费基础版内置）', provider: 'openai-compatible', baseUrl: '', apiKey: '', model: 'Qwen-1.8B-instruct', enabled: true, isDefault: true, preset: true, note: '赛题指定的轻量模型，仅简单推理与规划，不支持 MCP' },
+  {
+    id: 'preset-qwen18b',
+    name: 'Qwen-1.8B-instruct（云端 · 赛题指定）',
+    provider: 'openai-compatible',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    apiKey: '',
+    model: 'qwen-1.8b-chat',
+    enabled: true,
+    isDefault: true,
+    preset: true,
+    note: '赛题指定轻量模型，云端推理（阿里云百炼 DashScope）；在「模型设置」填入 API Key 即生效，本地不运行任何模型'
+  },
   { id: 'preset-deepseek', name: 'DeepSeek Chat', provider: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', apiKey: '', model: 'deepseek-chat', enabled: false, isDefault: false, preset: true, note: '支持 Function Calling，推荐用于 MCP 编排' },
   { id: 'preset-qwen-plus', name: '通义千问 Plus', provider: 'openai-compatible', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: '', model: 'qwen-plus', enabled: false, isDefault: false, preset: true, note: '中文强，支持工具调用' },
   { id: 'preset-glm4flash', name: '智谱 GLM-4-Flash', provider: 'openai-compatible', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', apiKey: '', model: 'glm-4-flash', enabled: false, isDefault: false, preset: true, note: '免费额度大，适合大批量对话' },
-  { id: 'preset-ollama', name: '本地 Ollama', provider: 'ollama', baseUrl: 'http://127.0.0.1:11434', apiKey: 'ollama', model: 'qwen2.5:7b', enabled: false, isDefault: false, preset: true, note: '完全本地，零成本，无需 Key' },
+  { id: 'preset-ollama', name: '本地 Ollama（备用）', provider: 'ollama', baseUrl: 'http://127.0.0.1:11434', apiKey: 'ollama', model: 'qwen2.5:7b-instruct', enabled: false, isDefault: false, preset: true, note: '完全本地、零成本；仅在云端模型未配 Key 时作为演示备用' },
 ];
 
 function seed() {

@@ -118,7 +118,30 @@ function stopSpeak() {
 }
 
 /* ---------------- 录音识别 ---------------- */
+/** 先检查麦克风授权，被拒绝时引导去设置，避免「点了没反应」 */
 function startRecord(onStop) {
+  wx.getSetting({
+    success: (s) => {
+      const auth = s.authSetting && s.authSetting['scope.record']
+      if (auth === false) {
+        wx.showModal({
+          title: '需要麦克风权限',
+          content: '语音对话需要使用麦克风。请在设置中开启「麦克风」权限后重试。',
+          confirmText: '去开启',
+          success: (r) => {
+            if (r.confirm) wx.openSetting({})
+          }
+        })
+        onStop && onStop(null, { errMsg: 'record auth denied' })
+        return
+      }
+      _doStart(onStop)
+    },
+    fail: () => _doStart(onStop)
+  })
+}
+
+function _doStart(onStop) {
   recorder = wx.getRecorderManager()
   recorder.onStop((res) => onStop && onStop(res))
   recorder.onError((e) => onStop && onStop(null, e))

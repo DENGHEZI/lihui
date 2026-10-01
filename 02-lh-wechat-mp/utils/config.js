@@ -38,8 +38,10 @@ module.exports = {
     { key: 'food', name: '吃饭', query: '餐厅|早餐店', icon: '🍜', bg: '#FFF7E0' },
     { key: 'transit', name: '公交地铁', query: '公交站|地铁站', icon: '🚌', bg: '#E6F4FF' },
     { key: 'leisure', name: '公园广场', query: '公园|广场', icon: '🌳', bg: '#E6F8F0' },
+    { key: 'edu', name: '学习教育', query: '学校|中学|小学', icon: '📚', bg: '#F0EFFF' },
     { key: 'bank', name: '银行网点', query: '银行|ATM', icon: '🏦', bg: '#EAF2FF' },
     { key: 'gov', name: '政务服务', query: '社区服务中心|政务大厅', icon: '🏛️', bg: '#F0EFFF' },
+    { key: 'hotel', name: '酒店住宿', query: '酒店|宾馆', icon: '🏨', bg: '#EFF6FF' },
     { key: 'pharmacy', name: '24h 药店', query: '24小时药店', icon: '💊', bg: '#E6FBF7' }
   ]
 }
