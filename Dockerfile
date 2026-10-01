@@ -32,8 +32,15 @@ COPY 03-lh-server/.env.example ./.env.example
 COPY 04-lh-mcp-servers /04-lh-mcp-servers
 
 ENV NODE_ENV=production \
-    HOST=0.0.0.0 \
-    PORT=8809
+    HOST=0.0.0.0
+# ★ 这里故意【不写死】ENV PORT！
+#   云托管 / 微信云托管 / CloudBase Run 会把你在「服务设置 → 容器端口」填写的端口
+#   通过环境变量 PORT 注入容器（例如 80），并按同一个端口做健康检查。
+#   若镜像层写死 ENV PORT=8809，容器就会监听 8809、平台却按 80 探测，
+#   报 Readiness probe failed: dial tcp ...:80: connect: connection refused，
+#   平台判定「服务启动正常但端口不符 → 部署失败」。
+#   运行时端口优先级：平台注入 PORT > 本地/裸跑时 config.js 默认 8809。
+#   （compose 里已显式声明 PORT: ${PORT:-8809}，本地行为不变）
 
 EXPOSE 8809
 
@@ -41,4 +48,5 @@ EXPOSE 8809
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "require('http').get('http://127.0.0.1:'+(process.env.PORT||8809)+'/api/v1/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
-CMD ["node", "src/app.js"]
+# exec 形式保证 node 成为 PID 1，收到 SIGTERM 能优雅关掉 MCP 子进程
+CMD ["sh", "-c", "exec node src/app.js"]

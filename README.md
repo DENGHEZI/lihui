@@ -210,6 +210,61 @@ docker run -d --name lihui -p 8809:8809 \
 | 起得来但外部访问不通 | 宿主机防火墙未放行 8809；或服务器安全组没开 | 开端口 8809；确认 `HOST=0.0.0.0`（容器内默认如此） |
 | `bind: address already in use` | 8809 被本机另一个服务端进程占用（宿主机直跑的那份） | `netstat -ano \| findstr :8809` 找到 PID 结束掉，或改 `PORT` |
 
+### ⑥ 腾讯云托管 / 微信云托管部署（CloudBase Run）
+
+> 这一节单独写，是因为**云托管的部署判定规则和 Docker 不一样**，最容易踩的是端口。
+
+**① 选代码**
+- 仓库：`https://gitee.com/deng-he-ziyan/lihui.git`，分支 `master`
+- **代码包根目录必须是项目根**（`Dockerfile` 在根）。云托管不会再往下找子目录，
+  也不要把「构建目录」设成 `03-lh-server`（那会让 `COPY 03-lh-server/src` 直接找不到文件）
+
+**② 容器端口（最关键，错了必判部署失败）**
+- 控制台填的**容器端口** 与 **环境变量 `PORT`** 必须一致（例如都填 `80`）
+- 镜像层**不写死** `ENV PORT=8809`，服务端监听的是运行时注入的 `$PORT`；
+  没注入时才回落到 `8809`
+- 官方判定：端口不一致 → `Readiness probe failed: dial tcp ...:80: connect: connection refused`
+  → 即使服务已经正常跑起来，平台也一律判「部署失败」
+
+**③ 环境变量（服务设置 → 环境变量，必填）**
+
+| 变量 | 值 | 说明 |
+|---|---|---|
+| `PORT` | 与容器端口一致，如 `80` | 不加会在未注入时回落 8809 |
+| `BAIDU_AK` | 百度地图服务端 AK | 不加则地图检索/公交/天气全无数据 |
+| `LLM_BASE_URL` | `https://dashscope.aliyuncs.com/compatible-mode/v1` | 云端 Qwen |
+| `LLM_API_KEY` | DashScope Key | 不加则无云端模型、无联网检索 |
+| `LLM_MODEL` | `qwen-flash` | |
+| `HOST` | `0.0.0.0` | 默认就是，不监听 0.0.0.0 平台判失败 |
+
+**④ 数据持久化**
+- 「服务设置 → 数据持久化」把容器路径挂到 **`/app/data`**（Token 账本 / 会话 / 反馈 / 模型配置都在这）
+- 不挂的话，容器一重建，当天 Token 配额与会话历史就没了
+
+**⑤ 实例规格**
+- 主进程会拉起 8 个 MCP stdio 子进程（node 多进程），
+  **建议 ≥ 1GB 内存**；选最低规格容易 OOM 反复重启，日志里表现为 `check pod status is not ok`
+
+**⑥ 部署后自检**
+```
+curl https://<你的云托管默认域名>/api/v1/health
+curl https://.../api/v1/model/active     # 要看到 hasKey: true
+curl https://.../api/v1/mcp/list         # baidu-map / life-circle 必须 running
+```
+
+**⑦ 云托管专属踩坑清单**
+
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| 「部署失败」但业务日志显示服务已正常启动 | **端口不一致**（最常见） | 容器端口与 `PORT` 环境变量对齐；镜像已不再写死 8809 |
+| 无报错日志、控制台一片空白 | 构建超时（>10 分钟） | 检查是否卡在拉 `node:22-alpine`；国内网络可换国内镜像源 |
+| `network connection aborted` | 拉国外镜像源不稳 | 换国内镜像源的基础镜像 |
+| `xxx: no such file or directory` | COPY 的文件被忽略或路径错 | 检查 `.gitignore` / `.dockerignore` 没排除 `04-lh-mcp-servers`、`03-lh-server/src` |
+| `check pod status is not ok` / 反复重启 | 内存 OOM（MCP 子进程多） | 升规格到 ≥1GB |
+| 部署成功但检索全无数据 | 没在环境变量里填 `BAIDU_AK`；或旧版本镜像缺 `04-lh-mcp-servers` | 重填 AK 并重新部署；重建镜像 |
+| 部署成功但回答退化为纯规则 | 环境变量没填 `LLM_API_KEY` | 填入 DashScope Key 后重新部署 |
+| 多行独立 `CMD` 只有最后一行生效 | 旧写法 | 已改为单行 shell + `exec` |
+
 ---
 
 ## 🧩 MCP 工具清单（16+）
