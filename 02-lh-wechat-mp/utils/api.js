@@ -9,22 +9,22 @@ const locateByIp = () => get('/ip/locate')
 const reportLocation = (lng, lat, accuracy) => post('/loc/report', { lng, lat, accuracy: accuracy || 50 })
 
 /* ---------------- 地图（服务端中转） ---------------- */
-const reverseGeocode = (lng, lat) => get('/map/reverse-geocode', { lng, lat })
-const geocode = (address, city) => get('/map/geocode', { address, city: city || '' })
+const reverseGeocode = (lng, lat) => get('/map/reverse-geocode', { lng, lat }, { cacheTtl: 10 * 60 * 1000 })
+const geocode = (address, city) => get('/map/geocode', { address, city: city || '' }, { cacheTtl: 30 * 60 * 1000 })
 const poiSearch = (query, lng, lat, radius) =>
-  get('/map/poi/search', { query, lng, lat, radius: radius || 1200, pageSize: 20 })
+  get('/map/poi/search', { query, lng, lat, radius: radius || 1200, pageSize: 20 }) // 搜索永不缓存，保证实时
 const planRoute = ({ mode = 'walking', origin, destination, realtime = false }) =>
   get('/map/route', {
     mode,
     origin: `${origin.lng},${origin.lat}`,
     destination: `${destination.lng},${destination.lat}`,
     realtime: realtime ? 'true' : 'false'
-  })
-const weather = (lng, lat) => get('/map/weather', { lng, lat })
-const scenicRecommend = (lng, lat, radius) => get('/map/scenic-recommend', { lng, lat, radius: radius || 3000 })
+  }, { cacheTtl: 2 * 60 * 1000 })
+const weather = (lng, lat) => get('/map/weather', { lng, lat }, { cacheTtl: 10 * 60 * 1000 })
+const scenicRecommend = (lng, lat, radius) => get('/map/scenic-recommend', { lng, lat, radius: radius || 3000 }, { cacheTtl: 10 * 60 * 1000 })
 
 /* ---------------- 生活圈 ---------------- */
-const lifeReport = (lng, lat, radius) => get('/life/report', { lng, lat, radius: radius || 1200 })
+const lifeReport = (lng, lat, radius) => get('/life/report', { lng, lat, radius: radius || 1200 }, { cacheTtl: 3 * 60 * 1000 })
 const customizePlan = (lng, lat, preference) => post('/life/customize', { lng, lat, preference: preference || {} })
 
 /* ---------------- Agent ---------------- */

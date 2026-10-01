@@ -2,6 +2,7 @@ const app = getApp()
 const config = require('../../utils/config.js')
 const api = require('../../utils/api.js')
 const { getDeviceId, getPlan, getCareMode, setCareMode } = require('../../utils/token.js')
+const { clearBizCache, getCacheSizeKB } = require('../../utils/request.js')
 
 const EMPTY_STATS = {
   total: { total: 0, calls: 0, costCny: 0 },
@@ -20,7 +21,8 @@ Page({
     locText: '未定位',
     appid: config.WX_APPID,
     serverText: config.BASE_URL,
-    mcpText: '-'
+    mcpText: '-',
+    cacheKB: 0
   },
 
   onShow() {
@@ -28,7 +30,8 @@ Page({
     this.setData({
       deviceShort: 'ID ' + getDeviceId().slice(-8),
       planName: plan === 'pro' ? '增强版（已接入 API）' : '免费基础版',
-      careMode: getCareMode()
+      careMode: getCareMode(),
+      cacheKB: getCacheSizeKB()
     })
     this.loadStats()
     this.loadConfig()
@@ -68,6 +71,15 @@ Page({
   },
   goFeedback() {
     wx.navigateTo({ url: '/pages/feedback/feedback' })
+  },
+
+  /** 一键清理业务缓存（保留设备指纹 / 套餐 / 关怀模式 / 语音配置） */
+  onClearCache() {
+    const before = getCacheSizeKB()
+    clearBizCache()
+    const after = getCacheSizeKB()
+    this.setData({ cacheKB: after })
+    wx.showToast({ title: '已清理 ' + Math.max(0, before - after) + ' KB 缓存', icon: 'none' })
   },
 
   onCare(e) {

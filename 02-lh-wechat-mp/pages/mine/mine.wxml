@@ -59,6 +59,11 @@
       <text class="m-txt">反馈与建议</text>
       <text class="m-arrow">›</text>
     </view>
+    <view class="menu-row" bindtap="onClearCache">
+      <text class="m-ico">🧹</text>
+      <text class="m-txt">清理缓存（当前 {{cacheKB}} KB）</text>
+      <text class="m-arrow">›</text>
+    </view>
     <view class="menu-row" bindtap="showAbout">
       <text class="m-ico">ℹ️</text>
       <text class="m-txt">关于鲤慧</text>

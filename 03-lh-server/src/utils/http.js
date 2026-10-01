@@ -7,21 +7,35 @@
  */
 const http = require('http');
 const https = require('https');
+const zlib = require('zlib');
 const { URL } = require('url');
 const logger = require('./logger');
 
 const TRACE = () => 'tr_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
+const GZIP_MIN_BYTES = 512; // 小于 512B 不压缩（压不满头反而变大）
+
 function json(res, data, status = 200, headers = {}) {
   const body = JSON.stringify(data);
-  res.writeHead(status, {
+  const h = {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Device-Id, X-Trace-Id',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'X-Trace-Id': headers['X-Trace-Id'] || TRACE(),
     ...headers,
-  });
+  };
+  // 性能：客户端支持 gzip 且响应体足够大时压缩（wx.request / 浏览器均自动解压）
+  const acceptEnc = (res.req && res.req.headers && res.req.headers['accept-encoding']) || '';
+  if (acceptEnc.includes('gzip') && Buffer.byteLength(body) >= GZIP_MIN_BYTES) {
+    const gz = zlib.gzipSync(body);
+    h['Content-Encoding'] = 'gzip';
+    h['Content-Length'] = gz.length;
+    res.writeHead(status, h);
+    res.end(gz);
+    return;
+  }
+  res.writeHead(status, h);
   res.end(body);
 }
 

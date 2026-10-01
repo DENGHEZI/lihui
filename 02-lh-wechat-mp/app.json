@@ -3,11 +3,17 @@
     "pages/index/index",
     "pages/life/life",
     "pages/assistant/assistant",
-    "pages/mine/mine",
-    "pages/route/route",
-    "pages/settings/settings",
-    "pages/feedback/feedback"
+    "pages/mine/mine"
   ],
+  "subPackages": [
+    { "root": "pages/route", "pages": ["route"] },
+    { "root": "pages/settings", "pages": ["settings"] },
+    { "root": "pages/feedback", "pages": ["feedback"] }
+  ],
+  "preloadRule": {
+    "pages/index/index": { "network": "all", "packages": ["pages/route"] },
+    "pages/assistant/assistant": { "network": "wifi", "packages": ["pages/settings"] }
+  },
   "window": {
     "backgroundTextStyle": "dark",
     "navigationBarBackgroundColor": "#FFFFFF",

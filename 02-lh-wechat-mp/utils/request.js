@@ -1,12 +1,83 @@
 /**
  * 鲤慧 LiHui · 微信小程序请求封装
+ *
+ * 性能设计：
+ *  - GET 二级缓存：内存 Map（会话内）+ wx.storage（冷启动仍命中）
+ *  - 坐标量化到 3 位小数（~100m）作为缓存键，避免 GPS 抖动导致缓存失效
+ *  - 仅业务性只读数据缓存（天气/推荐/体检报告），搜索与对话永远实时
  */
 const config = require('./config.js')
 const { getDeviceId, getPlan } = require('./token.js')
 
 let lastTokenCost = 0
 
-function request(path, { method = 'GET', data = {}, loading = false, loadingText = '加载中' } = {}) {
+/* ---------------- 二级缓存 ---------------- */
+const MEM_MAX = 30 // 内存缓存条目上限
+const CACHE_PREFIX = 'lh_cache_'
+const memCache = new Map() // key -> { data, expire }
+
+function quantKeyVal(k, v) {
+  // 坐标量化，其余原样
+  if ((k === 'lng' || k === 'lat') && isFinite(Number(v))) return Number(v).toFixed(3)
+  return String(v)
+}
+
+function buildKey(path, data) {
+  return path + '?' + Object.keys(data || {})
+    .sort()
+    .map((k) => k + '=' + quantKeyVal(k, data[k]))
+    .join('&')
+}
+
+function cacheGet(key) {
+  const now = Date.now()
+  const m = memCache.get(key)
+  if (m && m.expire > now) return m.data
+  if (m) memCache.delete(key)
+  try {
+    const s = wx.getStorageSync(CACHE_PREFIX + key)
+    if (s && s.expire > now) {
+      // 冷启动回填内存层
+      if (memCache.size >= MEM_MAX) memCache.delete(memCache.keys().next().value)
+      memCache.set(key, s)
+      return s.data
+    }
+    if (s) wx.removeStorageSync(CACHE_PREFIX + key)
+  } catch (e) {}
+  return undefined
+}
+
+function cacheSet(key, data, ttl) {
+  const entry = { data, expire: Date.now() + ttl }
+  if (memCache.size >= MEM_MAX) memCache.delete(memCache.keys().next().value)
+  memCache.set(key, entry)
+  try { wx.setStorageSync(CACHE_PREFIX + key, entry) } catch (e) {}
+}
+
+/** 清空业务缓存（保留 deviceId / plan / careMode / 语音配置） */
+function clearBizCache() {
+  memCache.clear()
+  try {
+    const info = wx.getStorageInfoSync()
+    ;(info.keys || []).filter((k) => k.indexOf(CACHE_PREFIX) === 0).forEach((k) => wx.removeStorageSync(k))
+  } catch (e) {}
+}
+
+/** 当前缓存占用（KB） */
+function getCacheSizeKB() {
+  try { return wx.getStorageInfoSync().currentSize || 0 } catch (e) { return 0 }
+}
+
+/* ---------------- 请求 ---------------- */
+function request(path, { method = 'GET', data = {}, loading = false, loadingText = '加载中', cacheTtl = 0 } = {}) {
+  // 命中缓存直接返回（零网络、零等待）
+  let cacheKey = ''
+  if (method === 'GET' && cacheTtl > 0) {
+    cacheKey = buildKey(path, data)
+    const hit = cacheGet(cacheKey)
+    if (hit !== undefined) return Promise.resolve(hit)
+  }
+
   if (loading) wx.showLoading({ title: loadingText, mask: true })
   return new Promise((resolve, reject) => {
     wx.request({
@@ -23,6 +94,7 @@ function request(path, { method = 'GET', data = {}, loading = false, loadingText
         const body = res.data || {}
         if (body.code === 0) {
           lastTokenCost = Number((res.header && res.header['X-Token-Cost']) || res.header && res.header['x-token-cost']) || 0
+          if (cacheKey) cacheSet(cacheKey, body.data, cacheTtl)
           resolve(body.data)
           return
         }
@@ -56,4 +128,4 @@ function request(path, { method = 'GET', data = {}, loading = false, loadingText
 const get = (path, data, opts) => request(path, Object.assign({ method: 'GET', data }, opts || {}))
 const post = (path, data, opts) => request(path, Object.assign({ method: 'POST', data }, opts || {}))
 
-module.exports = { request, get, post, getLastTokenCost: () => lastTokenCost }
+module.exports = { request, get, post, getLastTokenCost: () => lastTokenCost, clearBizCache, getCacheSizeKB }
