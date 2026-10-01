@@ -60,7 +60,7 @@ Page({
           // 检索失败的类显示「暂无数据」而不是 0 分，避免误导
           score: c.score === null || c.score === undefined ? (c.failed ? '—' : 0) : c.score,
           color: c.score === null || c.score === undefined ? '#8F959E' : colorOf(c.score),
-          failedText: c.failed ? '（本次检索超时，不影响总分）' : '',
+          failedText: c.failed ? (r.quotaExhausted ? '（今日检索配额已用完，次日 0 点恢复）' : '（本次检索超时，不影响总分）') : '',
           nearestText: c.nearest ? '，最近 ' + c.nearest.name + ' ' + this.fmtDist(c.nearest.distance) : '，范围内未查到'
         })
       )

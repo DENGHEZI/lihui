@@ -15,6 +15,7 @@ Page({
     scrollTo: '',
     careMode: false,
     recording: false,
+    speechText: '',
     scenes: [
       { icon: '🏥', name: '附近看病', text: '附近 15 分钟能看病吗？' },
       { icon: '🛒', name: '买菜', text: '附近哪里买菜最方便？' },
@@ -119,31 +120,26 @@ Page({
   },
 
   toggleRecord() {
+    // 正在录音 → 结束并等待识别结果
     if (this.data.recording) {
-      this.setData({ recording: false })
-      voice.stopRecord()
+      this.setData({ recording: false, speechText: '' })
+      voice.stopSpeech(this._speechMode)
       return
     }
-    this.setData({ recording: true })
-    wx.showToast({ title: '请开始说话', icon: 'none', duration: 1000 })
-    voice.startRecord(async (res, err) => {
-      this.setData({ recording: false })
-      if (!res || err) {
-        wx.showToast({ title: '录音失败，请检查麦克风权限', icon: 'none' })
-        return
-      }
-      try {
-        const text = await voice.recognize(res.tempFilePath)
-        if (text) this.ask(text)
-        else wx.showToast({ title: '没听清，请再说一次', icon: 'none' })
-      } catch (e) {
-        wx.showModal({
-          title: '语音识别未就绪',
-          content: (e && e.message) || '服务端未配置语音识别密钥，可先用文字输入',
-          showCancel: false
-        })
+    // 开始录音：实时显示识别中的文字；识别完成自动发送
+    this._speechMode = voice.startSpeech({
+      onPartial: (t) => this.setData({ speechText: t }),
+      onFinal: (t) => {
+        this.setData({ recording: false, speechText: '' })
+        if (t) this.ask(t)
+        else wx.showToast({ title: '没听清，请再试一次', icon: 'none' })
+      },
+      onError: () => {
+        this.setData({ recording: false, speechText: '' })
+        wx.showToast({ title: '语音未就绪：请检查麦克风权限，或先用文字输入', icon: 'none', duration: 2400 })
       }
     })
+    this.setData({ recording: true, speechText: '' })
   },
 
   toggleCare() {
@@ -155,13 +151,20 @@ Page({
   runAction(e) {
     const a = this.data.messages[this.data.messages.length - 1].actions[e.currentTarget.dataset.i]
     if (!a) return
+    // 带坐标的动作 → 直接打开微信内置地图导航（零依赖，最稳）
+    if (isFinite(Number(a.lng)) && isFinite(Number(a.lat))) {
+      action.openNavigation(a.name || a.destination || '目的地', a.lng, a.lat, a.address)
+      return
+    }
+    // 平台动作 → 白名单小程序跳转，失败回落复制
     wx.showModal({
       title: '确认跳转',
-      content: `即将打开「${a.app}」并开始导航，是否继续？`,
+      content: `即将打开「${a.app}」，是否继续？`,
       success: async (r) => {
         if (!r.confirm) return
         try {
-          await action.jumpToApp({ app: a.app, destination: '' })
+          const res = await action.jumpToApp({ app: a.app, destination: a.destination || '' })
+          if (!res || !res.jumped) wx.showToast({ title: '未接入该平台，已复制目的地名称', icon: 'none', duration: 2200 })
         } catch (err) {
           wx.showToast({ title: '跳转失败', icon: 'none' })
         }

@@ -1,6 +1,7 @@
 const api = require('../../utils/api.js')
 const { getPlan, setPlan, getCareMode, setCareMode } = require('../../utils/token.js')
 const voice = require('../../utils/voice.js')
+const action = require('../../utils/action.js')
 
 Page({
   data: {
@@ -46,6 +47,11 @@ Page({
   },
 
   onLoad() {
+    this.setData({
+      engineNames: this.data.engines.map((e) => e.name),
+      speakerNames: this.data.speakers.map((s) => s.name),
+      dialectNames: this.data.dialects.map((d) => d.name)
+    })
     this.syncPickers()
     this.setData({ plan: getPlan() })
     this.loadModels()
@@ -209,7 +215,7 @@ Page({
 
   async trySpeak() {
     await this.save()
-    voice.speak('前面 300 米有药店，走路 4 分钟就到。', { scene: 'navigation', careMode: this.data.voice.careMode })
+    voice.speak('前面 300 米有药店，走路 4 分钟就到。', { scene: 'navigation', careMode: this.data.voice.careMode, force: true })
     wx.showToast({ title: '正在试听', icon: 'none' })
   },
 
@@ -236,5 +242,19 @@ Page({
     } catch (e) {
       wx.hideLoading()
     }
+  },
+
+  /** 推荐平台直达（白名单跳转，需用户点按确认，符合微信规范） */
+  jumpPlatform(e) {
+    const app = e.currentTarget.dataset.app
+    wx.showModal({
+      title: '确认跳转',
+      content: `即将打开「${app}」小程序，是否继续？`,
+      success: async (r) => {
+        if (!r.confirm) return
+        const res = await action.jumpToApp({ app })
+        if (!res || !res.jumped) wx.showToast({ title: '跳转失败，请重试', icon: 'none' })
+      }
+    })
   }
 })

@@ -66,27 +66,35 @@ const CATEGORIES = [
   { key: 'education', name: '教育', weight: 0.15, keywords: ['幼儿园', '小学', '中学'], need: 1, desc: '孩子上学是否方便' },
   { key: 'market', name: '商业', weight: 0.20, keywords: ['超市', '菜市场', '便利店'], need: 2, desc: '买菜、日用是否方便' },
   { key: 'food', name: '餐饮', weight: 0.10, keywords: ['餐厅', '早餐店'], need: 3, desc: '吃饭、早餐是否方便' },
-  { key: 'transit', name: '交通', weight: 0.20, keywords: ['公交站', '地铁站', '停车场'], need: 1, desc: '出行是否方便' },
-  { key: 'leisure', name: '休闲', weight: 0.10, keywords: ['公园', '健身', '体育'], need: 1, desc: '遛弯、锻炼是否方便' },
+  { key: 'transit', name: '交通', weight: 0.20, keywords: ['公交', '地铁站', '停车场'], need: 1, desc: '出行是否方便' },
+  { key: 'leisure', name: '休闲', weight: 0.10, keywords: ['公园', '广场', '体育'], need: 1, desc: '遛弯、锻炼是否方便' },
 ];
 
 async function diagnose({ lng, lat, radius = 1200 }) {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const cats = await Promise.all(
-    CATEGORIES.map(async (c) => {
-      // 每类独立检索 + 失败重试 1 次；复合词查空时用单关键词二次确认，仍空才标记 failed（不计分）
+    CATEGORIES.map(async (c, ci) => {
+      // 类间错峰 200ms：6 类 × 3 路并发会瞬时打满百度 QPS，导致「交通/休闲」整类超时
+      if (ci) await sleep(ci * 200);
       let items = [];
       let failed = false;
-      for (let attempt = 0; attempt < 2 && !items.length; attempt++) {
-        try {
-          const r = await poiSearch(c.keywords.join('|'), lng, lat, radius, 20);
-          items = r.items || [];
-        } catch (_) {}
-      }
+      // 第一轮：复合关键词 RRF 融合检索（单关键词失败自动跳过，不影响其他路）
+      try {
+        const r = await poiSearch(c.keywords.join('|'), lng, lat, radius, 20);
+        items = r.items || [];
+      } catch (_) {}
+      // 第二轮：全部关键词逐路二次确认（任一命中即算成功，不再只试 keywords[0]）
       if (!items.length) {
-        try {
-          const r2 = await poiSearch(c.keywords[0], lng, lat, radius, 20);
-          items = r2.items || [];
-        } catch (_) {}
+        await sleep(300);
+        const parts = await Promise.all(
+          c.keywords.map((k) => poiSearch(k, lng, lat, radius, 20).catch(() => ({ items: [] })))
+        );
+        for (const p of parts) {
+          if ((p.items || []).length) {
+            items = p.items;
+            break;
+          }
+        }
         failed = !items.length;
       }
       const hitTypes = c.keywords.filter((k) => items.some((i) => (i.name + i.tag + i.type).includes(k)));

@@ -12,8 +12,8 @@ const CATEGORIES = [
   { key: 'education', name: '教育', weight: 0.15, keywords: ['幼儿园', '小学', '中学'], need: 1 },
   { key: 'market', name: '商业', weight: 0.2, keywords: ['超市', '菜市场', '便利店'], need: 2 },
   { key: 'food', name: '餐饮', weight: 0.1, keywords: ['餐厅', '早餐店'], need: 3 },
-  { key: 'transit', name: '交通', weight: 0.2, keywords: ['公交站', '地铁站', '停车场'], need: 1 },
-  { key: 'leisure', name: '休闲', weight: 0.1, keywords: ['公园', '健身', '体育'], need: 1 },
+  { key: 'transit', name: '交通', weight: 0.2, keywords: ['公交', '地铁站', '停车场'], need: 1 },
+  { key: 'leisure', name: '休闲', weight: 0.1, keywords: ['公园', '广场', '体育'], need: 1 },
 ];
 
 function numOr(v, d) {
@@ -29,22 +29,50 @@ function withTimeout(promise, ms, fallback) {
   ]);
 }
 
-/** 单类设施检索：失败自动重试 1 次，仍失败返回空列表（标记 failed 供降权处理） */
-async function fetchCategory(c, lng, lat, radius) {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const r = await baiduMap.poiSearch({ query: c.keywords.join('|'), lng, lat, radius, pageSize: 20 });
-      if ((r.items || []).length) return { items: r.items, failed: false };
-    } catch (_) {}
+/** 配额熔断：百度 302(天配额超限)/401(并发超限) 后 10 分钟内短路检索，避免空烧请求 */
+let quotaBlockedUntil = 0;
+function isQuotaBlocked() {
+  return Date.now() < quotaBlockedUntil;
+}
+function noteQuotaError(e) {
+  if (e && (e.baiduStatus === 302 || e.baiduStatus === 401)) {
+    quotaBlockedUntil = Date.now() + 10 * 60 * 1000;
+    logger.warn('life', `baidu quota blocked (status=${e.baiduStatus}), 熔断 10 分钟`);
+    return true;
   }
-  return { items: [], failed: true };
+  return false;
+}
+
+/** 单类设施检索：RRF 融合一轮 → 全部关键词逐路二次确认 → 仍失败标记 failed 供降权处理 */
+async function fetchCategory(c, lng, lat, radius, stagger = 0) {
+  if (isQuotaBlocked()) return { items: [], failed: true, quota: true };
+  if (stagger) await new Promise((r) => setTimeout(r, stagger)); // 类间错峰，防百度 QPS 瞬时超限
+  try {
+    const r = await baiduMap.poiSearch({ query: c.keywords.join('|'), lng, lat, radius, pageSize: 20 });
+    if ((r.items || []).length) return { items: r.items, failed: false };
+  } catch (e) {
+    noteQuotaError(e);
+  }
+  if (isQuotaBlocked()) return { items: [], failed: true, quota: true };
+  const parts = await Promise.all(
+    c.keywords.map((k) =>
+      baiduMap.poiSearch({ query: k, lng, lat, radius, pageSize: 20 }).catch((e) => {
+        noteQuotaError(e);
+        return null;
+      })
+    )
+  );
+  for (const p of parts) {
+    if (p && (p.items || []).length) return { items: p.items, failed: false };
+  }
+  return { items: [], failed: true, quota: isQuotaBlocked() };
 }
 
 /** 服务端本地兜底计算（不依赖 MCP；六类互相隔离，单类故障不拖垮总分） */
 async function localDiagnose({ lng, lat, radius = 1200 }) {
   const cats = await Promise.all(
-    CATEGORIES.map(async (c) => {
-      const { items, failed } = await fetchCategory(c, lng, lat, radius);
+    CATEGORIES.map(async (c, i) => {
+      const { items, failed } = await fetchCategory(c, lng, lat, radius, i * 200);
       const hitTypes = c.keywords.filter((k) => items.some((i) => (i.name + i.tag + i.type).includes(k)));
       // 检索失败的类不参与计分（区别于"确实没有"），避免偶发网络错误把总分拉穿
       const ratio = failed ? null : Math.min(1, items.length / Math.max(c.need, 1));
@@ -88,6 +116,10 @@ async function localDiagnose({ lng, lat, radius = 1200 }) {
     suggestions,
     degraded: cats.some((c) => c.failed),
     engine: 'server-local',
+    quotaExhausted: isQuotaBlocked() && cats.every((c) => c.failed),
+    hint: isQuotaBlocked() && cats.every((c) => c.failed)
+      ? '今日百度地图检索配额已用完（每日 0 点自动恢复）。本次仅展示部分结果，建议在百度地图开放平台完成个人认证以提升免费配额。'
+      : undefined,
   };
 }
 
@@ -98,22 +130,25 @@ module.exports = {
     const lat = numOr(q.lat, NaN);
     if (!Number.isFinite(lng) || !Number.isFinite(lat)) return fail(res, 1001, 'lng/lat 必填');
     const radius = numOr(q.radius, 1200);
-    try {
-      // MCP 体检限时 8s；返回结果做质量校验（>=4 类空检索视为可疑，回落本地引擎）
-      const r = await withTimeout(hub.callByQualifiedName('life-circle__diagnose', { lng, lat, radius }), 8000, null);
-      const data = r && r.data && (r.data.result || r.data);
-      const suspicious = data && Array.isArray(data.categories) && data.categories.filter((c) => !c.count).length >= 4;
-      if (data && !suspicious) return ok(res, data);
-      if (data && suspicious) logger.warn('life', 'mcp result suspicious (>=4 empty categories), fallback local');
-      throw new Error(suspicious ? 'suspicious mcp result' : 'empty mcp result');
-    } catch (e) {
-      logger.warn('life', `mcp diagnose failed, fallback local: ${e.message}`);
+    // 配额熔断期间跳过 MCP（否则每个报告仍会对百度空打几十次请求）
+    if (!isQuotaBlocked()) {
       try {
-        return ok(res, await localDiagnose({ lng, lat, radius }));
-      } catch (e2) {
-        logger.error('life', `local diagnose failed: ${e2.message}`);
-        return fail(res, 5003, '体检引擎繁忙，请稍后再试');
+        // MCP 体检限时 8s；返回结果做质量校验（>=4 类空检索视为可疑，回落本地引擎）
+        const r = await withTimeout(hub.callByQualifiedName('life-circle__diagnose', { lng, lat, radius }), 8000, null);
+        const data = r && r.data && (r.data.result || r.data);
+        const suspicious = data && Array.isArray(data.categories) && data.categories.filter((c) => !c.count).length >= 4;
+        if (data && !suspicious) return ok(res, data);
+        if (data && suspicious) logger.warn('life', 'mcp result suspicious (>=4 empty categories), fallback local');
+        throw new Error(suspicious ? 'suspicious mcp result' : 'empty mcp result');
+      } catch (e) {
+        logger.warn('life', `mcp diagnose failed, fallback local: ${e.message}`);
       }
+    }
+    try {
+      return ok(res, await localDiagnose({ lng, lat, radius }));
+    } catch (e2) {
+      logger.error('life', `local diagnose failed: ${e2.message}`);
+      return fail(res, 5003, '体检引擎繁忙，请稍后再试');
     }
   },
 

@@ -64,6 +64,12 @@
     <view style="height: 32rpx"></view>
   </scroll-view>
 
+  <!-- 录音状态条（实时显示识别文字） -->
+  <view class="rec-bar" wx:if="{{recording}}">
+    <view class="rec-dot"></view>
+    <text class="rec-text">{{speechText || '正在聆听…再点一次麦克风结束'}}</text>
+  </view>
+
   <!-- 输入区 -->
   <view class="input-bar">
     <view class="care-toggle {{careMode ? 'on' : ''}}" bindtap="toggleCare">{{careMode ? '关怀' : '标准'}}</view>

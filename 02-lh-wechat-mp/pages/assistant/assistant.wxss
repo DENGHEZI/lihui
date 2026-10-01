@@ -207,3 +207,33 @@
 .send-btn.dis {
   background: #C8CDD4;
 }
+
+/* 录音状态条 */
+.rec-bar {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  padding: 16rpx 32rpx;
+  background: #FFF7E6;
+  border-top: 1rpx solid #FFE7BA;
+}
+.rec-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: #FA8C16;
+  animation: rec-blink 1s infinite;
+  flex-shrink: 0;
+}
+@keyframes rec-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.rec-text {
+  font-size: 28rpx;
+  color: #874D00;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

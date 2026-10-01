@@ -62,9 +62,10 @@
     </view>
 
     <view class="row">
-      <text class="lh-body">唤醒词</text>
+      <text class="lh-body">唤醒词（预留）</text>
       <input class="row-inp" value="{{voice.wakeWord}}" placeholder="如：小鲤小鲤" placeholder-class="ph" bindblur="onWakeWord" />
     </view>
+    <text class="lh-mini">说明：唤醒词为预留配置（小程序系统限制无法后台常驻监听）。方言播报需在服务端配置百度语音密钥后生效；端上兜底播报为普通话。</text>
     <view class="row">
       <text class="lh-body">自动播报结果</text>
       <switch checked="{{voice.autoSpeak}}" color="#1677FF" bindchange="onAutoSpeak" />
@@ -90,6 +91,14 @@
     <view class="row">
       <text class="lh-body">MCP 工具</text>
       <text class="lh-cap" bindtap="showMcp">查看可用工具 ›</text>
+    </view>
+    <view class="row">
+      <text class="lh-body">推荐平台直达</text>
+      <view class="plans">
+        <text class="lh-pill" bindtap="jumpPlatform" data-app="美团外卖">🛵 美团外卖</text>
+        <text class="lh-pill" bindtap="jumpPlatform" data-app="饿了么">🍜 饿了么</text>
+        <text class="lh-pill" bindtap="jumpPlatform" data-app="滴滴出行">🚕 滴滴出行</text>
+      </view>
     </view>
     <text class="lh-mini">增强版会调用 MCP 工具（成本优化、情感疏通、桌面操作等），Token 消耗更高。</text>
   </view>

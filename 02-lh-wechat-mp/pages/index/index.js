@@ -254,7 +254,7 @@ Page({
 
   closeVoice() {
     if (this.data.voiceState === 'recording') {
-      voice.stopRecord()
+      voice.stopSpeech(this._speechMode)
     }
     this.setData({ voicePanel: false })
   },
@@ -263,24 +263,19 @@ Page({
 
   toggleRecord() {
     if (this.data.voiceState === 'recording') {
-      voice.stopRecord()
+      voice.stopSpeech(this._speechMode)
       this.setData({ voiceState: 'processing', voiceHint: '正在识别…' })
       return
     }
-    this.setData({ voiceState: 'recording', voiceHint: '再点一次结束' })
-    voice.startRecord(async (res, err) => {
-      if (!res || err) {
-        this.setData({ voiceState: 'idle', voiceHint: '录音失败，请检查麦克风权限' })
-        return
-      }
-      try {
-        const text = await voice.recognize(res.tempFilePath)
-        this.setData({ voicePanel: false, keyword: text })
-        this.askAgent(text)
-      } catch (e) {
-        this.setData({ voiceState: 'idle', voiceHint: (e && e.message) || '没听清，请再说一次' })
-      }
+    this._speechMode = voice.startSpeech({
+      onPartial: (t) => this.setData({ voiceHint: t }),
+      onFinal: (t) => {
+        this.setData({ voicePanel: false, keyword: t })
+        this.askAgent(t)
+      },
+      onError: (e) => this.setData({ voiceState: 'idle', voiceHint: (e && e.msg) || '识别失败，请重试' })
     })
+    this.setData({ voiceState: 'recording', voiceHint: '正在聆听…说完点一下结束' })
   },
 
   async askAgent(text) {
