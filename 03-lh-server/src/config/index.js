@@ -7,6 +7,13 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..'); // 03-lh-server/
 
+// 是否在容器里（Docker / 云托管 / Kubernetes 等）。
+// 云托管（CloudBase Run / 微信云托管）按控制台填写的「容器端口」做健康探测，
+// 并把该端口通过环境变量 PORT 注入；若平台未注入，这里默认对齐平台约定端口 80，
+// 否则会出现「服务已启动、MCP 也 8/8 正常，但平台按 80 探活 connection refused → 判部署失败」。
+// 物理机 / 本地裸跑不受影响，仍沿用 8809（与小程序端 dev 配置一致）。
+const IN_CONTAINER = fs.existsSync('/.dockerenv');
+
 function loadEnvFile(file) {
   try {
     const raw = fs.readFileSync(file, 'utf8');
@@ -45,7 +52,8 @@ const config = {
   dataDir: path.join(ROOT, 'data'),
 
   server: {
-    port: num('PORT', 8809),
+    // PORT 优先级：运行时注入 > 容器内默认 80 > 物理机默认 8809
+    port: num('PORT', IN_CONTAINER ? 80 : 8809),
     host: env('HOST', '0.0.0.0'),
     corsOrigin: env('CORS_ORIGIN', '*'),
     logLevel: env('LOG_LEVEL', 'info'),

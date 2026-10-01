@@ -100,7 +100,13 @@ const server = http.createServer(async (req, res) => {
   }
 
   const key = pathname.slice(API_PREFIX.length) || '/';
-  const handler = ROUTES[`${req.method} ${key}`];
+  let handler = ROUTES[`${req.method} ${key}`];
+
+  // 保底：容器平台（云托管 / K8s）健康检查常探不带前缀的 /health 或 /ping，
+  // 这里做同义映射，避免「服务活着但探活 404 → 判部署失败」。
+  if (!handler && (key === '/health' || key === '/ping')) {
+    handler = ROUTES['GET /health'];
+  }
 
   if (!handler) {
     return fail(res, 4040, `接口不存在: ${req.method} ${pathname}`, 404, { traceId });
