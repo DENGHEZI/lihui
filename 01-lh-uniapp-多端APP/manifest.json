@@ -1,0 +1,127 @@
+{
+    "name": "鲤慧",
+    "appid": "__UNI__LIHUI01",
+    "description": "鲤慧 —— 基于百度地图开放能力的 15 分钟生活圈智能体检与规划助手",
+    "versionName": "1.0.0",
+    "versionCode": "100",
+    "transformPx": false,
+    /* 5+App特有相关 */
+    "app-plus": {
+        "usingComponents": true,
+        "nvueStyleCompiler": "uni-app",
+        "compilerVersion": 3,
+        "splashscreen": {
+            "alwaysShowBeforeRender": true,
+            "waiting": true,
+            "autoclose": true,
+            "delay": 0
+        },
+        /* 模块配置 */
+        "modules": {
+            "Geolocation": {},
+            "Maps": {},
+            "Speech": {},
+            "Record": {},
+            "Payment": {}
+        },
+        /* 应用发布信息 */
+        "distribute": {
+            /* android打包配置 */
+            "android": {
+                "packagename": "com.lihui.lifecircle",
+                "minSdkVersion": 21,
+                "targetSdkVersion": 34,
+                "abiFilters": ["armeabi-v7a", "arm64-v8a"],
+                "permissions": [
+                    "<uses-permission android:name=\"android.permission.ACCESS_FINE_LOCATION\"/>",
+                    "<uses-permission android:name=\"android.permission.ACCESS_COARSE_LOCATION\"/>",
+                    "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.ACCESS_WIFI_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.CHANGE_NETWORK_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.CHANGE_WIFI_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.INTERNET\"/>",
+                    "<uses-permission android:name=\"android.permission.RECORD_AUDIO\"/>",
+                    "<uses-permission android:name=\"android.permission.MODIFY_AUDIO_SETTINGS\"/>",
+                    "<uses-permission android:name=\"android.permission.CAMERA\"/>",
+                    "<uses-permission android:name=\"android.permission.VIBRATE\"/>",
+                    "<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>",
+                    "<uses-permission android:name=\"android.permission.READ_PHONE_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>",
+                    "<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\"/>",
+                    "<uses-permission android:name=\"android.permission.CALL_PHONE\"/>",
+                    "<uses-feature android:name=\"android.hardware.camera\"/>"
+                ]
+            },
+            /* ios打包配置 */
+            "ios": {
+                "appid": "com.lihui.lifecircle",
+                "idfa": false,
+                "dSYMs": false,
+                "urltypes": "baidumap,amapuri,weixin",
+                "privacyDescription": {
+                    "NSLocationWhenInUseUsageDescription": "鲤慧需要使用您的位置来生成 15 分钟生活圈体检报告与周边便民服务推荐",
+                    "NSLocationAlwaysAndWhenInUseUsageDescription": "鲤慧需要使用您的位置来生成 15 分钟生活圈体检报告",
+                    "NSMicrophoneUsageDescription": "鲤慧需要使用麦克风来提供语音对话功能",
+                    "NSCameraUsageDescription": "鲤慧需要相机权限来上传反馈截图"
+                }
+            },
+            /* SDK配置：底图用百度地图 SDK（端上 AK 只用于底图初始化） */
+            "sdkConfigs": {
+                "maps": {
+                    "baidu": {
+                        "appkey_ios": "请填入百度地图 iOS 端 AK",
+                        "appkey_android": "请填入百度地图 Android 端 AK"
+                    }
+                },
+                "geolocation": {
+                    "baidu": {
+                        "appkey_ios": "请填入百度地图 iOS 端 AK",
+                        "appkey_android": "请填入百度地图 Android 端 AK"
+                    }
+                }
+            }
+        }
+    },
+    /* 鸿蒙（HarmonyOS）特有相关 —— uni-app x / HBuilderX 4.5+ */
+    "app-harmony": {
+        "bundleName": "com.lihui.lifecircle",
+        "minPlatformVersion": 11,
+        "targetPlatformVersion": 12,
+        "permissions": [
+            "ohos.permission.INTERNET",
+            "ohos.permission.LOCATION",
+            "ohos.permission.APPROXIMATELY_LOCATION",
+            "ohos.permission.MICROPHONE",
+            "ohos.permission.GET_NETWORK_INFO"
+        ]
+    },
+    /* 快应用特有相关 */
+    "quickapp": {},
+    /* 小程序特有相关 */
+    "mp-weixin": {
+        "appid": "wxfc45acb99d454f8a",
+        "setting": {
+            "urlCheck": false,
+            "es6": true,
+            "minified": true,
+            "postcss": true
+        },
+        "usingComponents": true,
+        "permission": {
+        "scope.userLocation": {
+            "desc": "用于定位并生成15分钟生活圈体检报告与便民推荐"
+        }
+        },
+        "requiredPrivateInfos": ["getLocation", "chooseLocation"]
+    },
+    "mp-alipay": {
+        "usingComponents": true
+    },
+    "mp-baidu": {
+        "usingComponents": true
+    },
+    "mp-toutiao": {
+        "usingComponents": true
+    },
+    "vueVersion": "2"
+}

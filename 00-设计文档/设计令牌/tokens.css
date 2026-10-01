@@ -1,0 +1,122 @@
+/* ==========================================================================
+ * 鲤慧 LiHui · 设计令牌（Design Tokens）
+ * 风格来源：高德地图 App 设计语言
+ * 用法：uni-app / 微信小程序 / H5 直接引入或复制粘贴，禁止各端私改色值
+ * ========================================================================== */
+
+:root {
+  /* ---------- 品牌色 ---------- */
+  --lh-primary:        #1677FF;
+  --lh-primary-dark:   #0E5FD8;
+  --lh-primary-soft:   #EAF2FF;
+  --lh-primary-grad:   linear-gradient(135deg, #3A8BFF 0%, #1677FF 100%);
+
+  /* ---------- 语义色 ---------- */
+  --lh-success:        #00B96B;
+  --lh-success-soft:   #E6F8F0;
+  --lh-warning:        #FF8A00;
+  --lh-warning-soft:   #FFF4E6;
+  --lh-danger:         #F5222D;
+  --lh-danger-soft:    #FEECEC;
+
+  /* ---------- 文字 ---------- */
+  --lh-text:           #1A1A1A;
+  --lh-text-sub:       #646A73;
+  --lh-text-weak:      #8F959E;
+  --lh-text-invert:    #FFFFFF;
+
+  /* ---------- 背景 / 线条 ---------- */
+  --lh-bg:             #F4F5F7;
+  --lh-card:           #FFFFFF;
+  --lh-line:           #EDEFF2;
+  --lh-line-strong:    #D8DCE2;
+  --lh-mask:           rgba(0, 0, 0, .45);
+
+  /* ---------- 地图元素 ---------- */
+  --lh-map-road:       #FFFFFF;
+  --lh-map-water:      #C8E4FF;
+  --lh-map-green:      #D9F0DC;
+  --lh-map-circle-fill: rgba(22, 119, 255, .10);
+  --lh-map-circle-line: #1677FF;
+
+  /* ---------- 字号 / 行高 ---------- */
+  --lh-fs-h1:    22px;  --lh-lh-h1:    30px;
+  --lh-fs-h2:    18px;  --lh-lh-h2:    26px;
+  --lh-fs-body:  15px;  --lh-lh-body:  22px;
+  --lh-fs-cap:   13px;  --lh-lh-cap:   18px;
+  --lh-fs-mini:  11px;  --lh-lh-mini:  16px;
+
+  /* ---------- 间距 ---------- */
+  --lh-sp-1:  4px;
+  --lh-sp-2:  8px;
+  --lh-sp-3:  12px;
+  --lh-sp-4:  16px;
+  --lh-sp-5:  20px;
+  --lh-sp-6:  24px;
+  --lh-sp-8:  32px;
+  --lh-page-x: 16px;
+
+  /* ---------- 圆角 ---------- */
+  --lh-r-sm:   8px;
+  --lh-r-md:   12px;
+  --lh-r-lg:   16px;
+  --lh-r-xl:   20px;
+  --lh-r-pill: 999px;
+  --lh-r-full: 50%;
+
+  /* ---------- 阴影 ---------- */
+  --lh-sh-card:  0 2px 12px rgba(0, 0, 0, .06);
+  --lh-sh-float: 0 4px 16px rgba(22, 119, 255, .25);
+  --lh-sh-sheet: 0 -4px 20px rgba(0, 0, 0, .08);
+
+  /* ---------- 尺寸 ---------- */
+  --lh-h-search: 48px;
+  --lh-h-btn:    48px;
+  --lh-sz-fab:   56px;
+  --lh-sz-mic:   72px;
+
+  /* ---------- 动效 ---------- */
+  --lh-ease-sheet: cubic-bezier(.16, 1, .3, 1);
+  --lh-dur-sheet:  260ms;
+  --lh-dur-page:   220ms;
+  --lh-dur-press:  120ms;
+}
+
+/* ---------- 关怀模式（老年人）：大字、高对比、粗描边 ---------- */
+.care-mode {
+  --lh-text:        #000000;
+  --lh-text-sub:    #333333;
+  --lh-text-weak:   #5A5A5A;
+  --lh-line:        #D8DCE2;
+  --lh-line-strong: #B9BFC7;
+
+  --lh-fs-h1:    28px;  --lh-lh-h1:    38px;
+  --lh-fs-h2:    22px;  --lh-lh-h2:    32px;
+  --lh-fs-body:  19px;  --lh-lh-body:  28px;
+  --lh-fs-cap:   16px;  --lh-lh-cap:   24px;
+  --lh-fs-mini:  14px;  --lh-lh-mini:  20px;
+
+  --lh-h-search: 56px;
+  --lh-h-btn:    56px;
+  --lh-sz-fab:   64px;
+  --lh-sz-mic:   84px;
+}
+
+/* ---------- 常用原子类（三端通用） ---------- */
+.lh-page      { background: var(--lh-bg); color: var(--lh-text); font-size: var(--lh-fs-body); }
+.lh-card      { background: var(--lh-card); border-radius: var(--lh-r-lg); box-shadow: var(--lh-sh-card); padding: var(--lh-sp-4); }
+.lh-h1        { font-size: var(--lh-fs-h1); line-height: var(--lh-lh-h1); font-weight: 600; color: var(--lh-text); }
+.lh-h2        { font-size: var(--lh-fs-h2); line-height: var(--lh-lh-h2); font-weight: 600; color: var(--lh-text); }
+.lh-body      { font-size: var(--lh-fs-body); line-height: var(--lh-lh-body); color: var(--lh-text); }
+.lh-cap       { font-size: var(--lh-fs-cap); line-height: var(--lh-lh-cap); color: var(--lh-text-sub); }
+.lh-mini      { font-size: var(--lh-fs-mini); line-height: var(--lh-lh-mini); color: var(--lh-text-weak); }
+.lh-divider   { height: 1px; background: var(--lh-line); }
+.lh-pill      { height: 28px; line-height: 26px; padding: 0 var(--lh-sp-3); border-radius: var(--lh-r-pill); border: 1px solid var(--lh-line); color: var(--lh-text-sub); font-size: var(--lh-fs-cap); }
+.lh-pill--on  { background: var(--lh-primary-soft); border-color: var(--lh-primary); color: var(--lh-primary); font-weight: 600; }
+.lh-btn       { height: var(--lh-h-btn); border-radius: var(--lh-r-pill); background: var(--lh-primary); color: #fff; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.lh-btn:active{ background: var(--lh-primary-dark); }
+.lh-btn--ghost{ background: #fff; color: var(--lh-primary); border: 1px solid var(--lh-primary); }
+.lh-btn--dis  { background: #C8CDD4; }
+.lh-fab       { width: var(--lh-sz-fab); height: var(--lh-sz-fab); border-radius: var(--lh-r-full); background: var(--lh-card); box-shadow: var(--lh-sh-float); display: flex; align-items: center; justify-content: center; }
+.lh-sheet     { background: var(--lh-card); border-radius: var(--lh-r-xl) var(--lh-r-xl) 0 0; box-shadow: var(--lh-sh-sheet); }
+.lh-handle    { width: 36px; height: 4px; border-radius: 2px; background: #DDE0E4; margin: 8px auto; }

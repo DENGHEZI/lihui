@@ -1,0 +1,26 @@
+{
+  "name": "lh-mcp-server-voice",
+  "version": "1.0.0",
+  "private": false,
+  "description": "自定义语音 MCP Server：音色方言选择、TTS 策略、ASR 最佳实践",
+  "type": "commonjs",
+  "bin": {
+    "lh-mcp-voice": "index.js"
+  },
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "lihui",
+    "baidu-map",
+    "life-circle"
+  ],
+  "license": "MIT",
+  "dependencies": {}
+}

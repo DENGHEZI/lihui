@@ -1,0 +1,18 @@
+{
+  "name": "lihui-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "鲤慧 LiHui 服务端 —— 百度地图 AK 中转 / IP 自动锚定 / MCP Hub / Agent(MCP Client) / Token 计量（零外部依赖）",
+  "main": "src/app.js",
+  "type": "commonjs",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js",
+    "mcp:baidu-map": "node ../04-lh-mcp-servers/baidu-map/index.js",
+    "mcp:life-circle": "node ../04-lh-mcp-servers/life-circle/index.js"
+  },
+  "dependencies": {},
+  "author": "鲤慧",
+  "license": "MIT"
+}

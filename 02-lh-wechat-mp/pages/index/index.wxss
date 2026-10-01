@@ -1,0 +1,417 @@
+/* ============================================================
+ * 鲤慧 LiHui · 地图主页样式
+ * 颜色全部走 app.wxss 的 --lh-* 变量，关怀模式（.care-mode）下
+ * 自动切换高对比深色文字并放大字号（WCAG AAA）
+ * ============================================================ */
+
+.page {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+.map {
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- 顶部搜索区 ---------- */
+.top {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  padding: 0 32rpx 24rpx;
+  z-index: 20;
+}
+
+.search-bar {
+  height: 96rpx;
+  background: #FFFFFF;
+  border-radius: 48rpx;
+  display: flex;
+  align-items: center;
+  padding: 0 16rpx 0 8rpx;
+  box-shadow: 0 6rpx 32rpx rgba(0, 0, 0, .10), 0 2rpx 8rpx rgba(0, 0, 0, .04);
+}
+.s-city {
+  display: flex;
+  align-items: center;
+  max-width: 200rpx;
+  padding: 0 16rpx 0 24rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--lh-text);
+  flex-shrink: 0;
+}
+.s-caret {
+  font-size: 20rpx;
+  color: var(--lh-text-weak);
+  margin-left: 6rpx;
+}
+.s-divider {
+  width: 2rpx;
+  height: 36rpx;
+  background: var(--lh-line);
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+.s-ico {
+  font-size: 32rpx;
+  margin-right: 12rpx;
+}
+.s-inp {
+  flex: 1;
+  height: 96rpx;
+  font-size: 30rpx;
+  color: var(--lh-text);
+}
+.ph {
+  color: var(--lh-text-weak);
+}
+.s-mic {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: var(--lh-primary-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+}
+
+/* 输入联想 */
+.suggest {
+  margin-top: 12rpx;
+  background: #FFFFFF;
+  border-radius: 32rpx;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, .12);
+  overflow: hidden;
+}
+.sug-item {
+  padding: 24rpx 32rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1rpx solid var(--lh-line);
+}
+.sug-item:last-child {
+  border-bottom: none;
+}
+.sug-name {
+  font-size: 30rpx;
+  color: var(--lh-text);
+}
+.sug-dist {
+  font-size: 26rpx;
+  color: var(--lh-text-weak);
+}
+
+/* ---------- 悬浮按钮 ---------- */
+.fabs {
+  position: absolute;
+  right: 32rpx;
+  z-index: 18;
+  transition: bottom .26s cubic-bezier(.16, 1, .3, 1);
+}
+.fabs .lh-fab {
+  margin-top: 24rpx;
+  transition: transform .15s ease;
+}
+.fabs .lh-fab:active {
+  transform: scale(.92);
+}
+.fab-ico {
+  font-size: 44rpx;
+  color: var(--lh-primary);
+}
+
+/* ---------- 底部抽屉 ---------- */
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #FFFFFF;
+  border-radius: 40rpx 40rpx 0 0;
+  box-shadow: 0 -8rpx 40rpx rgba(0, 0, 0, .08);
+  z-index: 25;
+  transition: height .26s cubic-bezier(.16, 1, .3, 1);
+  overflow: hidden;
+}
+.sheet-body {
+  height: calc(100% - 40rpx);
+  padding: 0 32rpx 48rpx;
+  box-sizing: border-box;
+}
+
+.quick-sub {
+  display: block;
+  margin: 8rpx 0 24rpx;
+}
+.quick-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+.quick-item {
+  width: 25%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx 0 28rpx;
+  transition: transform .12s ease;
+}
+.quick-item:active {
+  transform: scale(.94);
+}
+.q-ico {
+  font-size: 44rpx;
+  width: 88rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  background: var(--lh-bg);
+  border-radius: 28rpx;
+  margin-bottom: 12rpx;
+}
+.q-name {
+  font-size: 24rpx;
+  color: var(--lh-text-sub);
+}
+
+.rec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16rpx 0 20rpx;
+}
+.more {
+  font-size: 26rpx;
+  color: var(--lh-primary);
+}
+.scenic {
+  display: flex;
+  flex-wrap: wrap;
+}
+.scenic-item {
+  width: 48%;
+  background: #F8F9FB;
+  border-radius: 24rpx;
+  padding: 20rpx;
+  margin: 0 2% 16rpx 0;
+  box-sizing: border-box;
+}
+.scenic-item:active {
+  background: var(--lh-primary-soft);
+}
+.s-name {
+  font-size: 28rpx;
+  color: var(--lh-text);
+  font-weight: 600;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.s-meta {
+  font-size: 24rpx;
+  color: var(--lh-text-weak);
+  margin-top: 8rpx;
+  display: block;
+}
+
+.weather {
+  margin-top: 16rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid var(--lh-line);
+}
+.w-row {
+  display: flex;
+  align-items: center;
+  margin-top: 16rpx;
+}
+.w-temp {
+  font-size: 64rpx;
+  font-weight: 600;
+  color: var(--lh-text);
+  margin-right: 24rpx;
+}
+.w-mid {
+  display: flex;
+  flex-direction: column;
+}
+.w-tip {
+  font-size: 24rpx;
+  color: var(--lh-text-sub);
+  margin-top: 16rpx;
+  display: block;
+  background: #F8F9FB;
+  padding: 16rpx 20rpx;
+  border-radius: 20rpx;
+}
+
+/* ---------- POI 列表 ---------- */
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8rpx 0 16rpx;
+}
+.clear {
+  font-size: 26rpx;
+  color: var(--lh-text-weak);
+}
+.poi {
+  display: flex;
+  align-items: flex-start;
+  padding: 28rpx 0;
+  border-bottom: 1rpx solid var(--lh-line);
+}
+.p-ico {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 24rpx;
+  background: var(--lh-primary-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 38rpx;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+.p-mid {
+  flex: 1;
+  min-width: 0;
+}
+.p-name-row {
+  display: flex;
+  align-items: center;
+}
+.p-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--lh-text);
+  margin-right: 12rpx;
+}
+.p-rate {
+  font-size: 24rpx;
+  color: var(--lh-warning);
+}
+.p-addr {
+  font-size: 26rpx;
+  color: var(--lh-text-sub);
+  margin-top: 6rpx;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.p-tag {
+  font-size: 22rpx;
+  color: var(--lh-text-sub);
+  background: var(--lh-bg);
+  border-radius: 12rpx;
+  padding: 4rpx 12rpx;
+  display: inline-block;
+  margin-top: 10rpx;
+}
+.p-right {
+  text-align: right;
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+.p-dist {
+  font-size: 26rpx;
+  color: var(--lh-primary);
+  font-weight: 600;
+  display: block;
+}
+.p-go {
+  font-size: 24rpx;
+  color: var(--lh-text-weak);
+  margin-top: 8rpx;
+  display: block;
+}
+.loading {
+  text-align: center;
+  font-size: 26rpx;
+  color: var(--lh-text-weak);
+  padding: 32rpx 0;
+}
+
+/* ---------- 语音浮层 ---------- */
+.voice-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, .45);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.voice-card {
+  width: 560rpx;
+  background: #FFFFFF;
+  border-radius: 40rpx;
+  padding: 48rpx 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.voice-mic {
+  width: 144rpx;
+  height: 144rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3A8BFF 0%, #1677FF 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  font-size: 56rpx;
+  margin: 32rpx 0 20rpx;
+}
+.voice-mic.recording {
+  animation: pulse 1.6s infinite;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(22, 119, 255, .45); }
+  70% { box-shadow: 0 0 0 44rpx rgba(22, 119, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(22, 119, 255, 0); }
+}
+.wave {
+  display: flex;
+  align-items: center;
+}
+.bar {
+  width: 8rpx;
+  height: 32rpx;
+  background: #FFFFFF;
+  border-radius: 4rpx;
+  margin: 0 4rpx;
+  animation: wave 1s infinite ease-in-out;
+}
+@keyframes wave {
+  0%, 100% { height: 20rpx; }
+  50% { height: 52rpx; }
+}
+
+/* ============================================================
+ * 关怀模式（适老化）放大镜 —— 覆盖页面内主要文字
+ * ============================================================ */
+.care-mode .s-inp    { font-size: 38rpx; }
+.care-mode .s-city   { font-size: 36rpx; }
+.care-mode .q-name   { font-size: 30rpx; font-weight: 600; }
+.care-mode .lh-h2    { font-size: 44rpx; }
+.care-mode .lh-cap   { font-size: 32rpx; }
+.care-mode .lh-mini  { font-size: 28rpx; }
+.care-mode .s-name   { font-size: 34rpx; }
+.care-mode .s-meta   { font-size: 30rpx; }
+.care-mode .p-name   { font-size: 38rpx; }
+.care-mode .p-addr   { font-size: 32rpx; }
+.care-mode .p-dist   { font-size: 32rpx; }
+.care-mode .p-go     { font-size: 30rpx; }
+.care-mode .w-temp   { font-size: 76rpx; }
+.care-mode .w-tip    { font-size: 30rpx; }

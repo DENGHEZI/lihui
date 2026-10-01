@@ -1,0 +1,26 @@
+{
+  "name": "lh-mcp-server-baidu-map",
+  "version": "1.0.0",
+  "private": false,
+  "description": "百度地图开放能力 MCP Server：地理编码/逆地理编码/周边搜索/路线规划/天气/景点推荐",
+  "type": "commonjs",
+  "bin": {
+    "lh-mcp-baidu-map": "index.js"
+  },
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "lihui",
+    "baidu-map",
+    "life-circle"
+  ],
+  "license": "MIT",
+  "dependencies": {}
+}

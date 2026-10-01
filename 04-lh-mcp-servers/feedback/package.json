@@ -1,0 +1,26 @@
+{
+  "name": "lh-mcp-server-feedback",
+  "version": "1.0.0",
+  "private": false,
+  "description": "用户反馈闭环 MCP Server：提交/管理端处理/看板统计",
+  "type": "commonjs",
+  "bin": {
+    "lh-mcp-feedback": "index.js"
+  },
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "lihui",
+    "baidu-map",
+    "life-circle"
+  ],
+  "license": "MIT",
+  "dependencies": {}
+}

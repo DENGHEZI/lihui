@@ -1,0 +1,73 @@
+<view class="lh-page">
+  <view class="lh-card">
+    <text class="lh-h1">反馈与建议</text>
+    <text class="lh-cap">您的问题会被同步到管理端，我们会在 24 小时内处理并回复。</text>
+
+    <view class="types">
+      <text
+        class="lh-pill type-pill {{form.type === item.key ? 'lh-pill--on' : ''}}"
+        wx:for="{{types}}"
+        wx:key="key"
+        bindtap="setType"
+        data-i="{{index}}"
+      >{{item.icon}} {{item.name}}</text>
+    </view>
+
+    <textarea
+      class="ta"
+      value="{{form.content}}"
+      placeholder="请描述遇到的问题或您的建议…"
+      placeholder-class="ph"
+      maxlength="1000"
+      bindinput="onContent"
+    />
+    <text class="lh-mini count">{{form.content.length}} / 1000</text>
+
+    <view class="img-row">
+      <view class="img-item" wx:for="{{form.screenshots}}" wx:key="*this">
+        <image src="{{item}}" mode="aspectFill" class="img"></image>
+        <text class="del" catchtap="delImg" data-i="{{index}}">×</text>
+      </view>
+      <view class="img-add" wx:if="{{form.screenshots.length < 3}}" bindtap="chooseImage">＋</view>
+    </view>
+
+    <view class="field">
+      <text class="lh-cap">联系方式（选填）</text>
+      <input class="inp" value="{{form.contact}}" placeholder="手机号或邮箱，便于我们回复您" placeholder-class="ph" bindinput="onContact" />
+    </view>
+
+    <button class="lh-btn {{form.content ? '' : 'lh-btn--dis'}}" bindtap="submit">提交反馈</button>
+  </view>
+
+  <view class="lh-card" wx:if="{{history.length}}">
+    <text class="lh-h2">我的反馈记录</text>
+    <view class="hist-row" wx:for="{{history}}" wx:key="createdAt">
+      <view class="h-top">
+        <text class="h-type">{{item.typeName}}</text>
+        <text class="h-status" style="color:{{item.statusColor}}">{{item.statusName}}</text>
+      </view>
+      <text class="h-text">{{item.content}}</text>
+      <text class="lh-mini">{{item.createdAt}}</text>
+      <text class="h-reply" wx:if="{{item.reply}}">回复：{{item.reply}}</text>
+    </view>
+  </view>
+
+  <view class="lh-card">
+    <text class="lh-h2">紧急联系方式</text>
+    <text class="lh-cap">如果遇到紧急情况，请直接拨打：</text>
+    <view class="hot-row" bindtap="call" data-n="120">
+      <text class="hot-name">急救</text>
+      <text class="hot-tel">120</text>
+    </view>
+    <view class="hot-row" bindtap="call" data-n="110">
+      <text class="hot-name">报警</text>
+      <text class="hot-tel">110</text>
+    </view>
+    <view class="hot-row" bindtap="call" data-n="12356">
+      <text class="hot-name">心理援助热线</text>
+      <text class="hot-tel">12356</text>
+    </view>
+  </view>
+
+  <view style="height: 64rpx"></view>
+</view>

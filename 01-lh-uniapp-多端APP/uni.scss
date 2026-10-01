@@ -1,0 +1,88 @@
+/**
+ * 鲤慧 LiHui · uni-app 全局 SCSS 变量
+ * 与 00-设计文档/设计令牌/tokens.css 保持一一对应，禁止各端私改色值。
+ */
+
+/* 品牌色 */
+$lh-primary: #1677FF;
+$lh-primary-dark: #0E5FD8;
+$lh-primary-soft: #EAF2FF;
+
+/* 语义色 */
+$lh-success: #00B96B;
+$lh-success-soft: #E6F8F0;
+$lh-warning: #FF8A00;
+$lh-warning-soft: #FFF4E6;
+$lh-danger: #F5222D;
+$lh-danger-soft: #FEECEC;
+
+/* 文字 */
+$lh-text: #1A1A1A;
+$lh-text-sub: #646A73;
+$lh-text-weak: #8F959E;
+
+/* 背景 / 线条 */
+$lh-bg: #F4F5F7;
+$lh-card: #FFFFFF;
+$lh-line: #EDEFF2;
+$lh-line-strong: #D8DCE2;
+
+/* 字号 */
+$lh-fs-h1: 22px;
+$lh-fs-h2: 18px;
+$lh-fs-body: 15px;
+$lh-fs-cap: 13px;
+$lh-fs-mini: 11px;
+
+/* 间距 */
+$lh-sp-1: 4px;
+$lh-sp-2: 8px;
+$lh-sp-3: 12px;
+$lh-sp-4: 16px;
+$lh-sp-5: 20px;
+$lh-sp-6: 24px;
+$lh-sp-8: 32px;
+$lh-page-x: 16px;
+
+/* 圆角 */
+$lh-r-sm: 8px;
+$lh-r-md: 12px;
+$lh-r-lg: 16px;
+$lh-r-xl: 20px;
+$lh-r-pill: 999px;
+
+/* 阴影 */
+$lh-sh-card: 0 2px 12px rgba(0, 0, 0, .06);
+$lh-sh-float: 0 4px 16px rgba(22, 119, 255, .25);
+$lh-sh-sheet: 0 -4px 20px rgba(0, 0, 0, .08);
+
+/* 尺寸 */
+$lh-h-search: 48px;
+$lh-h-btn: 48px;
+$lh-sz-fab: 56px;
+$lh-sz-mic: 72px;
+
+/* uni-app 内置变量（保持官方默认，勿删） */
+$uni-color-primary: #007aff;
+$uni-color-success: #4cd964;
+$uni-color-warning: #f0ad4e;
+$uni-color-error: #dd524d;
+$uni-text-color: #333;
+$uni-text-color-inverse: #fff;
+$uni-text-color-grey: #999;
+$uni-text-color-placeholder: #808080;
+$uni-text-color-disable: #c0c0c0;
+$uni-bg-color: #ffffff;
+$uni-bg-color-grey: #f8f8f8;
+$uni-bg-color-hover: #f1f1f1;
+$uni-bg-color-mask: rgba(0, 0, 0, 0.4);
+$uni-border-color: #c8c7cc;
+$uni-font-size-sm: 12px;
+$uni-font-size-base: 14px;
+$uni-font-size-lg: 16px;
+$uni-spacing-row-sm: 5px;
+$uni-spacing-row-base: 10px;
+$uni-spacing-row-lg: 15px;
+$uni-spacing-col-sm: 4px;
+$uni-spacing-col-base: 8px;
+$uni-spacing-col-lg: 12px;

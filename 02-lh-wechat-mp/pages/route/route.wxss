@@ -1,0 +1,166 @@
+.lh-card {
+  margin: 24rpx 32rpx 0;
+}
+.from-to {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #EDEFF2;
+}
+.dot {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+.dot.start {
+  background: #00B96B;
+}
+.dot.end {
+  background: #F5222D;
+}
+.ft-mid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.ft-label {
+  font-size: 24rpx;
+  color: #8F959E;
+}
+.ft-val {
+  font-size: 30rpx;
+  color: #1A1A1A;
+  margin-top: 4rpx;
+}
+.ft-inp {
+  font-size: 30rpx;
+  color: #1A1A1A;
+  height: 56rpx;
+  margin-top: 4rpx;
+}
+.ph {
+  color: #8F959E;
+}
+.swap {
+  font-size: 36rpx;
+  color: #1677FF;
+  padding: 0 16rpx;
+}
+.modes {
+  display: flex;
+  margin: 28rpx 0 12rpx;
+}
+.mode-pill {
+  margin-right: 16rpx;
+}
+.realtime {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 20rpx 0;
+}
+.lh-card .lh-btn {
+  margin-top: 28rpx;
+}
+.sum {
+  display: flex;
+  justify-content: space-around;
+  padding: 16rpx 0 24rpx;
+}
+.sum-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.sum-num {
+  font-size: 52rpx;
+  font-weight: 600;
+  color: #1677FF;
+  line-height: 1.2;
+}
+.sum-unit {
+  font-size: 24rpx;
+  color: #8F959E;
+  margin-top: 4rpx;
+}
+.congestion {
+  background: #FFF4E6;
+  border-radius: 20rpx;
+  padding: 16rpx 24rpx;
+  margin-bottom: 24rpx;
+}
+.cong-text {
+  font-size: 26rpx;
+  color: #FF8A00;
+}
+.steps {
+  border-top: 1rpx solid #EDEFF2;
+  padding-top: 20rpx;
+}
+.step-row {
+  display: flex;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #EDEFF2;
+}
+.step-idx {
+  width: 44rpx;
+  height: 44rpx;
+  line-height: 44rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: #EAF2FF;
+  color: #1677FF;
+  font-size: 24rpx;
+  font-weight: 600;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+.step-mid {
+  flex: 1;
+}
+.step-txt {
+  font-size: 28rpx;
+  color: #1A1A1A;
+  display: block;
+}
+.alts {
+  margin-top: 28rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid #EDEFF2;
+}
+.alt-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 16rpx 0;
+}
+.ghost {
+  background: #FFFFFF;
+  color: #1677FF;
+  border: 1rpx solid #1677FF;
+}
+.cost-row {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #EDEFF2;
+}
+.c-name {
+  flex: 1;
+  font-size: 28rpx;
+  color: #1A1A1A;
+}
+.c-cost {
+  font-size: 28rpx;
+  color: #00B96B;
+  font-weight: 600;
+  width: 120rpx;
+  text-align: right;
+}
+.c-time {
+  font-size: 26rpx;
+  color: #8F959E;
+  width: 140rpx;
+  text-align: right;
+}

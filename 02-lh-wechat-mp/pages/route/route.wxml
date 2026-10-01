@@ -1,0 +1,90 @@
+<view class="lh-page">
+  <view class="lh-card">
+    <text class="lh-h2">路线规划</text>
+    <view class="from-to">
+      <view class="dot start"></view>
+      <view class="ft-mid">
+        <text class="ft-label">起点</text>
+        <text class="ft-val">{{originName}}</text>
+      </view>
+    </view>
+    <view class="from-to">
+      <view class="dot end"></view>
+      <view class="ft-mid">
+        <text class="ft-label">终点</text>
+        <input class="ft-inp" value="{{destName}}" placeholder="输入目的地" placeholder-class="ph" bindinput="onDestInput" />
+      </view>
+      <text class="swap" bindtap="swap">⇅</text>
+    </view>
+
+    <view class="modes">
+      <text
+        class="lh-pill mode-pill {{mode === item.key ? 'lh-pill--on' : ''}}"
+        wx:for="{{modes}}"
+        wx:key="key"
+        bindtap="setMode"
+        data-i="{{index}}"
+      >{{item.icon}} {{item.name}}</text>
+    </view>
+
+    <view class="realtime" wx:if="{{mode === 'driving'}}">
+      <text class="lh-body">实时避堵</text>
+      <switch checked="{{realtime}}" color="#1677FF" bindchange="onRealtime" />
+    </view>
+
+    <button class="lh-btn" bindtap="plan" loading="{{loading}}">规划路线</button>
+  </view>
+
+  <view class="lh-card" wx:if="{{result}}">
+    <view class="sum">
+      <view class="sum-item">
+        <text class="sum-num">{{result.km}}</text>
+        <text class="sum-unit">km</text>
+      </view>
+      <view class="sum-item">
+        <text class="sum-num">{{result.min}}</text>
+        <text class="sum-unit">分钟</text>
+      </view>
+      <view class="sum-item">
+        <text class="sum-num">{{result.trafficLight}}</text>
+        <text class="sum-unit">红绿灯</text>
+      </view>
+    </view>
+
+    <view class="congestion" wx:if="{{result.congestion}}">
+      <text class="cong-text">当前路况：{{result.congestion}}</text>
+    </view>
+
+    <view class="steps">
+      <view class="step-row" wx:for="{{result.steps}}" wx:key="instruction">
+        <view class="step-idx">{{index + 1}}</view>
+        <view class="step-mid">
+          <text class="step-txt">{{item.instruction}}</text>
+          <text class="lh-mini">{{item.distance}} 米 · 约 {{item.min}} 分钟</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="alts" wx:if="{{result.alternatives.length}}">
+      <text class="lh-h2">备选方案</text>
+      <view class="alt-row" wx:for="{{result.alternatives}}" wx:key="index">
+        <text class="lh-body">方案 {{index + 2}}</text>
+        <text class="lh-cap">{{item.km}} km · {{item.min}} 分钟</text>
+      </view>
+    </view>
+
+    <button class="lh-btn lh-btn--ghost ghost" bindtap="openNav">用百度地图开始导航</button>
+  </view>
+
+  <view class="lh-card" wx:if="{{costPlan}}">
+    <text class="lh-h2">省钱对比</text>
+    <text class="lh-body">{{costPlan.verdict}}</text>
+    <view class="cost-row" wx:for="{{costPlan.ranking}}" wx:key="name">
+      <text class="c-name">{{item.name}}</text>
+      <text class="c-cost">¥{{item.cost}}</text>
+      <text class="c-time">{{item.minutes}} 分钟</text>
+    </view>
+  </view>
+
+  <view style="height: 64rpx"></view>
+</view>

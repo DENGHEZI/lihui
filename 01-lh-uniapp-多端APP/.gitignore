@@ -1,0 +1,18 @@
+# 依赖 / 构建产物
+node_modules/
+unpackage/
+dist/
+
+# 本地私有配置
+.env
+.env.local
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+cert/
+
+# 系统
+.DS_Store
+Thumbs.db
+*.log

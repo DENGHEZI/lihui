@@ -1,0 +1,163 @@
+.lh-card {
+  margin: 24rpx 32rpx 0;
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.add {
+  font-size: 28rpx;
+  color: #1677FF;
+  font-weight: 600;
+}
+.lh-card > .lh-cap {
+  margin-top: 12rpx;
+}
+.model-row {
+  display: flex;
+  align-items: center;
+  padding: 28rpx 0;
+  border-bottom: 1rpx solid #EDEFF2;
+}
+.model-row:last-child {
+  border-bottom: none;
+}
+.model-row.on {
+  background: #F5F9FF;
+  margin: 0 -32rpx;
+  padding: 28rpx 32rpx;
+  border-radius: 24rpx;
+}
+.m-mid {
+  flex: 1;
+  min-width: 0;
+}
+.m-name-row {
+  display: flex;
+  align-items: center;
+}
+.m-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+.m-badge {
+  margin-left: 16rpx;
+  font-size: 22rpx;
+  color: #1677FF;
+  background: #EAF2FF;
+  border-radius: 12rpx;
+  padding: 4rpx 12rpx;
+}
+.m-badge.off {
+  color: #8F959E;
+  background: #F4F5F7;
+}
+.m-meta {
+  display: block;
+  font-size: 24rpx;
+  color: #646A73;
+  margin-top: 6rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.m-ops {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-left: 20rpx;
+}
+.op {
+  font-size: 26rpx;
+  color: #1677FF;
+  margin-bottom: 16rpx;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #EDEFF2;
+}
+.row-inp {
+  font-size: 30rpx;
+  color: #1A1A1A;
+  text-align: right;
+  flex: 1;
+}
+.ph {
+  color: #8F959E;
+}
+.pick {
+  font-size: 30rpx;
+  color: #1677FF;
+}
+.slider-row {
+  padding: 12rpx 0;
+}
+.slider-row .lh-body {
+  margin-bottom: 8rpx;
+}
+.plans {
+  display: flex;
+}
+.plans .lh-pill {
+  margin-left: 16rpx;
+}
+.lh-card .lh-btn {
+  margin-top: 32rpx;
+}
+.mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, .45);
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+}
+.editor {
+  width: 100%;
+  background: #FFFFFF;
+  border-radius: 40rpx 40rpx 0 0;
+  padding: 40rpx 32rpx calc(40rpx + env(safe-area-inset-bottom));
+  max-height: 86vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+.e-row {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #EDEFF2;
+}
+.e-inp {
+  height: 80rpx;
+  background: #F4F5F7;
+  border-radius: 20rpx;
+  padding: 0 24rpx;
+  font-size: 30rpx;
+  margin-top: 12rpx;
+}
+.e-row .pick {
+  display: block;
+  margin-top: 12rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  background: #F4F5F7;
+  border-radius: 20rpx;
+  padding: 0 24rpx;
+  color: #1A1A1A;
+}
+.e-ops {
+  display: flex;
+  margin-top: 40rpx;
+}
+.half {
+  flex: 1;
+}
+.half:first-child {
+  margin-right: 20rpx;
+}

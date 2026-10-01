@@ -1,0 +1,11 @@
+{
+  "name": "lihui-uniapp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "鲤慧 LiHui 多端 APP —— 基于 HBuilderX / uni-app，一套代码发行 Android + HarmonyOS + iOS",
+  "uni-app": {
+    "scripts": {}
+  },
+  "author": "鲤慧",
+  "license": "MIT"
+}

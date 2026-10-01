@@ -1,0 +1,151 @@
+.profile {
+  display: flex;
+  align-items: center;
+  padding: 40rpx 32rpx;
+  background: linear-gradient(135deg, #EAF2FF, #F4F5F7);
+}
+.avatar {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3A8BFF, #1677FF);
+  color: #FFFFFF;
+  font-size: 44rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 28rpx;
+}
+.p-mid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.p-name {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin-bottom: 8rpx;
+}
+.p-loc {
+  font-size: 24rpx;
+  color: #646A73;
+  background: #FFFFFF;
+  border-radius: 999rpx;
+  padding: 8rpx 20rpx;
+}
+.lh-card {
+  margin: 24rpx 32rpx 0;
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.link {
+  font-size: 26rpx;
+  color: #1677FF;
+}
+.tk-grid {
+  display: flex;
+  margin-top: 28rpx;
+}
+.tk-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.tk-num {
+  font-size: 38rpx;
+  font-weight: 600;
+  color: #1677FF;
+}
+.tk-lb {
+  font-size: 24rpx;
+  color: #8F959E;
+  margin-top: 8rpx;
+}
+.quota {
+  margin-top: 32rpx;
+}
+.q-bar {
+  height: 12rpx;
+  background: #EDEFF2;
+  border-radius: 6rpx;
+  overflow: hidden;
+}
+.q-fill {
+  height: 12rpx;
+  background: #1677FF;
+  border-radius: 6rpx;
+}
+.quota .lh-mini {
+  margin-top: 12rpx;
+}
+.by-model {
+  margin-top: 24rpx;
+  border-top: 1rpx solid #EDEFF2;
+  padding-top: 16rpx;
+}
+.bm-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12rpx 0;
+}
+.bm-name {
+  font-size: 26rpx;
+  color: #1A1A1A;
+}
+.bm-val {
+  font-size: 24rpx;
+  color: #646A73;
+}
+.menu {
+  padding: 8rpx 32rpx;
+}
+.menu-row {
+  display: flex;
+  align-items: center;
+  padding: 30rpx 0;
+  border-bottom: 1rpx solid #EDEFF2;
+}
+.menu-row:last-child {
+  border-bottom: none;
+}
+.m-ico {
+  font-size: 34rpx;
+  margin-right: 24rpx;
+}
+.m-txt {
+  flex: 1;
+  font-size: 30rpx;
+  color: #1A1A1A;
+}
+.m-arrow {
+  font-size: 36rpx;
+  color: #C8CDD4;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.row .lh-mini {
+  margin-top: 8rpx;
+}
+.kv {
+  display: flex;
+  justify-content: space-between;
+  padding: 18rpx 0;
+}
+.kv-v {
+  font-size: 26rpx;
+  color: #1A1A1A;
+  max-width: 60%;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

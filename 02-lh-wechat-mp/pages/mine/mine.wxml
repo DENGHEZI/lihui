@@ -1,0 +1,87 @@
+<view class="lh-page {{careMode ? 'care-mode' : ''}}">
+  <view class="profile">
+    <view class="avatar">鲤</view>
+    <view class="p-mid">
+      <text class="p-name">鲤慧用户</text>
+      <text class="lh-cap">{{deviceShort}} · {{planName}}</text>
+    </view>
+    <text class="p-loc">{{locText}}</text>
+  </view>
+
+  <!-- Token 消耗 -->
+  <view class="lh-card">
+    <view class="head">
+      <text class="lh-h2">Token 消耗</text>
+      <text class="link" bindtap="loadStats">刷新</text>
+    </view>
+    <view class="tk-grid">
+      <view class="tk-item">
+        <text class="tk-num">{{stats.total.total}}</text>
+        <text class="tk-lb">近 7 日总量</text>
+      </view>
+      <view class="tk-item">
+        <text class="tk-num">{{stats.total.calls}}</text>
+        <text class="tk-lb">调用次数</text>
+      </view>
+      <view class="tk-item">
+        <text class="tk-num">¥{{costText}}</text>
+        <text class="tk-lb">预估花费</text>
+      </view>
+    </view>
+    <view class="quota">
+      <view class="q-bar">
+        <view class="q-fill" style="width:{{quotaPercent}}%"></view>
+      </view>
+      <text class="lh-mini">今日已用 {{stats.quota.usedToday}} / {{stats.quota.daily}} Token</text>
+    </view>
+    <view class="by-model">
+      <view class="bm-row" wx:for="{{stats.byModel}}" wx:key="model">
+        <text class="bm-name">{{item.model}}</text>
+        <text class="bm-val">{{item.total}} Token · ¥{{item.costText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 功能入口 -->
+  <view class="lh-card menu">
+    <view class="menu-row" bindtap="goSettings">
+      <text class="m-ico">⚙️</text>
+      <text class="m-txt">模型与语音设置</text>
+      <text class="m-arrow">›</text>
+    </view>
+    <view class="menu-row" bindtap="goLife">
+      <text class="m-ico">◔</text>
+      <text class="m-txt">15 分钟生活圈体检</text>
+      <text class="m-arrow">›</text>
+    </view>
+    <view class="menu-row" bindtap="goFeedback">
+      <text class="m-ico">✉️</text>
+      <text class="m-txt">反馈与建议</text>
+      <text class="m-arrow">›</text>
+    </view>
+    <view class="menu-row" bindtap="showAbout">
+      <text class="m-ico">ℹ️</text>
+      <text class="m-txt">关于鲤慧</text>
+      <text class="m-arrow">›</text>
+    </view>
+  </view>
+
+  <view class="lh-card">
+    <view class="row">
+      <view>
+        <text class="lh-body">关怀模式</text>
+        <text class="lh-mini">大字、高对比、语音放慢，适合老年人</text>
+      </view>
+      <switch checked="{{careMode}}" color="#1677FF" bindchange="onCare" />
+    </view>
+  </view>
+
+  <view class="lh-card">
+    <view class="kv"><text class="lh-cap">当前平台</text><text class="kv-v">微信小程序</text></view>
+    <view class="kv"><text class="lh-cap">AppID</text><text class="kv-v">{{appid}}</text></view>
+    <view class="kv"><text class="lh-cap">服务端</text><text class="kv-v">{{serverText}}</text></view>
+    <view class="kv"><text class="lh-cap">MCP 工具</text><text class="kv-v">{{mcpText}}</text></view>
+  </view>
+
+  <view style="height: 64rpx"></view>
+</view>

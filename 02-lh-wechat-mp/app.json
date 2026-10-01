@@ -1,0 +1,65 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/life/life",
+    "pages/assistant/assistant",
+    "pages/mine/mine",
+    "pages/route/route",
+    "pages/settings/settings",
+    "pages/feedback/feedback"
+  ],
+  "window": {
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarTitleText": "鲤慧",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F4F5F7",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#8F959E",
+    "selectedColor": "#1677FF",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "地图",
+        "iconPath": "images/tab-map.png",
+        "selectedIconPath": "images/tab-map-on.png"
+      },
+      {
+        "pagePath": "pages/life/life",
+        "text": "生活圈",
+        "iconPath": "images/tab-life.png",
+        "selectedIconPath": "images/tab-life-on.png"
+      },
+      {
+        "pagePath": "pages/assistant/assistant",
+        "text": "助手",
+        "iconPath": "images/tab-chat.png",
+        "selectedIconPath": "images/tab-chat-on.png"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
+        "iconPath": "images/tab-mine.png",
+        "selectedIconPath": "images/tab-mine-on.png"
+      }
+    ]
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于定位并生成15分钟生活圈体检报告与便民推荐"
+    }
+  },
+  "requiredPrivateInfos": ["getLocation", "chooseLocation"],
+  "networkTimeout": {
+    "request": 20000,
+    "uploadFile": 30000,
+    "downloadFile": 30000
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

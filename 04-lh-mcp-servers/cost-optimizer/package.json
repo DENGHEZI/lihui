@@ -1,0 +1,26 @@
+{
+  "name": "lh-mcp-server-cost-optimizer",
+  "version": "1.0.0",
+  "private": false,
+  "description": "智能成本优化 MCP Server：方案省钱重排、优惠信息聚合推送",
+  "type": "commonjs",
+  "bin": {
+    "lh-mcp-cost-optimizer": "index.js"
+  },
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "lihui",
+    "baidu-map",
+    "life-circle"
+  ],
+  "license": "MIT",
+  "dependencies": {}
+}

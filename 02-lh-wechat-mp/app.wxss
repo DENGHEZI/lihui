@@ -1,0 +1,157 @@
+/* ============================================================
+ * 鲤慧 LiHui · 微信小程序全局样式
+ * 与 00-设计文档/设计令牌/tokens.css 保持一致
+ * ============================================================ */
+
+page {
+  --lh-primary: #1677FF;
+  --lh-primary-dark: #0E5FD8;
+  --lh-primary-soft: #EAF2FF;
+  --lh-success: #00B96B;
+  --lh-success-soft: #E6F8F0;
+  --lh-warning: #FF8A00;
+  --lh-warning-soft: #FFF4E6;
+  --lh-danger: #F5222D;
+  --lh-text: #1A1A1A;
+  --lh-text-sub: #646A73;
+  --lh-text-weak: #8F959E;
+  --lh-line: #EDEFF2;
+  --lh-bg: #F4F5F7;
+  --lh-card: #FFFFFF;
+
+  background-color: #F4F5F7;
+  color: #1A1A1A;
+  font-size: 30rpx;
+  line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+}
+
+/* 关怀模式 */
+.care-mode {
+  --lh-text: #000000;
+  --lh-text-sub: #333333;
+  --lh-text-weak: #5A5A5A;
+  --lh-line: #D8DCE2;
+}
+
+.care-mode .lh-body {
+  font-size: 38rpx;
+  line-height: 1.6;
+}
+
+/* 公共原子类 */
+.lh-page {
+  min-height: 100vh;
+  background: #F4F5F7;
+  box-sizing: border-box;
+}
+
+.lh-card {
+  background: #FFFFFF;
+  border-radius: 32rpx;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, .06);
+  padding: 32rpx;
+  box-sizing: border-box;
+}
+
+.lh-h1 {
+  font-size: 44rpx;
+  font-weight: 600;
+  color: var(--lh-text);
+  display: block;
+}
+
+.lh-h2 {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: var(--lh-text);
+  display: block;
+}
+
+.lh-body {
+  font-size: 30rpx;
+  color: var(--lh-text);
+  display: block;
+}
+
+.lh-cap {
+  font-size: 26rpx;
+  color: var(--lh-text-sub);
+  display: block;
+}
+
+.lh-mini {
+  font-size: 22rpx;
+  color: var(--lh-text-weak);
+  display: block;
+}
+
+.lh-divider {
+  height: 1rpx;
+  background: var(--lh-line);
+}
+
+.lh-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 56rpx;
+  padding: 0 24rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid var(--lh-line);
+  color: var(--lh-text-sub);
+  font-size: 26rpx;
+  background: #FFFFFF;
+}
+
+.lh-pill--on {
+  background: var(--lh-primary-soft);
+  border-color: var(--lh-primary);
+  color: var(--lh-primary);
+  font-weight: 600;
+}
+
+.lh-btn {
+  height: 96rpx;
+  line-height: 96rpx;
+  border-radius: 999rpx;
+  background: var(--lh-primary);
+  color: #FFFFFF;
+  font-size: 32rpx;
+  font-weight: 600;
+  text-align: center;
+  border: none;
+  padding: 0;
+}
+
+.lh-btn::after {
+  border: none;
+}
+
+.lh-btn--ghost {
+  background: #FFFFFF;
+  color: var(--lh-primary);
+  border: 1rpx solid var(--lh-primary);
+}
+
+.lh-btn--dis {
+  background: #C8CDD4;
+}
+
+.lh-handle {
+  width: 72rpx;
+  height: 8rpx;
+  border-radius: 4rpx;
+  background: #DDE0E4;
+  margin: 16rpx auto;
+}
+
+.lh-fab {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 8rpx 32rpx rgba(22, 119, 255, .25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

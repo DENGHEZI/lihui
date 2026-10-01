@@ -1,0 +1,281 @@
+/**
+ * 鲤慧 LiHui · 用户自定义模型注册表 + 统一 LLM 调用
+ * 支持：openai-compatible / anthropic / gemini / ollama / baidu-qianfan / deepseek
+ */
+const config = require('../config');
+const store = require('./store');
+const { fetchJSON } = require('../utils/http');
+const logger = require('../utils/logger');
+const tokenMeter = require('./tokenMeter');
+
+const col = store.collection('models', []);
+const PRESETS = [
+  { id: 'preset-qwen18b', name: 'Qwen-1.8B-instruct（免费基础版内置）', provider: 'openai-compatible', baseUrl: '', apiKey: '', model: 'Qwen-1.8B-instruct', enabled: true, isDefault: true, preset: true, note: '赛题指定的轻量模型，仅简单推理与规划，不支持 MCP' },
+  { id: 'preset-deepseek', name: 'DeepSeek Chat', provider: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', apiKey: '', model: 'deepseek-chat', enabled: false, isDefault: false, preset: true, note: '支持 Function Calling，推荐用于 MCP 编排' },
+  { id: 'preset-qwen-plus', name: '通义千问 Plus', provider: 'openai-compatible', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: '', model: 'qwen-plus', enabled: false, isDefault: false, preset: true, note: '中文强，支持工具调用' },
+  { id: 'preset-glm4flash', name: '智谱 GLM-4-Flash', provider: 'openai-compatible', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', apiKey: '', model: 'glm-4-flash', enabled: false, isDefault: false, preset: true, note: '免费额度大，适合大批量对话' },
+  { id: 'preset-ollama', name: '本地 Ollama', provider: 'ollama', baseUrl: 'http://127.0.0.1:11434', apiKey: 'ollama', model: 'qwen2.5:7b', enabled: false, isDefault: false, preset: true, note: '完全本地，零成本，无需 Key' },
+];
+
+function seed() {
+  const list = col.all();
+  if (!list.length) {
+    col.save(PRESETS.map((p) => ({ ...p })));
+  } else {
+    // 补齐新增预置
+    const ids = new Set(list.map((x) => x.id));
+    let changed = false;
+    for (const p of PRESETS) if (!ids.has(p.id)) { list.push({ ...p }); changed = true; }
+    if (changed) col.save(list);
+  }
+}
+seed();
+
+const mask = (k) => (!k ? '' : k.length <= 8 ? '****' : k.slice(0, 4) + '****' + k.slice(-4));
+
+function list({ reveal = false } = {}) {
+  return col.all().map((m) => ({ ...m, apiKey: reveal ? m.apiKey : mask(m.apiKey) }));
+}
+
+function listFull() {
+  return col.all();
+}
+
+function get(id) {
+  return col.find((x) => x.id === id) || null;
+}
+
+function active() {
+  const all = listFull();
+  return all.find((x) => x.enabled && x.isDefault) || all.find((x) => x.enabled) || null;
+}
+
+function save(input) {
+  const patch = {
+    name: input.name || '未命名模型',
+    provider: input.provider || 'openai-compatible',
+    baseUrl: (input.baseUrl || '').replace(/\/+$/, ''),
+    apiKey: input.apiKey || '',
+    model: input.model || '',
+    enabled: input.enabled !== false,
+    note: input.note || '',
+    preset: false,
+    updatedAt: Date.now(),
+  };
+  let item;
+  if (input.id && get(input.id)) {
+    const old = get(input.id);
+    // 未传新 key 时保留旧 key
+    if (!input.apiKey) patch.apiKey = old.apiKey;
+    item = col.update(input.id, patch);
+  } else {
+    item = col.add({ id: store.uid('m'), createdAt: Date.now(), ...patch });
+  }
+  // 唯一 default
+  if (input.isDefault) {
+    const all = col.all().map((x) => ({ ...x, isDefault: x.id === item.id, enabled: x.id === item.id ? true : x.enabled }));
+    col.save(all);
+  }
+  return get(item.id);
+}
+
+function remove(id) {
+  const m = get(id);
+  if (m && m.preset) {
+    // 预置项不物理删除，只禁用
+    return col.update(id, { enabled: false, isDefault: false });
+  }
+  col.remove(id);
+  return true;
+}
+
+function setDefault(id) {
+  const all = col.all().map((x) => ({ ...x, isDefault: x.id === id }));
+  col.save(all);
+  return get(id);
+}
+
+/* ------------------------------------------------------------------ */
+/* 统一 chat 调用                                                      */
+/* ------------------------------------------------------------------ */
+/**
+ * @returns {{ text:string, usage:{prompt,completion,total}, model:string, raw:any }}
+ */
+async function chat({ messages, modelId = '', temperature = 0.6, maxTokens = 1024, tools, deviceId = 'anonymous' }) {
+  let m = modelId ? get(modelId) : null;
+  if (!m || !m.enabled) m = active();
+
+  // 完全没配模型 → 走本地规则兜底（不消耗 token）
+  if (!m || (!m.apiKey && m.provider !== 'ollama' && !(config.llm.apiKey && config.llm.baseUrl))) {
+    const text = ruleBasedReply(messages);
+    return {
+      text,
+      usage: { prompt: 0, completion: 0, total: 0, costCny: 0 },
+      model: 'local-rule-fallback',
+      fallback: true,
+    };
+  }
+
+  if (!m.apiKey && config.llm.apiKey && config.llm.baseUrl) {
+    m = { ...m, provider: 'openai-compatible', baseUrl: config.llm.baseUrl, apiKey: config.llm.apiKey, model: config.llm.model };
+  }
+
+  const provider = m.provider;
+  let res;
+
+  if (provider === 'ollama') {
+    res = await callOllama(m, messages, { temperature, maxTokens });
+  } else if (provider === 'anthropic') {
+    res = await callAnthropic(m, messages, { temperature, maxTokens });
+  } else if (provider === 'gemini') {
+    res = await callGemini(m, messages, { temperature, maxTokens });
+  } else {
+    res = await callOpenAICompatible(m, messages, { temperature, maxTokens, tools });
+  }
+
+  const usage = res.usage || {
+    prompt: tokenMeter.estimate(messages.map((x) => x.content).join('\n')),
+    completion: tokenMeter.estimate(res.text),
+  };
+  usage.total = (usage.prompt || 0) + (usage.completion || 0);
+  const rec = tokenMeter.record({ deviceId, model: m.model, prompt: usage.prompt || 0, completion: usage.completion || 0 });
+  usage.costCny = rec.costCny;
+
+  return { text: res.text, usage, model: m.model, toolCalls: res.toolCalls || [], raw: res.raw };
+}
+
+async function callOpenAICompatible(m, messages, { temperature, maxTokens, tools }) {
+  const url = `${m.baseUrl || 'https://api.openai.com/v1'}/chat/completions`;
+  const body = {
+    model: m.model,
+    messages,
+    temperature,
+    max_tokens: maxTokens,
+    stream: false,
+  };
+  if (tools && tools.length) {
+    body.tools = tools;
+    body.tool_choice = 'auto';
+  }
+  const raw = await fetchJSON(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${m.apiKey}` },
+    body,
+    timeout: 60000,
+    retry: 1,
+  });
+  const choice = (raw.choices && raw.choices[0]) || {};
+  const msg = choice.message || {};
+  let text = msg.content || '';
+  if (Array.isArray(text)) text = text.map((c) => (c.text || '')).join('');
+  return {
+    text,
+    toolCalls: msg.tool_calls || [],
+    usage: raw.usage
+      ? { prompt: raw.usage.prompt_tokens, completion: raw.usage.completion_tokens }
+      : null,
+    raw,
+  };
+}
+
+async function callOllama(m, messages, { temperature, maxTokens }) {
+  const url = `${m.baseUrl || 'http://127.0.0.1:11434'}/api/chat`;
+  const raw = await fetchJSON(url, {
+    method: 'POST',
+    body: {
+      model: m.model,
+      messages,
+      stream: false,
+      options: { temperature, num_predict: maxTokens },
+    },
+    timeout: 120000,
+    retry: 0,
+  });
+  return {
+    text: (raw.message && raw.message.content) || '',
+    usage: raw.eval_count
+      ? { prompt: raw.prompt_eval_count || 0, completion: raw.eval_count || 0 }
+      : null,
+    raw,
+  };
+}
+
+async function callAnthropic(m, messages, { temperature, maxTokens }) {
+  const url = `${m.baseUrl || 'https://api.anthropic.com'}/v1/messages`;
+  const system = messages.filter((x) => x.role === 'system').map((x) => x.content).join('\n');
+  const rest = messages.filter((x) => x.role !== 'system');
+  const raw = await fetchJSON(url, {
+    method: 'POST',
+    headers: { 'x-api-key': m.apiKey, 'anthropic-version': '2023-06-01' },
+    body: { model: m.model, system, messages: rest, temperature, max_tokens: maxTokens },
+    timeout: 60000,
+  });
+  const text = (raw.content || []).map((c) => c.text || '').join('');
+  return {
+    text,
+    usage: raw.usage ? { prompt: raw.usage.input_tokens, completion: raw.usage.output_tokens } : null,
+    raw,
+  };
+}
+
+async function callGemini(m, messages, { temperature, maxTokens }) {
+  const base = m.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
+  const url = `${base}/models/${m.model}:generateContent?key=${encodeURIComponent(m.apiKey)}`;
+  const contents = messages
+    .filter((x) => x.role !== 'system')
+    .map((x) => ({ role: x.role === 'assistant' ? 'model' : 'user', parts: [{ text: x.content }] }));
+  const sys = messages.filter((x) => x.role === 'system').map((x) => x.content).join('\n');
+  const raw = await fetchJSON(url, {
+    method: 'POST',
+    body: {
+      contents,
+      ...(sys ? { systemInstruction: { parts: [{ text: sys }] } } : {}),
+      generationConfig: { temperature, maxOutputTokens: maxTokens },
+    },
+    timeout: 60000,
+  });
+  const cand = (raw.candidates && raw.candidates[0]) || {};
+  const text = ((cand.content && cand.content.parts) || []).map((p) => p.text || '').join('');
+  return {
+    text,
+    usage: raw.usageMetadata
+      ? { prompt: raw.usageMetadata.promptTokenCount, completion: raw.usageMetadata.candidatesTokenCount }
+      : null,
+    raw,
+  };
+}
+
+/* 无模型时的本地规则兜底（保证赛题「免费基础版」也能跑） */
+function ruleBasedReply(messages) {
+  const last = [...messages].reverse().find((x) => x.role === 'user');
+  const q = (last && last.content) || '';
+  if (/医院|看病|诊所|卫生/.test(q)) return '已为您找到附近的医疗机构，详见下方卡片。如需 15 分钟生活圈完整体检，请点击「生活圈」。';
+  if (/菜市场|买菜|超市|便利店/.test(q)) return '周边 15 分钟步行范围内有菜市场与超市，详见下方列表。';
+  if (/怎么走|路线|导航|多远/.test(q)) return '已为您规划步行路线，预计耗时见卡片。';
+  if (/省钱|便宜|成本/.test(q)) return '已按「成本最低」为您重排方案，详见省钱对比。';
+  return '我是鲤慧。您可以问我：附近哪里能看病？15 分钟生活圈缺什么？怎么走最省时间？';
+}
+
+/** 连通性测试 */
+async function test(id) {
+  const m = get(id);
+  if (!m) return { ok: false, msg: '模型不存在' };
+  const t0 = Date.now();
+  try {
+    const r = await chat({
+      modelId: id,
+      messages: [
+        { role: 'system', content: '你是连通性测试助手，只回复 pong' },
+        { role: 'user', content: 'ping' },
+      ],
+      maxTokens: 16,
+      deviceId: '__test__',
+    });
+    return { ok: true, latencyMs: Date.now() - t0, reply: r.text, model: r.model, usage: r.usage };
+  } catch (e) {
+    logger.warn('modelRegistry', `test ${id} failed: ${e.message}`);
+    return { ok: false, latencyMs: Date.now() - t0, msg: e.message };
+  }
+}
+
+module.exports = { list, listFull, get, active, save, remove, setDefault, chat, test, PRESETS };

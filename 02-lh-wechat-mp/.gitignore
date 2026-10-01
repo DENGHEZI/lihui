@@ -1,0 +1,15 @@
+# 依赖
+node_modules/
+miniprogram_npm/
+
+# 开发者工具本地配置（含个人账号信息，不提交）
+project.private.config.json
+.idea/
+.vscode/
+
+# 构建产物
+dist/
+*.log
+
+.DS_Store
+Thumbs.db

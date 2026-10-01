@@ -1,0 +1,131 @@
+.lh-card {
+  margin: 24rpx 32rpx 0;
+}
+.types {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 24rpx 0;
+}
+.type-pill {
+  margin: 0 16rpx 16rpx 0;
+}
+.ta {
+  width: 100%;
+  height: 260rpx;
+  background: #F4F5F7;
+  border-radius: 24rpx;
+  padding: 24rpx;
+  font-size: 30rpx;
+  box-sizing: border-box;
+  margin-top: 12rpx;
+}
+.ph {
+  color: #8F959E;
+}
+.count {
+  text-align: right;
+  margin-top: 8rpx;
+}
+.img-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 20rpx;
+}
+.img-item {
+  position: relative;
+  width: 152rpx;
+  height: 152rpx;
+  margin: 0 16rpx 16rpx 0;
+}
+.img {
+  width: 152rpx;
+  height: 152rpx;
+  border-radius: 20rpx;
+}
+.del {
+  position: absolute;
+  right: -12rpx;
+  top: -12rpx;
+  width: 40rpx;
+  height: 40rpx;
+  line-height: 36rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: #F5222D;
+  color: #FFFFFF;
+  font-size: 28rpx;
+}
+.img-add {
+  width: 152rpx;
+  height: 152rpx;
+  border-radius: 20rpx;
+  border: 1rpx dashed #C8CDD4;
+  color: #8F959E;
+  font-size: 52rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.field {
+  margin-top: 16rpx;
+}
+.inp {
+  height: 88rpx;
+  background: #F4F5F7;
+  border-radius: 24rpx;
+  padding: 0 24rpx;
+  font-size: 30rpx;
+  margin-top: 12rpx;
+}
+.lh-card .lh-btn {
+  margin-top: 36rpx;
+}
+.hist-row {
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #EDEFF2;
+}
+.hist-row:last-child {
+  border-bottom: none;
+}
+.h-top {
+  display: flex;
+  justify-content: space-between;
+}
+.h-type {
+  font-size: 26rpx;
+  color: #1677FF;
+  font-weight: 600;
+}
+.h-status {
+  font-size: 26rpx;
+}
+.h-text {
+  font-size: 28rpx;
+  color: #1A1A1A;
+  margin: 12rpx 0 8rpx;
+  display: block;
+}
+.h-reply {
+  font-size: 26rpx;
+  color: #00B96B;
+  margin-top: 8rpx;
+  display: block;
+}
+.hot-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #EDEFF2;
+}
+.hot-row:last-child {
+  border-bottom: none;
+}
+.hot-name {
+  font-size: 30rpx;
+  color: #1A1A1A;
+}
+.hot-tel {
+  font-size: 30rpx;
+  color: #1677FF;
+  font-weight: 600;
+}

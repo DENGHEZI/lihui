@@ -1,0 +1,26 @@
+# ---------- 依赖 ----------
+node_modules/
+**/node_modules/
+
+# ---------- 密钥与环境变量（绝不入库） ----------
+.env
+**/.env
+!*.env.example
+
+# ---------- 服务端运行时数据（日志 / Token 账本 / 反馈） ----------
+03-lh-server/data/
+
+# ---------- 日志 ----------
+*.log
+logs/
+
+# ---------- uni-app / 小程序编译产物 ----------
+unpackage/
+**/unpackage/dist/
+
+# ---------- IDE / 系统 ----------
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

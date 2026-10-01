@@ -1,0 +1,112 @@
+<view class="lh-page {{careMode ? 'care-mode' : ''}}">
+  <view class="hero">
+    <view class="hero-top">
+      <view>
+        <text class="lh-h1">15 分钟生活圈体检</text>
+        <text class="lh-cap hero-sub">{{centerText}} · 步行半径 {{radius}} 米</text>
+      </view>
+      <view class="care {{careMode ? 'on' : ''}}" bindtap="toggleCare">{{careMode ? '关怀模式' : '标准模式'}}</view>
+    </view>
+
+    <view class="score-box" wx:if="{{report}}">
+      <view class="ring" style="background: conic-gradient({{ringColor}} {{ringDeg}}deg, #EDEFF2 0deg)">
+        <view class="ring-inner">
+          <text class="ring-score" style="color:{{ringColor}}">{{report.score}}</text>
+          <text class="ring-unit">分</text>
+        </view>
+      </view>
+      <view class="score-right">
+        <text class="lh-cap">短板 {{report.shortboards.length}} 项</text>
+        <text class="lh-mini">预计步行 {{report.walkMinutes}} 分钟可达</text>
+        <button class="lh-btn mini-btn" bindtap="customize">生成我的生活圈方案</button>
+      </view>
+    </view>
+    <view class="score-box loading-box" wx:else>
+      <text class="lh-cap">正在体检…</text>
+    </view>
+  </view>
+
+  <view class="lh-card cat-card" wx:if="{{report}}">
+    <text class="lh-h2">六类设施覆盖</text>
+    <view class="cat-row" wx:for="{{report.categories}}" wx:key="key">
+      <view class="cat-head">
+        <text class="cat-name">{{item.name}}</text>
+        <text class="cat-score" style="color:{{item.color}}">{{item.score}}</text>
+      </view>
+      <view class="bar-bg">
+        <view class="bar-fg" style="width:{{item.score}}%;background:{{item.color}}"></view>
+      </view>
+      <text class="cat-desc">{{item.desc}} · 可达 {{item.count}} 处{{item.nearestText}}</text>
+    </view>
+  </view>
+
+  <view class="lh-card" wx:if="{{report.shortboards.length}}">
+    <text class="lh-h2">短板提醒</text>
+    <view class="warn-row" wx:for="{{report.shortboards}}" wx:key="*this">
+      <text class="warn-dot">●</text>
+      <text class="lh-body warn-text">{{item}}</text>
+    </view>
+    <view class="lh-divider mt24"></view>
+    <text class="lh-h2 mt24">补齐建议</text>
+    <view class="tip-row" wx:for="{{report.suggestions}}" wx:key="*this">
+      <text class="tip-idx">{{index + 1}}</text>
+      <text class="lh-body tip-text">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="lh-card" wx:if="{{plan}}">
+    <text class="lh-h2">个性化生活圈方案</text>
+    <view class="tip-row" wx:for="{{plan.plan}}" wx:key="*this">
+      <text class="tip-idx">{{index + 1}}</text>
+      <text class="lh-body tip-text">{{item}}</text>
+    </view>
+    <button class="lh-btn lh-btn--ghost ghost-btn" bindtap="jumpMap">在地图上查看</button>
+  </view>
+
+  <view class="lh-card">
+    <text class="lh-h2">服务质量评价参考</text>
+    <text class="lh-cap">输入常去的商家或机构名称，看看值不值得去</text>
+    <view class="rate-input">
+      <input class="rate-inp" value="{{rateName}}" placeholder="如：岳麓区社区卫生服务中心" placeholder-class="ph" bindinput="onRateInput" />
+      <button class="lh-btn rate-btn" bindtap="doRate">评估</button>
+    </view>
+    <view wx:if="{{rateResult}}">
+      <view class="rate-dim" wx:for="{{rateResult.dimensions}}" wx:key="name">
+        <text class="dim-name">{{item.name}}</text>
+        <text class="dim-hint">{{item.hint}}</text>
+      </view>
+      <text class="lh-body rate-advice">{{rateResult.advice}}</text>
+    </view>
+  </view>
+
+  <view class="lh-card">
+    <text class="lh-h2">生活圈偏好</text>
+    <view class="pref-row">
+      <text class="lh-body">预算水平</text>
+      <view class="pref-tags">
+        <text
+          class="lh-pill {{pref.budget === item.key ? 'lh-pill--on' : ''}}"
+          wx:for="{{budgets}}"
+          wx:key="key"
+          bindtap="setBudget"
+          data-i="{{index}}"
+        >{{item.name}}</text>
+      </view>
+    </view>
+    <view class="pref-row">
+      <text class="lh-body">家里有老人</text>
+      <switch checked="{{pref.withElderly}}" color="#1677FF" bindchange="onElderly" />
+    </view>
+    <view class="pref-row">
+      <text class="lh-body">需要公园</text>
+      <switch checked="{{pref.needPark}}" color="#1677FF" bindchange="onPark" />
+    </view>
+    <view class="pref-row">
+      <text class="lh-body">最长步行时间</text>
+      <text class="lh-cap">{{pref.maxWalkMinutes}} 分钟</text>
+    </view>
+    <slider value="{{pref.maxWalkMinutes}}" min="5" max="30" step="5" activeColor="#1677FF" bindchange="onWalk" />
+  </view>
+
+  <view style="height: 64rpx"></view>
+</view>

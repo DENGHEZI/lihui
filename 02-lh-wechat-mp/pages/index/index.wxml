@@ -1,0 +1,135 @@
+<view class="page {{careMode ? 'care-mode' : ''}}">
+  <!-- 地图底图 -->
+  <map
+    id="lhmap"
+    class="map"
+    longitude="{{center.lng}}"
+    latitude="{{center.lat}}"
+    scale="{{scale}}"
+    markers="{{markers}}"
+    circles="{{circles}}"
+    show-location
+    enable-rotate="{{false}}"
+    bindmarkertap="onMarkerTap"
+  ></map>
+
+  <!-- 顶部搜索区（定位城市合并进搜索框前缀） -->
+  <view class="top" style="padding-top: {{safeTop}}px">
+    <view class="search-bar">
+      <view class="s-city" bindtap="locateMe">{{cityShort}}<text class="s-caret">▾</text></view>
+      <view class="s-divider"></view>
+      <text class="s-ico">🔍</text>
+      <input
+        class="s-inp"
+        value="{{keyword}}"
+        placeholder="搜索目的地、公交、地铁…"
+        placeholder-class="ph"
+        confirm-type="search"
+        bindinput="onKeywordChange"
+        bindconfirm="onSearch"
+      />
+      <view class="s-mic" catchtap="openVoice">🎙</view>
+    </view>
+
+    <!-- 输入联想 -->
+    <view class="suggest" wx:if="{{suggests.length}}">
+      <view class="sug-item" wx:for="{{suggests}}" wx:key="name" bindtap="onPickSuggest" data-i="{{index}}">
+        <text class="sug-name">{{item.name}}</text>
+        <text class="sug-dist">{{item.district}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 悬浮按钮（跟随抽屉高度，永不被盖住） -->
+  <view class="fabs" style="bottom: {{sheetHeight + 24}}px">
+    <view class="lh-fab" bindtap="locateMe"><text class="fab-ico">◎</text></view>
+    <view class="lh-fab" bindtap="goLife"><text class="fab-ico">◔</text></view>
+  </view>
+
+  <!-- 底部抽屉 -->
+  <view class="sheet" style="height: {{sheetHeight}}px">
+    <view class="lh-handle"></view>
+    <scroll-view scroll-y class="sheet-body">
+
+      <!-- 折叠态 -->
+      <block wx:if="{{!poiList.length}}">
+        <text class="lh-h2">周边便民服务</text>
+        <text class="lh-cap quick-sub">15 分钟步行范围内，一键查看</text>
+        <view class="quick-grid">
+          <view class="quick-item" wx:for="{{quickServices}}" wx:key="key" bindtap="quickSearch" data-i="{{index}}">
+            <text class="q-ico" style="background: {{item.bg}}">{{item.icon}}</text>
+            <text class="q-name">{{item.name}}</text>
+          </view>
+        </view>
+
+        <view class="rec-head">
+          <text class="lh-h2">出行休闲推荐</text>
+          <text class="more" bindtap="loadScenic">换一批 ›</text>
+        </view>
+        <view class="scenic">
+          <view class="scenic-item" wx:for="{{scenic}}" wx:key="uid" bindtap="navigate" data-i="{{index}}">
+            <text class="s-name">{{item.name}}</text>
+            <text class="s-meta">{{item.tag}} · {{item.distText}}</text>
+          </view>
+        </view>
+
+        <view class="weather" wx:if="{{weather}}">
+          <text class="lh-h2">今日天气</text>
+          <view class="w-row">
+            <text class="w-temp">{{weather.temperature}}°</text>
+            <view class="w-mid">
+              <text class="lh-body">{{weather.text}}</text>
+              <text class="lh-mini">{{weather.city}} · 湿度 {{weather.humidity}}% · AQI {{weather.aqi}}</text>
+            </view>
+          </view>
+          <text class="w-tip" wx:if="{{weather.tips}}">{{weather.tips}}</text>
+        </view>
+      </block>
+
+      <!-- 展开态 -->
+      <block wx:else>
+        <view class="list-head">
+          <text class="lh-h2">{{lastQuery}} · {{poiList.length}} 条</text>
+          <text class="clear" bindtap="clearPoi">清除</text>
+        </view>
+        <view class="poi" wx:for="{{poiList}}" wx:key="uid" bindtap="navigate" data-i="{{index}}">
+          <view class="p-ico">{{curIcon}}</view>
+          <view class="p-mid">
+            <view class="p-name-row">
+              <text class="p-name">{{item.name}}</text>
+              <text class="p-rate" wx:if="{{item.rating && item.rating !== '0'}}">★{{item.rating}}</text>
+            </view>
+            <text class="p-addr">{{item.address || '地址未知'}}</text>
+            <text class="p-tag" wx:if="{{item.tag}}">{{item.tag}}</text>
+          </view>
+          <view class="p-right">
+            <text class="p-dist">{{item.distText}}</text>
+            <text class="p-go">导航 ›</text>
+          </view>
+        </view>
+        <view class="loading" wx:if="{{loadingPoi}}">正在搜索…</view>
+      </block>
+    </scroll-view>
+  </view>
+
+  <!-- 语音浮层 -->
+  <view class="voice-mask" wx:if="{{voicePanel}}" bindtap="closeVoice">
+    <view class="voice-card" catchtap="noop">
+      <text class="lh-h2">{{voiceState === 'recording' ? '正在聆听…' : '语音输入'}}</text>
+      <text class="lh-cap">{{voiceHint}}</text>
+      <view class="voice-mic {{voiceState}}" bindtap="toggleRecord">
+        <block wx:if="{{voiceState === 'recording'}}">
+          <view class="wave">
+            <view class="bar" style="animation-delay:0s"></view>
+            <view class="bar" style="animation-delay:.12s"></view>
+            <view class="bar" style="animation-delay:.24s"></view>
+            <view class="bar" style="animation-delay:.36s"></view>
+            <view class="bar" style="animation-delay:.48s"></view>
+          </view>
+        </block>
+        <text wx:else>🎙</text>
+      </view>
+      <text class="lh-mini">我的声音：{{voiceName}}</text>
+    </view>
+  </view>
+</view>

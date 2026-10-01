@@ -1,0 +1,105 @@
+{
+	"pages": [
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "鲤慧",
+				"app-plus": { "titleNView": false }
+			}
+		},
+		{
+			"path": "pages/assistant/assistant",
+			"style": {
+				"navigationBarTitleText": "鲤慧助手",
+				"navigationBarBackgroundColor": "#FFFFFF",
+				"navigationBarTextStyle": "black"
+			}
+		},
+		{
+			"path": "pages/life/life",
+			"style": {
+				"navigationBarTitleText": "15 分钟生活圈",
+				"navigationBarBackgroundColor": "#FFFFFF",
+				"navigationBarTextStyle": "black"
+			}
+		},
+		{
+			"path": "pages/route/route",
+			"style": {
+				"navigationBarTitleText": "路线规划",
+				"navigationBarBackgroundColor": "#FFFFFF",
+				"navigationBarTextStyle": "black"
+			}
+		},
+		{
+			"path": "pages/mine/mine",
+			"style": {
+				"navigationBarTitleText": "我的",
+				"navigationBarBackgroundColor": "#FFFFFF",
+				"navigationBarTextStyle": "black"
+			}
+		},
+		{
+			"path": "pages/settings/settings",
+			"style": {
+				"navigationBarTitleText": "模型与语音设置",
+				"navigationBarBackgroundColor": "#FFFFFF",
+				"navigationBarTextStyle": "black"
+			}
+		},
+		{
+			"path": "pages/feedback/feedback",
+			"style": {
+				"navigationBarTitleText": "反馈与建议",
+				"navigationBarBackgroundColor": "#FFFFFF",
+				"navigationBarTextStyle": "black"
+			}
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "鲤慧",
+		"navigationBarBackgroundColor": "#FFFFFF",
+		"backgroundColor": "#F4F5F7"
+	},
+	"tabBar": {
+		"color": "#8F959E",
+		"selectedColor": "#1677FF",
+		"backgroundColor": "#FFFFFF",
+		"borderStyle": "white",
+		"list": [
+			{
+				"pagePath": "pages/index/index",
+				"text": "地图",
+				"iconPath": "static/tab-map.png",
+				"selectedIconPath": "static/tab-map-on.png"
+			},
+			{
+				"pagePath": "pages/life/life",
+				"text": "生活圈",
+				"iconPath": "static/tab-life.png",
+				"selectedIconPath": "static/tab-life-on.png"
+			},
+			{
+				"pagePath": "pages/assistant/assistant",
+				"text": "助手",
+				"iconPath": "static/tab-chat.png",
+				"selectedIconPath": "static/tab-chat-on.png"
+			},
+			{
+				"pagePath": "pages/mine/mine",
+				"text": "我的",
+				"iconPath": "static/tab-mine.png",
+				"selectedIconPath": "static/tab-mine-on.png"
+			}
+		]
+	},
+	"condition": {
+		"current": 0,
+		"list": [
+			{ "name": "地图主页", "path": "pages/index/index" },
+			{ "name": "助手对话", "path": "pages/assistant/assistant" }
+		]
+	}
+}

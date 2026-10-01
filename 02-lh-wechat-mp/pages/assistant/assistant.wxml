@@ -1,0 +1,74 @@
+<view class="page {{careMode ? 'care-mode' : ''}}">
+  <!-- 场景快捷入口 -->
+  <scroll-view scroll-x class="scene-bar" enhanced show-scrollbar="{{false}}">
+    <view class="scene-list">
+      <text class="lh-pill scene-pill" wx:for="{{scenes}}" wx:key="name" bindtap="askScene" data-i="{{index}}">{{item.icon}} {{item.name}}</text>
+    </view>
+  </scroll-view>
+
+  <!-- 消息流 -->
+  <scroll-view scroll-y class="msgs" scroll-into-view="{{scrollTo}}" scroll-with-animation>
+    <view class="msg-row {{item.role}}" wx:for="{{messages}}" wx:key="id" id="m{{index}}">
+      <view class="avatar" wx:if="{{item.role === 'assistant'}}">鲤</view>
+      <view class="bubble {{item.role}}">
+        <text class="txt">{{item.text}}</text>
+
+        <view class="cards" wx:if="{{item.cards.length}}">
+          <view class="card" wx:for="{{item.cards}}" wx:for-item="c" wx:key="type">
+            <!-- 生活圈 -->
+            <block wx:if="{{c.type === 'life_score'}}">
+              <text class="c-title">生活圈体检 {{c.score}} 分 · {{c.level}}</text>
+              <view class="c-line" wx:for="{{c.shortboards}}" wx:for-item="s" wx:key="*this">• {{s}}</view>
+            </block>
+            <!-- POI -->
+            <block wx:elif="{{c.type === 'poi_list'}}">
+              <text class="c-title">{{c.title}}</text>
+              <view class="c-poi-row" wx:for="{{c.items}}" wx:for-item="p" wx:key="uid" bindtap="goRoute" data-name="{{p.name}}" data-lng="{{p.lng}}" data-lat="{{p.lat}}">
+                <text class="p-name">{{p.name}}</text>
+                <text class="p-dist">{{p.distText}}</text>
+              </view>
+            </block>
+            <!-- 路线 -->
+            <block wx:elif="{{c.type === 'route'}}">
+              <text class="c-title">路线 {{c.km}} km · 约 {{c.min}} 分钟</text>
+              <text class="c-sub" wx:if="{{c.congestion}}">路况：{{c.congestion}}</text>
+            </block>
+            <!-- 成本 -->
+            <block wx:elif="{{c.type === 'cost'}}">
+              <text class="c-title">{{c.title || '省钱方案'}}</text>
+              <text class="c-sub" wx:if="{{c.recommended}}">推荐：{{c.recommended.name}} · ¥{{c.recommended.cost}}</text>
+              <text class="c-save" wx:if="{{c.saved}}">比最贵方案省 ¥{{c.saved}}，月省约 ¥{{c.monthlySavingEstimate}}</text>
+              <text class="c-sub" wx:if="{{c.verdict}}">{{c.verdict}}</text>
+            </block>
+            <!-- 天气 -->
+            <block wx:elif="{{c.type === 'weather'}}">
+              <text class="c-title">{{c.city}} {{c.temperature}}° {{c.text}}</text>
+              <text class="c-sub">湿度 {{c.humidity}}% · AQI {{c.aqi}}</text>
+            </block>
+            <!-- 桌面操作 -->
+            <block wx:elif="{{c.type === 'action_plan'}}">
+              <text class="c-title">{{c.title}}（需您确认）</text>
+              <view class="c-line" wx:for="{{c.steps}}" wx:for-item="s" wx:key="step">{{s.step}}. {{s.action}}</view>
+              <button class="lh-btn confirm-btn" bindtap="confirmAction">我已确认，继续</button>
+            </block>
+          </view>
+        </view>
+
+        <view class="actions" wx:if="{{item.actions.length}}">
+          <button class="lh-btn act-btn" wx:for="{{item.actions}}" wx:key="uri" bindtap="runAction" data-i="{{index}}">打开{{item.app}}导航</button>
+        </view>
+
+        <text class="lh-mini meta" wx:if="{{item.meta}}">{{item.meta}}</text>
+      </view>
+    </view>
+    <view style="height: 32rpx"></view>
+  </scroll-view>
+
+  <!-- 输入区 -->
+  <view class="input-bar">
+    <view class="care-toggle {{careMode ? 'on' : ''}}" bindtap="toggleCare">{{careMode ? '关怀' : '标准'}}</view>
+    <input class="chat-input" value="{{input}}" placeholder="问鲤慧：附近哪里能看病？" placeholder-class="ph" confirm-type="send" bindinput="onInput" bindconfirm="send" />
+    <view class="mic-btn {{recording ? 'rec' : ''}}" bindtap="toggleRecord">{{recording ? '■' : '🎙'}}</view>
+    <view class="send-btn {{input ? '' : 'dis'}}" bindtap="send">发送</view>
+  </view>
+</view>
