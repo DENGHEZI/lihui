@@ -28,7 +28,6 @@
         bindinput="onKeywordChange"
         bindconfirm="onSearch"
       />
-      <view class="s-mic" catchtap="openVoice">🎙</view>
     </view>
 
     <!-- 输入联想 -->
@@ -110,26 +109,5 @@
         <view class="loading" wx:if="{{loadingPoi}}">正在搜索…</view>
       </block>
     </scroll-view>
-  </view>
-
-  <!-- 语音浮层 -->
-  <view class="voice-mask" wx:if="{{voicePanel}}" bindtap="closeVoice">
-    <view class="voice-card" catchtap="noop">
-      <text class="lh-h2">{{voiceState === 'recording' ? '正在聆听…' : '语音输入'}}</text>
-      <text class="lh-cap">{{voiceHint}}</text>
-      <view class="voice-mic {{voiceState}}" bindtap="toggleRecord">
-        <block wx:if="{{voiceState === 'recording'}}">
-          <view class="wave">
-            <view class="bar" style="animation-delay:0s"></view>
-            <view class="bar" style="animation-delay:.12s"></view>
-            <view class="bar" style="animation-delay:.24s"></view>
-            <view class="bar" style="animation-delay:.36s"></view>
-            <view class="bar" style="animation-delay:.48s"></view>
-          </view>
-        </block>
-        <text wx:else>🎙</text>
-      </view>
-      <text class="lh-mini">我的声音：{{voiceName}}</text>
-    </view>
   </view>
 </view>

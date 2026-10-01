@@ -64,17 +64,10 @@
     <view style="height: 32rpx"></view>
   </scroll-view>
 
-  <!-- 录音状态条（实时显示识别文字） -->
-  <view class="rec-bar" wx:if="{{recording}}">
-    <view class="rec-dot"></view>
-    <text class="rec-text">{{speechText || '正在聆听…再点一次麦克风结束'}}</text>
-  </view>
-
   <!-- 输入区 -->
   <view class="input-bar">
     <view class="care-toggle {{careMode ? 'on' : ''}}" bindtap="toggleCare">{{careMode ? '关怀' : '标准'}}</view>
     <input class="chat-input" value="{{input}}" placeholder="问鲤慧：附近哪里能看病？" placeholder-class="ph" confirm-type="send" bindinput="onInput" bindconfirm="send" />
-    <view class="mic-btn {{recording ? 'rec' : ''}}" bindtap="toggleRecord">{{recording ? '■' : '🎙'}}</view>
     <view class="send-btn {{input ? '' : 'dis'}}" bindtap="send">发送</view>
   </view>
 </view>
