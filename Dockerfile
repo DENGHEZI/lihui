@@ -15,10 +15,21 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app
 
+# 运行时数据目录（Token 账本 / 会话 / 反馈 / 模型配置）。
+# 注意：不要在这里 COPY 03-lh-server/data，其中可能含敏感配置；
+# compose 以命名卷 lihui-data 持久化 /app/data，缺失时 store.js 会自动 mkdir。
+RUN mkdir -p /app/data && chmod 700 /app/data
+
 # 仅拷贝服务端所需内容（AK 一律不进镜像，运行时以环境变量注入）
 COPY 03-lh-server/package.json ./
 COPY 03-lh-server/src ./src
 COPY 03-lh-server/.env.example ./.env.example
+
+# ★ 必须随镜像一起拷贝：MCP Server 是 stdio 子进程，由 config.mcp.dir 解析路径。
+#   MCP_BASE = path.resolve('/app', '..', '..') + '/04-lh-mcp-servers' = /04-lh-mcp-servers
+#   这些 MCP 全部零依赖（只用 node 内置模块），无需 npm install。
+#   漏掉这一步 → 镜像能起来、健康检查 200，但所有检索/生活圈/导航全部无数据。
+COPY 04-lh-mcp-servers /04-lh-mcp-servers
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \

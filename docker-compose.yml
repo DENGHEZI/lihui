@@ -1,20 +1,50 @@
 # ============================================================
 # 鲤慧 LiHui · 一键编排
-# 用法：BAIDU_AK=<你的百度AK> docker compose up -d
-# 验证：curl http://127.0.0.1:8809/api/v1/health
+#
+# 用法（在项目根目录执行，不是 03-lh-server/ 子目录）：
+#   1) cp .env.example .env        # 填 BAIDU_AK（强烈建议同时填 LLM_API_KEY）
+#   2) docker compose up -d --build
+#   3) curl http://127.0.0.1:8809/api/v1/health
+#
+# 说明：compose 会自动读取同目录的 .env 文件；
+#      也可以用 `BAIDU_AK=xxx docker compose up -d` 临时覆盖。
+#      所有变量都带 :- 兜底，未设置时不会直接退出（只是功能降级）。
 # ============================================================
 services:
   lihui-server:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: lihui-server:1.0.0
     container_name: lihui-server
     ports:
       - "8809:8809"
     environment:
-      - BAIDU_AK=${BAIDU_AK:?请在命令行或同目录 .env 中提供 BAIDU_AK}
+      # —— 百度地图（服务端 AK，绝不写进镜像）——
+      - BAIDU_AK=${BAIDU_AK:-}
+      - BAIDU_MAP_BASE=${BAIDU_MAP_BASE:-https://api.map.baidu.com}
+      # —— 大模型（填了即恢复云端模型 + 联网检索；不填则在端上「我的-模型设置」手配）——
+      - LLM_BASE_URL=${LLM_BASE_URL:-}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-qwen-flash}
+      # —— 运行参数 ——
+      - NODE_ENV=${NODE_ENV:-production}
+      - HOST=${HOST:-0.0.0.0}
+      - PORT=${PORT:-8809}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      - MCP_AUTOSTART=${MCP_AUTOSTART:-true}
+      - TOKEN_DAILY_QUOTA=${TOKEN_DAILY_QUOTA:-200000}
     volumes:
-      # Token 账本 / 反馈 / 会话等运行时数据持久化
+      # Token 账本 / 反馈 / 会话 / 模型配置 等运行时数据持久化
       - lihui-data:/app/data
+    healthcheck:
+      # 注意：仅 restart: unless-stopped 不会因 unhealthy 重启，
+      #       容器内进程真正崩了才重启；healthcheck 主要用于 docker ps 观测与编排依赖。
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:'+(process.env.PORT||8809)+'/api/v1/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
     restart: unless-stopped
 
 volumes:

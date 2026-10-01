@@ -156,20 +156,59 @@ node index.js               # stdio JSON-RPC 2.0，可用任意 MCP Client 挂�
 
 ### ⑤ Docker 一键部署（推荐服务器场景）
 
+> ⚠️ **必须在项目根目录执行**（`D:/鲤慧-LiHui`），**不是** `03-lh-server/` 子目录。
+> Dockerfile 里的 `COPY` 路径带 `03-lh-server/` 前缀，在子目录构建会直接 COPY 失败。
+
 ```bash
-# 方式一：docker compose（自动持久化 data 卷）
-BAIDU_AK=<你的百度AK> docker compose up -d
+# ① 准备环境变量（compose 自动读取根目录 .env）
+cp .env.example .env
+#    编辑 .env：必填 BAIDU_AK，强烈建议同时填 LLM_API_KEY / LLM_MODEL
 
-# 方式二：原生 docker
-docker build -t lihui-server .
-docker run -d --name lihui -p 8809:8809 -e BAIDU_AK=<你的百度AK> lihui-server
+# ② 一键部署 + 自动自检（推荐）
+bash scripts/docker-deploy.sh
 
-# 健康检查
-curl http://127.0.0.1:8809/api/v1/health
+# ③ 或手动
+docker compose up -d --build            # 构建并后台启动
+docker compose logs -f lihui-server     # 看日志
+curl http://127.0.0.1:8809/api/v1/health # 健康检查
 ```
 
-> 镜像基于 `node:22-alpine`；服务端零依赖，无需 `npm install`；
+原生 docker（不用 compose）：
+
+```bash
+docker build -t lihui-server .          # 同样在根目录执行
+docker run -d --name lihui -p 8809:8809 \
+  -e BAIDU_AK=<你的百度AK> \
+  -e LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1 \
+  -e LLM_API_KEY=<你的DashScopeKey> -e LLM_MODEL=qwen-flash \
+  -v lihui-data:/app/data lihui-server
+```
+
+> 镜像基于 `node:22-alpine`；服务端与全部 MCP Server **均零依赖**（只用 node 内置模块），无需 `npm install`；
 > AK 通过环境变量注入，**不写进镜像**；`data/` 运行时数据（Token 账本、反馈）走 Docker 卷持久化。
+> 镜像内已包含 `04-lh-mcp-servers/`（MCP 子进程目录，位置 `/04-lh-mcp-servers`，与 `config.mcp.dir` 解析结果一致）。
+
+**部署后自检三项**（缺一项就是部署有问题）：
+
+| 检查项 | 命令 | 期望 |
+|---|---|---|
+| 服务存活 | `curl http://127.0.0.1:8809/api/v1/health` | 200 |
+| 云端模型 | `curl http://127.0.0.1:8809/api/v1/model/active` | 有 `hasKey: true` 的云端模型 |
+| MCP 进程 | `curl http://127.0.0.1:8809/api/v1/mcp/list` | `baidu-map` / `life-circle` 等全部 `running` |
+
+---
+
+#### 部署失败报错对照表
+
+| 报错 / 现象 | 原因 | 解决 |
+|---|---|---|
+| `COPY failed: no source files were specified`<br>或 `failed to compute cache key` | 在 `03-lh-server/` 里执行了 `docker build` | 回到项目根目录执行；compose 的 `build.context` 也是 `.` |
+| `The BAIDU_AK variable is not set` | 老版本 compose 用了 `${BAIDU_AK:?}` 强制变量，未设置直接退出 | 已改为 `${BAIDU_AK:-}`；现在只需建 `.env` 填入即可 |
+| 容器 `health` 是 200，但所有检索/生活圈/导航**没数据** | **镜像内缺 `04-lh-mcp-servers`**（旧版 Dockerfile 漏 COPY，MCP 子进程 spawn ENOENT） | 已修复，执行 `docker compose up -d --build` 重建镜像；或进容器确认 `docker exec lihui-server ls /04-lh-mcp-servers` |
+| `/model/active` 没有云端模型、回答退化成纯规则 | 容器里没有 `data/models.json`，且未注入 `LLM_API_KEY` | 在 `.env` 填 `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` 并重启 |
+| `docker: command not found` | 没装 Docker，或 Docker Desktop 未启动 | 装 Docker Desktop 并启动托盘服务 |
+| 起得来但外部访问不通 | 宿主机防火墙未放行 8809；或服务器安全组没开 | 开端口 8809；确认 `HOST=0.0.0.0`（容器内默认如此） |
+| `bind: address already in use` | 8809 被本机另一个服务端进程占用（宿主机直跑的那份） | `netstat -ano \| findstr :8809` 找到 PID 结束掉，或改 `PORT` |
 
 ---
 
