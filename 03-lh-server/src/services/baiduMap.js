@@ -111,27 +111,31 @@ async function reverseGeocode(lng, lat) {
 /* 地点检索                                                            */
 /* ------------------------------------------------------------------ */
 async function poiSearch({ query, lng, lat, radius = 1200, pageNum = 0, pageSize = 20, city = '' }) {
-  // 复合关键词（如「医院|药店」）：百度 place 检索不认 |，拆开逐个查再合并
+  // 复合关键词（如「医院|药店」）：百度 place 检索不认 |，拆开逐路检索，
+  // 再用 RRF（Reciprocal Rank Fusion, k=60）倒排融合 —— 多路同时召回且排名靠前的 POI 得分最高
   const words = String(query || '').split('|').map((s) => s.trim()).filter(Boolean);
   if (words.length > 1) {
     const parts = await Promise.all(
       words.slice(0, 3).map((w) =>
-        poiSearch({ query: w, lng, lat, radius, pageNum, pageSize: 10, city }).catch(() => ({ total: 0, items: [] }))
+        poiSearch({ query: w, lng, lat, radius, pageNum, pageSize: 10, city }).catch(() => ({ items: [] }))
       )
     );
-    const seen = new Set();
-    const merged = [];
-    for (const p of parts) {
-      for (const it of p.items || []) {
-        const k = it.uid || `${it.name}@${it.address}`;
-        if (k && !seen.has(k)) {
-          seen.add(k);
-          merged.push(it);
-        }
-      }
-    }
-    merged.sort((a, b) => (a.distance === null ? 1e9 : a.distance) - (b.distance === null ? 1e9 : b.distance));
-    return { total: merged.length, items: merged.slice(0, pageSize) };
+    const K = 60;
+    const map = new Map();
+    parts.forEach((p) => {
+      (p.items || []).forEach((it, idx) => {
+        const key = it.uid || `${it.name}@${it.address}`;
+        if (!key) return;
+        const cur = map.get(key) || { item: it, rrf: 0 };
+        cur.rrf += 1 / (K + idx + 1);
+        map.set(key, cur);
+      });
+    });
+    const merged = [...map.values()]
+      .sort((a, b) => b.rrf - a.rrf || ((a.item.distance === null ? 9e9 : a.item.distance) - (b.item.distance === null ? 9e9 : b.item.distance)))
+      .slice(0, pageSize)
+      .map((x) => x.item);
+    return { total: merged.length, items: merged };
   }
   const params = {
     query,

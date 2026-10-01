@@ -57,7 +57,10 @@ Page({
       const r = await api.lifeReport(this.data.center.lng, this.data.center.lat, this.data.radius)
       r.categories = (r.categories || []).map((c) =>
         Object.assign({}, c, {
-          color: colorOf(c.score),
+          // 检索失败的类显示「暂无数据」而不是 0 分，避免误导
+          score: c.score === null || c.score === undefined ? (c.failed ? '—' : 0) : c.score,
+          color: c.score === null || c.score === undefined ? '#8F959E' : colorOf(c.score),
+          failedText: c.failed ? '（本次检索超时，不影响总分）' : '',
           nearestText: c.nearest ? '，最近 ' + c.nearest.name + ' ' + this.fmtDist(c.nearest.distance) : '，范围内未查到'
         })
       )
@@ -70,6 +73,7 @@ Page({
       })
     } catch (e) {
       this.setData({ report: null })
+      wx.showToast({ title: (e && e.msg) || '体检失败，下拉重试', icon: 'none' })
     }
   },
 

@@ -21,25 +21,43 @@ function numOr(v, d) {
   return Number.isFinite(n) ? n : d;
 }
 
-/** 服务端本地兜底计算（不依赖 MCP） */
+/** 限时执行：防止外部调用挂起拖垮整个体检 */
+function withTimeout(promise, ms, fallback) {
+  return Promise.race([
+    promise.catch(() => fallback),
+    new Promise((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
+/** 单类设施检索：失败自动重试 1 次，仍失败返回空列表（标记 failed 供降权处理） */
+async function fetchCategory(c, lng, lat, radius) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await baiduMap.poiSearch({ query: c.keywords.join('|'), lng, lat, radius, pageSize: 20 });
+      if ((r.items || []).length) return { items: r.items, failed: false };
+    } catch (_) {}
+  }
+  return { items: [], failed: true };
+}
+
+/** 服务端本地兜底计算（不依赖 MCP；六类互相隔离，单类故障不拖垮总分） */
 async function localDiagnose({ lng, lat, radius = 1200 }) {
   const cats = await Promise.all(
     CATEGORIES.map(async (c) => {
-      let items = [];
-      try {
-        const r = await baiduMap.poiSearch({ query: c.keywords.join('|'), lng, lat, radius, pageSize: 20 });
-        items = r.items || [];
-      } catch (_) {}
+      const { items, failed } = await fetchCategory(c, lng, lat, radius);
       const hitTypes = c.keywords.filter((k) => items.some((i) => (i.name + i.tag + i.type).includes(k)));
-      const ratio = Math.min(1, items.length / Math.max(c.need, 1));
-      const typeRatio = hitTypes.length / c.keywords.length;
-      const score = Math.round((ratio * 0.6 + typeRatio * 0.4) * 100);
+      // 检索失败的类不参与计分（区别于"确实没有"），避免偶发网络错误把总分拉穿
+      const ratio = failed ? null : Math.min(1, items.length / Math.max(c.need, 1));
+      const typeRatio = failed ? null : hitTypes.length / c.keywords.length;
+      const score = failed ? null : Math.round((ratio * 0.6 + typeRatio * 0.4) * 100);
       return {
         key: c.key,
         name: c.name,
         weight: c.weight,
+        need: c.need,
         score,
         count: items.length,
+        failed,
         types: hitTypes,
         nearest: items[0] ? { name: items[0].name, distance: items[0].distance } : null,
         samples: items.slice(0, 5).map((i) => ({ name: i.name, distance: i.distance, address: i.address })),
@@ -47,9 +65,14 @@ async function localDiagnose({ lng, lat, radius = 1200 }) {
     })
   );
 
-  const score = Math.round(cats.reduce((a, b) => a + b.score * b.weight, 0));
+  // 只用"成功检索"的类做加权（权重归一化），杜绝偶发故障导致的评分跳水
+  const valid = cats.filter((c) => c.score !== null);
+  const weightSum = valid.reduce((a, b) => a + b.weight, 0) || 1;
+  const score = Math.round(valid.reduce((a, b) => a + b.score * (b.weight / weightSum), 0));
   const level = score >= 85 ? '优秀' : score >= 60 ? '良好' : score >= 40 ? '一般' : '较差';
-  const shortboards = cats.filter((c) => c.score < 60).map((c) => `${c.name}：15 分钟步行可达 ${c.count} 处，达标线 ${CATEGORIES.find((x) => x.key === c.key).need} 类`);
+  const shortboards = valid
+    .filter((c) => c.score < 60)
+    .map((c) => `${c.name}：15 分钟步行可达 ${c.count} 处，达标线 ${c.need} 类`);
   const suggestions = shortboards.map((s) => {
     const name = s.split('：')[0];
     return `${name}是短板，建议沿主干道方向步行扩大搜索半径，或考虑使用共享单车将出行半径扩展到 3 公里。`;
@@ -63,6 +86,7 @@ async function localDiagnose({ lng, lat, radius = 1200 }) {
     categories: cats,
     shortboards,
     suggestions,
+    degraded: cats.some((c) => c.failed),
     engine: 'server-local',
   };
 }
@@ -75,13 +99,21 @@ module.exports = {
     if (!Number.isFinite(lng) || !Number.isFinite(lat)) return fail(res, 1001, 'lng/lat 必填');
     const radius = numOr(q.radius, 1200);
     try {
-      const r = await hub.callByQualifiedName('life-circle__diagnose', { lng, lat, radius });
-      const data = (r.data && (r.data.result || r.data)) || null;
-      if (data) return ok(res, data);
-      throw new Error('empty mcp result');
+      // MCP 体检限时 8s；返回结果做质量校验（>=4 类空检索视为可疑，回落本地引擎）
+      const r = await withTimeout(hub.callByQualifiedName('life-circle__diagnose', { lng, lat, radius }), 8000, null);
+      const data = r && r.data && (r.data.result || r.data);
+      const suspicious = data && Array.isArray(data.categories) && data.categories.filter((c) => !c.count).length >= 4;
+      if (data && !suspicious) return ok(res, data);
+      if (data && suspicious) logger.warn('life', 'mcp result suspicious (>=4 empty categories), fallback local');
+      throw new Error(suspicious ? 'suspicious mcp result' : 'empty mcp result');
     } catch (e) {
       logger.warn('life', `mcp diagnose failed, fallback local: ${e.message}`);
-      return ok(res, await localDiagnose({ lng, lat, radius }));
+      try {
+        return ok(res, await localDiagnose({ lng, lat, radius }));
+      } catch (e2) {
+        logger.error('life', `local diagnose failed: ${e2.message}`);
+        return fail(res, 5003, '体检引擎繁忙，请稍后再试');
+      }
     }
   },
 

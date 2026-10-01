@@ -65,10 +65,18 @@ Page({
   },
 
   async ask(text) {
-    const msgs = this.data.messages.concat([{ id: nid(), role: 'user', text, cards: [], actions: [] }])
-    msgs.push({ id: nid(), role: 'assistant', text: '正在为您查询…', cards: [], actions: [] })
-    this.setData({ messages: msgs })
+    // 并发安全：占位消息带固定 id，返回后「按 id 替换」而不是 slice(0,-1)，
+    // 连续多条对话时不会误删用户消息（修复"对话框消失"）
+    const ph = { id: nid(), role: 'assistant', text: '正在为您查询…', cards: [], actions: [], pending: true }
+    this.setData({ messages: this.data.messages.concat([{ id: nid(), role: 'user', text, cards: [], actions: [] }, ph]) })
     this.toBottom()
+
+    const replacePh = (patch) => {
+      this.setData({
+        messages: this.data.messages.map((m) => (m.id === ph.id ? Object.assign({}, m, patch, { pending: false }) : m))
+      })
+      this.toBottom()
+    }
 
     try {
       const loc = app.globalData.location || (await app.getLocation())
@@ -88,23 +96,20 @@ Page({
         }
         return c
       })
-      const list = this.data.messages.slice(0, -1)
-      list.push({
-        id: nid(),
-        role: 'assistant',
+      replacePh({
         text: r.reply,
         cards,
         actions: r.actions || [],
         meta: `${r.model} · Token ${r.usage.total} · ¥${r.usage.costCny}`
       })
-      this.setData({ messages: list })
-      this.toBottom()
       voice.speak(r.reply, { scene: 'chat', careMode: this.data.careMode })
     } catch (e) {
-      const list = this.data.messages.slice(0, -1)
-      list.push({ id: nid(), role: 'assistant', text: '抱歉，刚才没查成功。请确认服务端已启动，或稍后再试。', cards: [], actions: [] })
-      this.setData({ messages: list })
-      this.toBottom()
+      const offline = e && (e.errMsg || e.code === 'ECONN')
+      replacePh({
+        text: offline
+          ? '网络连不上服务端：请确认手机与电脑在同一 WiFi，且服务端已启动。'
+          : (e && e.msg) || '查询没有成功，请稍后再试一次。'
+      })
     }
   },
 

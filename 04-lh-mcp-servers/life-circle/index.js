@@ -27,6 +27,29 @@ function fetchJSON(url, timeout = 9000) {
 }
 
 async function poiSearch(query, lng, lat, radius, pageSize = 20) {
+  // 复合关键词（「医院|药店」）：百度 place 检索不认 |，拆词逐路检索后 RRF(k=60) 融合
+  const words = String(query || '').split('|').map((s) => s.trim()).filter(Boolean);
+  if (words.length > 1) {
+    const parts = await Promise.all(
+      words.slice(0, 3).map((w) => poiSearch(w, lng, lat, radius, 10).catch(() => ({ items: [] })))
+    );
+    const K = 60;
+    const map = new Map();
+    parts.forEach((p) => {
+      (p.items || []).forEach((it, idx) => {
+        const key = it.uid || `${it.name}@${it.address}`;
+        if (!key) return;
+        const cur = map.get(key) || { item: it, rrf: 0 };
+        cur.rrf += 1 / (K + idx + 1);
+        map.set(key, cur);
+      });
+    });
+    const merged = [...map.values()]
+      .sort((a, b) => b.rrf - a.rrf || ((a.item.distance === null ? 9e9 : a.item.distance) - (b.item.distance === null ? 9e9 : b.item.distance)))
+      .slice(0, pageSize)
+      .map((x) => x.item);
+    return { total: merged.length, items: merged };
+  }
   const qs = new URLSearchParams({ query, location: `${lat},${lng}`, radius, page_size: pageSize, page_num: 0, scope: 2, ak: AK, output: 'json' }).toString();
   const raw = await fetchJSON(`${BASE}/place/v2/search?${qs}`);
   const items = (raw.results || []).map((x) => {
@@ -50,19 +73,34 @@ const CATEGORIES = [
 async function diagnose({ lng, lat, radius = 1200 }) {
   const cats = await Promise.all(
     CATEGORIES.map(async (c) => {
+      // 每类独立检索 + 失败重试 1 次；复合词查空时用单关键词二次确认，仍空才标记 failed（不计分）
       let items = [];
-      try { items = (await poiSearch(c.keywords.join('|'), lng, lat, radius, 20)).items; } catch (_) {}
+      let failed = false;
+      for (let attempt = 0; attempt < 2 && !items.length; attempt++) {
+        try {
+          const r = await poiSearch(c.keywords.join('|'), lng, lat, radius, 20);
+          items = r.items || [];
+        } catch (_) {}
+      }
+      if (!items.length) {
+        try {
+          const r2 = await poiSearch(c.keywords[0], lng, lat, radius, 20);
+          items = r2.items || [];
+        } catch (_) {}
+        failed = !items.length;
+      }
       const hitTypes = c.keywords.filter((k) => items.some((i) => (i.name + i.tag + i.type).includes(k)));
-      const ratio = Math.min(1, items.length / Math.max(c.need, 1));
-      const typeRatio = hitTypes.length / c.keywords.length;
+      const ratio = failed ? null : Math.min(1, items.length / Math.max(c.need, 1));
+      const typeRatio = failed ? null : hitTypes.length / c.keywords.length;
       return {
         key: c.key,
         name: c.name,
         desc: c.desc,
         weight: c.weight,
         need: c.need,
-        score: Math.round((ratio * 0.6 + typeRatio * 0.4) * 100),
+        score: failed ? null : Math.round((ratio * 0.6 + typeRatio * 0.4) * 100),
         count: items.length,
+        failed,
         types: hitTypes,
         nearest: items[0] ? { name: items[0].name, distance: items[0].distance } : null,
         samples: items.slice(0, 5).map((i) => ({ name: i.name, distance: i.distance, address: i.address, rating: i.rating })),
@@ -70,11 +108,14 @@ async function diagnose({ lng, lat, radius = 1200 }) {
     })
   );
 
-  const score = Math.round(cats.reduce((a, b) => a + b.score * b.weight, 0));
+  // 只用检索成功的类加权（权重归一化），失败类显示「—」不计分
+  const valid = cats.filter((c) => c.score !== null);
+  const weightSum = valid.reduce((a, b) => a + b.weight, 0) || 1;
+  const score = Math.round(valid.reduce((a, b) => a + b.score * (b.weight / weightSum), 0));
   const level = score >= 85 ? '优秀' : score >= 60 ? '良好' : score >= 40 ? '一般' : '较差';
-  const shortboards = cats.filter((c) => c.score < 60).map((c) => `${c.name}：15 分钟步行可达 ${c.count} 处（达标线 ${c.need} 类），${c.nearest ? '最近为 ' + c.nearest.name + ' 约 ' + c.nearest.distance + ' 米' : '范围内未查到'}`);
+  const shortboards = valid.filter((c) => c.score < 60).map((c) => `${c.name}：15 分钟步行可达 ${c.count} 处（达标线 ${c.need} 类），${c.nearest ? '最近为 ' + c.nearest.name + ' 约 ' + c.nearest.distance + ' 米' : '范围内未查到'}`);
   const suggestions = cats
-    .filter((c) => c.score < 60)
+    .filter((c) => c.score !== null && c.score < 60)
     .map((c) => ({
       医疗: '医疗是短板：建议确认最近的社区卫生服务中心门诊时间，并备好常用药；紧急情况优先拨打 120。',
       教育: '教育是短板：建议查询最近学校的招生范围，或使用共享单车将半径扩展到 3 公里。',
@@ -93,6 +134,7 @@ async function diagnose({ lng, lat, radius = 1200 }) {
     categories: cats,
     shortboards,
     suggestions,
+    degraded: cats.some((c) => c.failed),
     engine: 'life-circle-mcp',
   };
 }
