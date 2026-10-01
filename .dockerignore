@@ -1,0 +1,24 @@
+# git
+.git
+.gitignore
+
+# 密钥与运行时数据（绝不进镜像）
+**/.env
+03-lh-server/data/
+03-lh-server/.env
+
+# 文档与截图（镜像不需要）
+00-设计文档/
+docs/
+
+# 依赖与编译产物
+node_modules/
+**/node_modules/
+unpackage/
+**/unpackage/dist/
+
+# 日志与系统文件
+*.log
+logs/
+.DS_Store
+Thumbs.db

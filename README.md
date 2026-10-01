@@ -154,6 +154,23 @@ cd 04-lh-mcp-servers/baidu-map
 node index.js               # stdio JSON-RPC 2.0，可用任意 MCP Client 挂载
 ```
 
+### ⑤ Docker 一键部署（推荐服务器场景）
+
+```bash
+# 方式一：docker compose（自动持久化 data 卷）
+BAIDU_AK=<你的百度AK> docker compose up -d
+
+# 方式二：原生 docker
+docker build -t lihui-server .
+docker run -d --name lihui -p 8809:8809 -e BAIDU_AK=<你的百度AK> lihui-server
+
+# 健康检查
+curl http://127.0.0.1:8809/api/v1/health
+```
+
+> 镜像基于 `node:22-alpine`；服务端零依赖，无需 `npm install`；
+> AK 通过环境变量注入，**不写进镜像**；`data/` 运行时数据（Token 账本、反馈）走 Docker 卷持久化。
+
 ---
 
 ## 🧩 MCP 工具清单（16+）

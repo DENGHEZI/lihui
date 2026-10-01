@@ -1,0 +1,21 @@
+# ============================================================
+# 鲤慧 LiHui · 一键编排
+# 用法：BAIDU_AK=<你的百度AK> docker compose up -d
+# 验证：curl http://127.0.0.1:8809/api/v1/health
+# ============================================================
+services:
+  lihui-server:
+    build: .
+    image: lihui-server:1.0.0
+    container_name: lihui-server
+    ports:
+      - "8809:8809"
+    environment:
+      - BAIDU_AK=${BAIDU_AK:?请在命令行或同目录 .env 中提供 BAIDU_AK}
+    volumes:
+      # Token 账本 / 反馈 / 会话等运行时数据持久化
+      - lihui-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  lihui-data:
