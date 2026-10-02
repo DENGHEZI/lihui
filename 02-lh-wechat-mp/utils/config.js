@@ -8,13 +8,17 @@
  *  - 需在小程序后台把 https://api.map.baidu.com 加入 request 合法域名
  */
 const ENV = {
-  // 云托管（腾讯云 CloudBase Run）—— 已部署验证通过，脱离电脑可用
-  // 注意：需在微信公众平台「开发设置 → 服务器域名 → request 合法域名」加入此域名
-  prod: 'https://springboot-o4hr-322354-12-1498892848.sh.run.tcloudbase.com',
+  // 正式域名：lihui-tech.online
+  // 前置条件（缺一不可）：① ICP 备案通过 ② 云托管「服务设置 → 域名管理」绑定该自定义域名
+  // ③ 小程序后台「开发管理 → 服务器域名 → request 合法域名」加入 https://lihui-tech.online
+  prod: 'https://lihui-tech.online',
+  // 备案期临时通道：云托管默认域名，微信后台白名单已配好，现在就能测
+  // 等 lihui-tech.online 备案通过并绑定后，把下面的 CURRENT 改成 'prod' 即可切过去
+  staging: 'https://springboot-o4hr-322354-12-1498892848.sh.run.tcloudbase.com',
   // 本地调试（手机与电脑须连同一 WiFi，地址为电脑的局域网 IP）
   dev: 'http://192.168.0.106:8809',
 }
-const CURRENT = 'prod'
+const CURRENT = 'staging'
 
 module.exports = {
   APP_NAME: '鲤慧',
