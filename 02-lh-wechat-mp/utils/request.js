@@ -81,6 +81,32 @@ function networkHint(err) {
   return m.length > 22 ? m.slice(0, 22) + '…' : m
 }
 
+/* ---------------- 微信云托管内网通道 ----------------
+ * 走 wx.cloud.callContainer 时请求由微信内部转发到自己的云托管服务，
+ * 不经过「request 合法域名」校验，因此真机/体验版/正式版都不需要备案域名。
+ * 由 config.USE_CLOUD_CONTAINER + config.CLOUD_ENV_ID 控制，默认关闭。
+ */
+const API_PREFIX = '/api/v1'
+let cloudInited = false
+
+function canUseCloudContainer() {
+  if (!config.USE_CLOUD_CONTAINER || !config.CLOUD_ENV_ID) return false
+  if (!wx.cloud || !wx.cloud.callContainer) {
+    console.warn('[鲤慧] 基础库不支持 wx.cloud.callContainer，回退 wx.request')
+    return false
+  }
+  if (!cloudInited) {
+    try {
+      wx.cloud.init({ env: config.CLOUD_ENV_ID, traceUser: true })
+      cloudInited = true
+    } catch (e) {
+      console.error('[鲤慧] wx.cloud.init 失败，回退 wx.request', e)
+      return false
+    }
+  }
+  return true
+}
+
 /* ---------------- 请求 ---------------- */
 function request(path, { method = 'GET', data = {}, loading = false, loadingText = '加载中', cacheTtl = 0 } = {}) {
   // 命中缓存直接返回（零网络、零等待）
@@ -93,47 +119,68 @@ function request(path, { method = 'GET', data = {}, loading = false, loadingText
 
   if (loading) wx.showLoading({ title: loadingText, mask: true })
   return new Promise((resolve, reject) => {
+    const header = {
+      'Content-Type': 'application/json',
+      'X-Device-Id': getDeviceId(),
+      'X-Plan': getPlan()
+    }
+    const onSuccess = (res) => {
+      const body = res.data || {}
+      if (body.code === 0) {
+        lastTokenCost = Number((res.header && res.header['X-Token-Cost']) || (res.header && res.header['x-token-cost'])) || 0
+        if (cacheKey) cacheSet(cacheKey, body.data, cacheTtl)
+        resolve(body.data)
+        return
+      }
+      if (body.code === 1003) {
+        wx.showModal({ title: '额度用尽', content: body.msg || '今日 Token 配额已用完', showCancel: false })
+      } else if (body.code === 3002) {
+        wx.showModal({
+          title: '还没有可用模型',
+          content: '请先到「我的 → 模型与语音设置」添加一个模型',
+          confirmText: '去设置',
+          success: (r) => {
+            if (r.confirm) wx.navigateTo({ url: '/pages/settings/settings' })
+          }
+        })
+      } else {
+        wx.showToast({ title: body.msg || '请求失败', icon: 'none', duration: 2200 })
+      }
+      reject(body)
+    }
+    const onFail = (err) => {
+      wx.showToast({ title: networkHint(err), icon: 'none', duration: 3000 })
+      reject(err)
+    }
+    const onComplete = () => {
+      if (loading) wx.hideLoading()
+    }
+
+    // ① 优先走微信云托管内网通道：不受 request 合法域名限制
+    if (canUseCloudContainer()) {
+      wx.cloud.callContainer({
+        config: { env: config.CLOUD_ENV_ID },
+        path: API_PREFIX + path,
+        method,
+        data,
+        header: Object.assign({ 'X-WX-SERVICE': config.CLOUD_SERVICE }, header),
+        success: onSuccess,
+        fail: onFail,
+        complete: onComplete
+      })
+      return
+    }
+
+    // ② 常规 HTTP：需把域名加入小程序后台「request 合法域名」
     wx.request({
       url: config.BASE_URL + path,
       method,
       data,
       timeout: 20000,
-      header: {
-        'Content-Type': 'application/json',
-        'X-Device-Id': getDeviceId(),
-        'X-Plan': getPlan()
-      },
-      success: (res) => {
-        const body = res.data || {}
-        if (body.code === 0) {
-          lastTokenCost = Number((res.header && res.header['X-Token-Cost']) || res.header && res.header['x-token-cost']) || 0
-          if (cacheKey) cacheSet(cacheKey, body.data, cacheTtl)
-          resolve(body.data)
-          return
-        }
-        if (body.code === 1003) {
-          wx.showModal({ title: '额度用尽', content: body.msg || '今日 Token 配额已用完', showCancel: false })
-        } else if (body.code === 3002) {
-          wx.showModal({
-            title: '还没有可用模型',
-            content: '请先到「我的 → 模型与语音设置」添加一个模型',
-            confirmText: '去设置',
-            success: (r) => {
-              if (r.confirm) wx.navigateTo({ url: '/pages/settings/settings' })
-            }
-          })
-        } else {
-          wx.showToast({ title: body.msg || '请求失败', icon: 'none', duration: 2200 })
-        }
-        reject(body)
-      },
-      fail: (err) => {
-        wx.showToast({ title: networkHint(err), icon: 'none', duration: 3000 })
-        reject(err)
-      },
-      complete: () => {
-        if (loading) wx.hideLoading()
-      }
+      header,
+      success: onSuccess,
+      fail: onFail,
+      complete: onComplete
     })
   })
 }
