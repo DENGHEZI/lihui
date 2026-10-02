@@ -61,6 +61,10 @@ Page({
 
   async bootstrap() {
     const loc = await app.getLocation()
+    if (!loc) {
+      this.setData({ cityText: '定位不可用', cityShort: '未定位', locSourceText: '请开启系统定位' })
+      return
+    }
     // 用端上百度 AK 补一次行政区（小程序端直连，低延迟）
     let cityText = [loc.city, loc.district].filter(Boolean).join(' ')
     if (!cityText && loc.lng) {
@@ -78,11 +82,19 @@ Page({
   },
 
   applyLocation(loc, cityText) {
+    const src =
+      loc.source === 'gps'
+        ? 'GPS 定位'
+        : loc.source === 'gps-coarse'
+        ? '网络定位（±' + Math.round(loc.accuracy || 0) + 'm）'
+        : loc.source === 'ip'
+        ? 'IP 锚定（±' + Math.round(loc.accuracy || 3000) + 'm，建议开定位）'
+        : '默认城市'
     this.setData({
       center: { lng: Number(loc.lng), lat: Number(loc.lat) },
       cityText: cityText || '当前位置',
       cityShort: parseCity(cityText) || '当前',
-      locSourceText: loc.source === 'gps' ? 'GPS 定位' : loc.source === 'ip' ? 'IP 锚定' : '默认城市'
+      locSourceText: src
     })
     this.updateMarkers()
     this.updateCircle()
@@ -222,9 +234,12 @@ Page({
 
   async locateMe() {
     wx.showLoading({ title: '定位中' })
-    app.globalData.location = null
-    const loc = await app.getLocation()
+    const loc = await app.getLocation({ force: true })
     wx.hideLoading()
+    if (!loc) {
+      wx.showToast({ title: '定位失败，请检查系统定位权限', icon: 'none', duration: 2400 })
+      return
+    }
     this.applyLocation(loc, [loc.city, loc.district].filter(Boolean).join(' '))
     wx.showToast({ title: '已回到我的位置', icon: 'none' })
   },

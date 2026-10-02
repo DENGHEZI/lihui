@@ -1,7 +1,8 @@
 /**
  * 鲤慧 LiHui · 百度地图 Web 服务 API 封装
  *  - 服务端统一注入 ak（绝不下发到客户端）
- *  - 统一坐标系 bd09ll、统一返回 {lng, lat}
+ *  - ⚠️ 对外坐标系统一 GCJ-02（小程序 wx.getLocation 也是 GCJ-02）：
+ *    所有百度接口显式声明 coord_type / coordtype，避免入参被误读成 BD-09
  *  - 全部接口带 TTL 缓存与降级兜底
  * 官方文档：https://lbsyun.baidu.com/faq/api
  */
@@ -9,6 +10,7 @@ const config = require('../config');
 const { fetchJSON } = require('../utils/http');
 const { Cache } = require('../utils/cache');
 const logger = require('../utils/logger');
+const { safeBd09ToGcj02 } = require('../utils/coord');
 
 const cache = new Cache(800);
 const BASE = () => config.baidu.base;
@@ -82,10 +84,16 @@ async function geocode(address, city = '') {
   };
 }
 
-async function reverseGeocode(lng, lat) {
+/**
+ * 逆地理编码
+ * @param {number} lng
+ * @param {number} lat
+ * @param {string} coordType 入参坐标系，默认 gcj02（小程序端）；百度 IP 定位结果属 bd09ll，需显式传入
+ */
+async function reverseGeocode(lng, lat, coordType = 'gcj02') {
   const raw = await call(
     '/reverse_geocoding/v3/',
-    { location: LL(lat, lng), coordtype: 'bd09ll', extensions_poi: 1 },
+    { location: LL(lat, lng), coordtype: coordType, extensions_poi: 1 },
     { ttl: config.cache.reverseGeocode }
   );
   const r = raw.result || {};
@@ -147,6 +155,8 @@ async function poiSearch({ query, lng, lat, radius = 1200, pageNum = 0, pageSize
   if (lng !== undefined && lat !== undefined) {
     params.location = LL(lat, lng);
     params.radius = radius;
+    // ⚠️ 不声明 coord_type 时百度按 BD-09 解释 location，检索圆心会整体偏移 500~900m
+    params.coord_type = 3; // 3 = GCJ-02
   } else {
     params.region = city || '全国';
   }
@@ -185,6 +195,8 @@ const ROUTE_PATH = {
 async function route({ mode = 'walking', origin, destination, realtime = false }) {
   const pathname = ROUTE_PATH[mode] || ROUTE_PATH.walking;
   const params = { origin, destination };
+  // 统一声明入参坐标系为 GCJ-02（端上 location 与 POI 均为 GCJ-02）
+  params.coord_type = 3;
   if (mode === 'driving') {
     params.tactics = realtime ? 11 : 0; // 11 = 实时路况避堵
     params.road_type = 0;
@@ -256,7 +268,13 @@ async function weather({ district = '', lng, lat }) {
 /* 输入联想                                                            */
 /* ------------------------------------------------------------------ */
 async function suggest(keyword, city = '') {
-  const raw = await call('/place/v2/suggestion', { query: keyword, region: city, city_limit: false });
+  // ret_coord_type=gcj02：否则默认吐 BD-09，Agent / 前端拿到坐标会整体偏移
+  const raw = await call('/place/v2/suggestion', {
+    query: keyword,
+    region: city,
+    city_limit: false,
+    ret_coord_type: 'gcj02',
+  });
   return (raw.result || []).map((x) => ({
     name: x.name,
     district: x.district,

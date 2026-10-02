@@ -36,7 +36,8 @@ function call(pathname, params) {
 
 /** 地址 → 坐标 */
 function geocode(address, city) {
-  return call('/geocoding/v3/', { address, city: city || '' }).then((d) => {
+  // ret_coordtype=gcj02：geocoding 默认吐 BD-09，与端上坐标系不一致会偏 500~900m
+  return call('/geocoding/v3/', { address, city: city || '', ret_coordtype: 'gcj02' }).then((d) => {
     const l = (d.result && d.result.location) || {}
     return { lng: Number(l.lng), lat: Number(l.lat), level: (d.result && d.result.level) || '' }
   })
@@ -58,7 +59,12 @@ function reverseGeocode(lng, lat) {
 
 /** 输入联想 */
 function suggest(keyword, city) {
-  return call('/place/v2/suggestion', { query: keyword, region: city || '', city_limit: false }).then((d) =>
+  return call('/place/v2/suggestion', {
+    query: keyword,
+    region: city || '',
+    city_limit: false,
+    ret_coord_type: 'gcj02'
+  }).then((d) =>
     (d.result || []).map((x) => ({
       name: x.name,
       district: x.district,
@@ -68,7 +74,9 @@ function suggest(keyword, city) {
   )
 }
 
-/** 周边 POI（轻量兜底，主链路走服务端） */
+/** 周边 POI（轻量兜底，主链路走服务端）
+ *  ⚠️ coord_type=3 必须显式声明：不传时百度按 BD-09 解释 location，
+ *     等于把 GCJ-02 的检索圆心当成百度坐标，整圈结果会整体偏移 500~900m。 */
 function poiSearch(query, lng, lat, radius) {
   return call('/place/v2/search', {
     query,
@@ -76,7 +84,8 @@ function poiSearch(query, lng, lat, radius) {
     radius: radius || 1200,
     page_size: 20,
     page_num: 0,
-    scope: 2
+    scope: 2,
+    coord_type: 3
   }).then((d) => ({
     total: d.total || 0,
     items: (d.results || []).map((x) => {
