@@ -19,6 +19,8 @@ node_modules/
 03-lh-server/data/tokens.json
 03-lh-server/data/voice.json
 03-lh-server/data/orders.json
+# 真实店源目录：运行时由百度 POI 同步生成，不入库（Dockerfile 也不 COPY，容器内会重新拉）
+03-lh-server/data/catalog.json
 
 # ---------- 日志 ----------
 *.log

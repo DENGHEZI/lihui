@@ -15,6 +15,15 @@
       <text wx:if="{{keyword}}" class="s-clear" bindtap="clearKeyword">✕</text>
     </view>
 
+    <!-- 双数据源：真实店源来自百度 POI 实时检索 -->
+    <view class="srcs">
+      <view class="src {{curSource === item.key ? 'src--on' : ''}}" wx:for="{{sources}}" wx:key="key" bindtap="onSourceTap" data-k="{{item.key}}">
+        <text class="src-name">{{item.name}}</text>
+        <text class="src-sub">{{item.sub}}</text>
+      </view>
+      <text wx:if="{{from}}" class="src-from">店源：{{from}}</text>
+    </view>
+
     <scroll-view class="cats" scroll-x enable-flex show-scrollbar="{{false}}">
       <view class="cat {{curCat === item.key ? 'cat--on' : ''}}" wx:for="{{categories}}" wx:key="key" bindtap="onCatTap" data-k="{{item.key}}">
         <text class="cat-ico">{{item.icon}}</text>
@@ -30,6 +39,12 @@
       <text class="lh-cap">正在上架好货…</text>
     </view>
 
+    <!-- 百度日配额耗尽时给个明确说明，别让用户以为「附近没店」 -->
+    <view wx:if="{{quotaHit}}" class="quota">
+      <text class="q-ico">⚠️</text>
+      <text class="q-txt">{{quotaMessage || '百度地图当日配额已用尽，部分类目暂时拿不到真实店铺，明天 0 点后恢复。'}}</text>
+    </view>
+
     <!-- 空结果 / 加载失败都给个明确提示，别只留一块白板 —— 否则用户只会说「商品打不开」 -->
     <view wx:elif="{{emptyHint}}" class="empty">
       <text class="e-ico">📭</text>
@@ -43,15 +58,20 @@
           <view class="c-row1">
             <text class="c-name">{{item.name}}</text>
           </view>
+          <view class="c-addr">{{item.address || '地址未知'}}</view>
           <view class="c-tags">
             <text class="c-tag" wx:for="{{item.tags}}" wx:for-item="t" wx:key="*this">{{t}}</text>
+            <text wx:if="{{item.source === 'baidu'}}" class="c-tag c-tag--real">百度真实店源</text>
+            <text wx:if="{{item.phone}}" class="c-tag">☎ {{item.phone}}</text>
           </view>
           <view class="c-row2">
-            <text class="c-price"><text class="cur">¥</text>{{item.price}}<text class="unit">/{{item.unit}}</text></text>
+            <!-- 真实 POI 条目 price 为 null：只给参考价，必须带「参考」角标，不能让用户以为是实价 -->
+            <text wx:if="{{item.price}}" class="c-price"><text class="cur">¥</text>{{item.price}}<text class="unit">/{{item.unit}}</text></text>
+            <text wx:else class="c-price c-price--est">参考 ¥{{item.estPrice}}<text class="unit">/{{item.unit}} 起</text></text>
             <text wx:if="{{item.distText}}" class="c-dist">{{item.distText}}</text>
           </view>
           <view class="c-row3">
-            <text class="c-sup">下单平台：{{item.supplier.platformName || '第三方'}}</text>
+            <text class="c-sup">去{{item.supplier.platformName || '第三方'}}下单</text>
             <text class="c-go">去下单 ›</text>
           </view>
         </view>
@@ -65,7 +85,9 @@
     </view>
 
     <view class="foot-note">
-      所有订单由鲤慧留存记录，支付与履约在 {{thirdName}} 等第三方平台完成，鲤慧不接触资金。
+      <block wx:if="{{realLinked}}">✅ 已接入真实价格渠道：{{realLinked}}，点进详情能看到真实价。</block>
+      <block wx:else>ℹ️ 当前为百度真实店铺 + 参考价，点进详情可跳转对应平台看真实价并支付。</block>
+      <text class="fn-sub">所有订单由鲤慧留存记录，支付与履约在第三方平台完成，鲤慧不接触资金。</text>
     </view>
   </scroll-view>
 </view>
