@@ -16,8 +16,9 @@ const poiSearch = (query, lng, lat, radius) =>
 const planRoute = ({ mode = 'walking', origin, destination, realtime = false }) =>
   get('/map/route', {
     mode,
-    origin: `${origin.lng},${origin.lat}`,
-    destination: `${destination.lng},${destination.lat}`,
+    // ⚠️ 百度 direction 系列要求「纬度,经度」，写成经,纬 等于起点终点对调
+    origin: `${origin.lat},${origin.lng}`,
+    destination: `${destination.lat},${destination.lng}`,
     realtime: realtime ? 'true' : 'false'
   }, { cacheTtl: 2 * 60 * 1000 })
 const weather = (lng, lat) => get('/map/weather', { lng, lat }, { cacheTtl: 10 * 60 * 1000 })

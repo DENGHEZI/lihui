@@ -5,6 +5,7 @@
 const baiduMap = require('./baiduMap');
 const { Cache } = require('../utils/cache');
 const { isPrivateIp } = require('../utils/http');
+const { safeBd09ToGcj02 } = require('../utils/coord');
 const logger = require('../utils/logger');
 
 const cache = new Cache(1000);
@@ -35,6 +36,7 @@ async function locate(ip, opts = {}) {
   const corr = ip ? CORRECTION.get(ip) : null;
   if (corr && Date.now() - corr.ts < 30 * 60 * 1000) {
     out.point = { lng: corr.lng, lat: corr.lat };
+    out.pointCoord = 'gcj02'; // 端上报的是 GCJ-02，后续不再换算
     out.confidence = 0.98;
     out.source = 'client-gps';
   }
@@ -67,9 +69,11 @@ async function locate(ip, opts = {}) {
   }
 
   // 5) 用坐标补一次逆地理，拿到区县（提升端上展示精度）
+  //    ⚠️ 百度 IP 定位产出的是 BD-09，此处必须按 bd09ll 反查，否则反查点偏移 500~900m
   if (out.point && !out.district) {
+    const revCoord = out.pointCoord === 'gcj02' ? 'gcj02' : 'bd09ll';
     try {
-      const rev = await baiduMap.reverseGeocode(out.point.lng, out.point.lat);
+      const rev = await baiduMap.reverseGeocode(out.point.lng, out.point.lat, revCoord);
       out.city = out.city || rev.city;
       out.province = out.province || rev.province;
       out.district = rev.district || '';
@@ -77,7 +81,15 @@ async function locate(ip, opts = {}) {
     } catch (_) {}
   }
 
-  if (out.city) cache.set(ck, out, 30 * 60 * 1000);
+  // 6) 对外统一 GCJ-02：百度 IP 定位给的是 BD-09，先换算再下发，
+  //    否则端上拿它当 GCJ-02 用，等于又引入 500~900m 偏差
+  // 端上报上来的 GPS 已是 GCJ-02（source=client-gps），不能重复换算
+  if (out.point && out.pointCoord !== 'gcj02') {
+    const g = safeBd09ToGcj02(out.point.lng, out.point.lat);
+    if (g) out.point = g;
+  }
+
+  if (out.city || out.point) cache.set(ck, out, 30 * 60 * 1000);
   return out;
 }
 
