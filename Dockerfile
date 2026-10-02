@@ -16,14 +16,21 @@ LABEL org.opencontainers.image.licenses="MIT"
 WORKDIR /app
 
 # 运行时数据目录（Token 账本 / 会话 / 反馈 / 模型配置）。
-# 注意：不要在这里 COPY 03-lh-server/data，其中可能含敏感配置；
-# compose 以命名卷 lihui-data 持久化 /app/data，缺失时 store.js 会自动 mkdir。
 RUN mkdir -p /app/data && chmod 700 /app/data
 
-# 仅拷贝服务端所需内容（AK 一律不进镜像，运行时以环境变量注入）
+# 服务端代码（零依赖，无需 npm install）
 COPY 03-lh-server/package.json ./
 COPY 03-lh-server/src ./src
 COPY 03-lh-server/.env.example ./.env.example
+
+# ★ 运行密钥随镜像构建时注入（仅从「被 .gitignore 忽略、不进 Gitee」的本地文件拷贝）。
+#   目的：云端部署后开箱即用，免去在云控制台逐个填环境变量的麻烦。
+#     · .env            → 百度 AK 等（config 用 loadEnvFile 读 /app/.env）
+#     · data/models.json → 云端模型 Key（modelRegistry 读 /app/data/models.json）
+#   ⚠️ 安全权衡：镜像内含密钥，仅适用于私有云托管镜像仓库；
+#      若需更严格，删掉下面两行、改回在云控制台配环境变量（config 运行时 env 优先于文件）。
+COPY 03-lh-server/.env ./.env
+COPY 03-lh-server/data/models.json ./data/models.json
 
 # ★ 必须随镜像一起拷贝：MCP Server 是 stdio 子进程，由 config.mcp.dir 解析路径。
 #   MCP_BASE = path.resolve('/app', '..', '..') + '/04-lh-mcp-servers' = /04-lh-mcp-servers

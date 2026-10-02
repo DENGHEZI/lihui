@@ -2,10 +2,18 @@
 .git
 .gitignore
 
-# 密钥与运行时数据（绝不进镜像）
+# 密钥与运行时数据：默认全部排除；
+# 但构建镜像时需要把以下两个本地文件注入容器（二者都被 .gitignore 忽略，不会进 Gitee）
 **/.env
-03-lh-server/data/
-03-lh-server/.env
+!03-lh-server/.env
+03-lh-server/data/feedback.json
+03-lh-server/data/logs/
+03-lh-server/data/mcp.json
+03-lh-server/data/quota.json
+03-lh-server/data/sessions.json
+03-lh-server/data/tokens.json
+03-lh-server/data/voice.json
+# 03-lh-server/data/models.json 不在排除列表 -> 会打进镜像（含云端模型 Key）
 
 # 文档与截图（镜像不需要）
 00-设计文档/
