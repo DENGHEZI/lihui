@@ -3,6 +3,7 @@
   flex-direction: column;
   height: 100vh;
   box-sizing: border-box;
+  overflow: hidden;
 }
 .scene-bar {
   white-space: nowrap;
@@ -20,6 +21,8 @@
 }
 .msgs {
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
   padding: 24rpx 24rpx 0;
   box-sizing: border-box;
 }
@@ -142,6 +145,7 @@
 .input-bar {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
   background: #FFFFFF;
