@@ -273,9 +273,19 @@ function wgs84ToGcj02(lng, lat) {
 }
 
 /* ================= 定位 ================= */
+/* IP 定位接口返回的 city 常是「湖南省郴州市北湖区」这种带省带区的全称，
+   直接和 district 拼会变成「湖南省郴州市北湖区 · 北湖区」。这里收敛成「郴州市 · 北湖区」。 */
+function cityName(s) {
+  let v = String(s || '').trim().replace(/^中国/, '').replace(/^.*?省/, '');
+  const i = v.lastIndexOf('市');
+  return i > 0 ? v.slice(0, i + 1) : v;
+}
 function setLocUI(city, district, src) {
   state.city = city || state.city; state.district = district || state.district;
-  $('#city').textContent = [state.city, state.district].filter(Boolean).join(' · ') || '郴州';
+  const c = cityName(state.city), d = String(state.district || '').trim();
+  const label = (!c || !d || c.includes(d) || d.includes(c)) ? c : (c + ' · ' + d);
+  state.cityLabel = label;
+  $('#city').textContent = label || '郴州';
   $('#locText').textContent = [state.district || state.city].filter(Boolean).join('') || '已定位';
   $('#locDot').classList.remove('off');
   $('#locSrc').textContent = src;
