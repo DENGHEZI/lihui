@@ -6,12 +6,38 @@
 
 *15 分钟，看清你的生活半径。*
 
-![Platform](https://img.shields.io/badge/端-微信小程序_|_Android_|_HarmonyOS_|_iOS-1677FF)
+![Platform](https://img.shields.io/badge/端-微信小程序_|_Web_|_Android_|_HarmonyOS_|_iOS-1677FF)
 ![Server](https://img.shields.io/badge/服务端-Node.js_零依赖-00B96B)
 ![MCP](https://img.shields.io/badge/MCP-8_Servers_即插即用-FF8A00)
+![Router](https://img.shields.io/badge/API-50%2B%20路由-6C5CE7)
+![Coordin](https://img.shields.io/badge/坐标-GCJ%2F02_统一治理-00B96B)
 ![License](https://img.shields.io/badge/License-MIT-8F959E)
 
 </div>
+
+---
+
+## 🌐 在线体验
+
+同一套后端，三种入口，打开即用：
+
+| 入口 | 形态 | 说明 |
+|---|---|---|
+| **网页版** | 浏览器直接打开 | 自动定位 + 生活圈体检 + 便民速查 + 真实店源，**零安装、扫码即用** |
+| **微信小程序** | 微信扫一扫 | 地图主页 / 商城 / 订单 / 模型与语音，全功能端 |
+| **多端 APP** | Android / HarmonyOS / iOS | uni-app 工程，同一套 UI 规范 |
+
+```bash
+# 网页版本地起服务后浏览器访问（根路径即网页，/server-info 是原 JSON 自述）
+node 03-lh-server/src/app.js     # → http://localhost:8809/
+```
+
+> 网页版把浏览器 **WGS-84 定位在前端内联换算成 GCJ-02** 再打接口，
+> 与小程序 `wx.getLocation({ type: 'gcj02' })`、百度返回值共用同一坐标系，避免「偏 500～900 米」。
+
+**网页版真机渲染**（自动定位 → IP 兜底 → 天气 → 生活圈体检 → 真实店源）：
+
+![网页版](docs/screenshots/11-web-preview.png)
 
 ---
 
@@ -41,6 +67,17 @@
 |:---:|:---:|:---:|
 | ![个性化方案](docs/screenshots/04-life-plan.jpg) | ![AI助手](docs/screenshots/05-assistant.jpg) | ![我的](docs/screenshots/06-mine.jpg) |
 
+| 鲤慧商城 · 郴州热门 | 鲤慧商城 · 附近真实 | 我的订单（可跳第三方支付） |
+|:---:|:---:|:---:|
+| ![商城热门](docs/screenshots/07-mall-hot.jpg) | ![商城附近](docs/screenshots/08-mall-near.jpg) | ![我的订单](docs/screenshots/09-orders.jpg) |
+
+| 模型与语音设置（6 类供应商） | 关怀模式 · 适老化 |
+|:---:|:---:|
+| ![模型与语音](docs/screenshots/10-models-voice.jpg) | ![关怀模式](docs/screenshots/03-life-report.jpg) |
+
+> 商城页全部店名 / 地址 / 电话来自**百度地图 place 实时检索**（非内置假数据）；
+> 配额耗尽时前端弹提示条并回落到最近一次可用结果，**不白板**。
+
 ---
 
 ## ✨ 核心功能
@@ -66,6 +103,92 @@
 | 🧩 **MCP 工具生态** | 8 个 MCP Server 即插即用，支持从 ModelScope 检索安装 |
 | ☀️ **天气与景区** | 实时天气 + AQI，周边出行休闲推荐 |
 | 🖥 **桌面动作** | 生成 `baidumap://` 等 URI Scheme，一键跳转地图 App 导航 |
+
+---
+
+## 💡 八个创新点（工程 · 产品 · 合规）
+
+### 1️⃣ 坐标系统一治理引擎 —— 把「偏 500~900 米」当系统性问题根治
+同一份数据在三个入口要过三种坐标系：小程序 `wx.getLocation` 是 **GCJ-02**，
+网页浏览器 `navigator.geolocation` 是 **WGS-84**，百度接口默认吐 **BD-09**。
+鲤慧的做法不是「各自补个偏移」，而是**把坐标系当成接口契约**：
+
+| 位置 | 处理 |
+|---|---|
+| 百度 POI 检索 | 强制 `ret_coord_type=gcj02`，出口统一 GCJ-02 |
+| 路线规划入参 | 不设 `bd09ll`（入参本就是 GCJ-02，设错直接偏移） |
+| 跳转 URI | `baidumap://…&coord_type=gcj02` |
+| 网页端 | 前端内联 `wgs84ToGcj02` 标准偏移算法，先转换再请求 |
+| 工具层 | `src/utils/coord.js` 备 `bd09ToGcj02` 等，任何新入口先声明坐标系 |
+
+> 修复前用户反馈「位置不对」时，实际是 4 处坐标系混用叠加，单点修都只能缓解。
+
+### 2️⃣ Stale-Aware 缓存 —— 第三方接口限流也不会白板
+百度 place 是**日配额**接口（超限返回 `302`），naive 实现会：一次超限 → 空结果覆盖旧目录 →
+「配额一挂，商城空一整天」。鲤慧做了三层：
+
+```
+实时检索 → 内存缓存(10min) → 磁盘缓存(mode 分文件) → 空态文案
+             ↑ 命中但被限流时，回吐 { ...stale, hint:'接口暂不可用，这是最近一次可用结果' }
+```
+
+- **配额命中的空结果绝不覆盖**已有目录（护住旧缓存，不再越修越坏）
+- `near` / `hot` **分文件**存储，两个 tab 不再互相擦写、也不再空烧配额
+- 配额状态 `quotaHit` 一路透传到端上，前端显式弹提示条
+
+### 3️⃣ AK / Key 不落端 —— 密钥集中化 + 用户自带 Key 双通道
+- 百度地图 Web 服务 AK **只存服务端**，端上只拿渲染结果；
+- 用户自己的 LLM Key 走「我的 → 模型设置」可视化录入，支持 **OpenAI 兼容 / Anthropic / Gemini / Ollama / DeepSeek / 智谱** 6 类供应商，遮蔽显示、随时增删测；
+- 服务端兜底 `.env` 环境变量，端上不留任何密钥字符串。
+
+### 4️⃣ 零依赖服务端 —— 没有 `npm install` 的服务端
+`03-lh-server` 用 **node 内置模块**（`http` / `fs` / `child_process` / `crypto`）手写路由、序列化、MCP 桥接：
+
+- 无 `node_modules`、无构建步骤，`node src/app.js` 直接起
+- 镜像只有 `node:22-alpine`，构建 10 秒内
+- 主进程再 spawn **8 个 MCP stdio 子进程**，崩溃自动重启（≤3 次）
+
+### 5️⃣ 可解释的生活圈体检评分（不是拍脑袋给分）
+六类设施**加权**评分，权重写死在服务端、短板可定位、分数可追因：
+
+| 医疗 25% | 商业 20% | 交通 20% | 教育 15% | 餐饮 10% | 休闲 10% |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+
+输出 = 环形总分 + 六类条形 + **短板一句话建议**（不只是「你分低」）。
+
+### 6️⃣ Agent = 完整 MCP Client（2024-11-05 协议）
+不是「调个 LLM 拼字符串」，是真的 MCP 客户端：
+
+```
+启动 → 拉起 8 个 MCP Server(stdio) → initialize → tools/list 能力发现
+     → 按意图 tools/call → 汇总成人性化回复 + 结构化卡片
+```
+8 个 Server：`baidu-map · life-circle · cost-optimizer · ip-anchor · desktop-action · emotion · voice · feedback`
+
+### 7️⃣ 适老化关怀模式（无障碍不是加分项）
+一键开启：大字号 + WCAG AAA 高对比 + 慢速语音 + 单步引导 + 方言音色，
+语音引擎可换（百度语音 / 系统 TTS），老人模式自动放慢加响。
+
+### 8️⃣ 第三方履约、鲤慧不碰资金
+商城/订单只做**两件事**：留存订单记录（单号 `LH+日期+随机`）、生成跳转去第三方平台支付履约。
+
+> 所有订单由鲤慧留存记录，支付与履约在第三方平台完成，鲤慧不接触资金。
+> 前端每次都把这句免责说明打在店源下方，避免「鲤慧收钱了？」的误解。
+
+---
+
+## 📊 项目数据
+
+| 维度 | 数量 |
+|---|---|
+| 端 | 4（微信小程序 · 网页版 · Android · HarmonyOS/iOS） |
+| MCP Server | 8（16+ tools） |
+| API 路由 | 50+ |
+| 服务端依赖 | **0**（纯 Node 内置模块） |
+| 生活圈设施类目 | 6 类加权体检 + 8 类便民速查 |
+| 支持的模型供应商 | 6（OpenAI 兼容 / Anthropic / Gemini / Ollama / DeepSeek / 智谱） |
+| 定位降级链 | 4 级（端上 GPS → IP 锚定 → 逆地理补区 → 城市兜底） |
+| 语音链路 | 录音 → 识别 → 播报（音色/语速/方言可配） |
 
 ---
 
@@ -278,6 +401,31 @@ curl https://.../api/v1/mcp/list         # baidu-map / life-circle 必须 runnin
 
 ---
 
+## 🛡 合规边界（写在产品里，不是藏在法务那）
+
+| 边界 | 鲤慧怎么做 |
+|---|---|
+| 不碰资金 | 支付与履约全部在第三方平台（携程 / 美团等）完成，鲤慧只留订单记录 |
+| 不伪造数据 | 店名 / 地址 / 电话 / 坐标全部来自百度地图实时检索，配额不足时**明说**并回落缓存，不用假数据填空 |
+| 不劫持跳转 | 唤起第三方用 `wx.navigateToMiniProgram`（白名单）或 `https://` / `baidumap://` 方案，安全白名单校验 |
+| 密钥不落端 | 服务端 AK 不下发；用户 Key 端上录入、服务端遮蔽存储 |
+| 计量可核算 | Token 按「天 / 设备 / 模型」聚合记账，用量与成本可在端上查看 |
+
+---
+
+## 🎯 它能用在哪
+
+| 场景 | 鲤慧给的答案 |
+|---|---|
+| 🏙 **刚到一座新城市** | 30 秒看完：这个区医疗/交通/商业/教育缺不缺、缺多少、最近的在哪 |
+| 👵 **给爸妈租房** | 关怀模式 + 慢速语音，直接听「这个片区买菜要走 12 分钟」 |
+| 🧭 **周末去哪玩** | 休闲 / 门票 / 住宿 + 路线规划 + 成本对比，一键导航 |
+| 💼 **商务差旅** | 「高铁站 3km 内有啥」→ POI 检索 + 驾车避堵 + 省钱方案 |
+| 🏪 **本地商家** | 作为附近居民的慢变量入口：体检报告就是一张可被转发的城市卡片 |
+| 🧑‍💻 **开发者** | 参考实现：零依赖 Node 服务端 + MCP Client + 多端同构 + 云托管一条龙部署 |
+
+---
+
 ## 🧩 MCP 工具清单（16+）
 
 | MCP Server | 工具 | 能力 |
@@ -313,11 +461,15 @@ curl https://.../api/v1/mcp/list         # baidu-map / life-circle 必须 runnin
 
 - [x] 微信小程序端全功能
 - [x] uni-app 多端工程（Android / HarmonyOS / iOS）
-- [x] MCP Server 生态 + Agent Client 编排
+- [x] **网页版**（根路径直出，浏览器实时定位与体检）
+- [x] MCP Server 生态 + Agent Client 编排（8 Server / 16+ tools）
 - [x] Token 计量与配额体系
-- [ ] HTTPS 域名部署 + Nginx 反代（见 `00-设计文档/04-部署与发布指南.md`）
+- [x] 坐标系统一治理（GCJ-02 全链路）
+- [x] Stale-Aware 店源缓存（限流不白板）
+- [ ] `lihui-tech.online` 自定义域名 + HTTPS（绑定 DNSPod CNAME）
 - [ ] ModelScope 一键安装 MCP Server
-- [ ] 生活圈历史体检对比
+- [ ] 生活圈历史体检对比（周/月趋势）
+- [ ] 多城市切换与跨城对比
 
 ---
 
@@ -325,6 +477,14 @@ curl https://.../api/v1/mcp/list         # baidu-map / life-circle 必须 runnin
 
 [MIT](LICENSE) © 邓何子彦（deng-he-ziyan）
 
+---
+
 <div align="center">
-<sub>Built with 🗺 百度地图开放能力 · Powered by MCP Protocol</sub>
+
+### 🐟 15 分钟，看清你的生活半径
+
+**一码多端 · 服务端中转 · MCP 工具生态 · 坐标统一治理**
+
+[在线网页版](#-在线体验) · [MCP Server 清单](#-mcp-工具清单16) · [部署到云托管](#-腾讯云托管--微信云托管部署cloudbase-run) · [创新点](#-八个创新点工程--产品--合规)
+
 </div>
