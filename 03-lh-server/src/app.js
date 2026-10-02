@@ -11,9 +11,10 @@ const config = require('./config');
 const logger = require('./utils/logger');
 const { json, fail, readBody, clientIp, TRACE } = require('./utils/http');
 const hub = require('./mcp/hub');
+const bmapSite = require('./services/bmapSite');
 
 /* ---------------- 路由表 ---------------- */
-const modules = ['./routes/system', './routes/ip', './routes/map', './routes/life', './routes/agent', './routes/mcp', './routes/model', './routes/voice', './routes/token', './routes/feedback', './routes/action'];
+const modules = ['./routes/system', './routes/ip', './routes/map', './routes/life', './routes/agent', './routes/mcp', './routes/model', './routes/voice', './routes/token', './routes/feedback', './routes/action', './routes/shop', './routes/order'];
 const ROUTES = {};
 for (const m of modules) {
   try {
@@ -98,6 +99,11 @@ const server = http.createServer(async (req, res) => {
   // 保底：容器平台（云托管 / 云厂商 / K8s）健康检查常探不带前缀的 /health、/ping。
   // 必须在下面 API_PREFIX 检查之前放行，否则会被直接 404 拦掉。
   const isPlainHealth = pathname === '/health' || pathname === '/ping';
+
+  // 百度底图站点（web-view 首页 / 瓦片代理 / JS API 代理），不走 /api/v1 前缀
+  if (pathname === '/map-home' || pathname === '/map_home' || pathname.startsWith('/bmap/')) {
+    return await bmapSite.handle(req, res, u);
+  }
 
   if (!pathname.startsWith(API_PREFIX) && !isPlainHealth) {
     return fail(res, 4040, 'not found', 404);

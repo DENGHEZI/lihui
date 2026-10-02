@@ -1,0 +1,273 @@
+.detail {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #F4F5F7;
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 20rpx 24rpx 40rpx;
+  box-sizing: border-box;
+}
+
+.block {
+  margin-bottom: 20rpx;
+}
+
+/* ---------- 商品头 ---------- */
+.hero {
+  display: flex;
+  background: #FFFFFF;
+  border-radius: 28rpx;
+  padding: 32rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, .06);
+}
+
+.hero-ico {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(160deg, #EAF2FF, #F4F8FF);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 68rpx;
+  flex-shrink: 0;
+}
+
+.hero-main {
+  flex: 1;
+  min-width: 0;
+  margin-left: 24rpx;
+}
+
+.h-name {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+  line-height: 1.4;
+}
+
+.h-tags {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 10rpx;
+}
+
+.h-tag {
+  font-size: 21rpx;
+  color: var(--lh-primary);
+  background: var(--lh-primary-soft);
+  border-radius: 6rpx;
+  padding: 3rpx 10rpx;
+  margin: 0 8rpx 6rpx 0;
+}
+
+.h-price {
+  margin-top: 16rpx;
+  font-size: 46rpx;
+  font-weight: 700;
+  color: #F5222D;
+  line-height: 1;
+}
+
+.h-cur {
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.h-unit {
+  font-size: 24rpx;
+  font-weight: 400;
+  color: var(--lh-text-sub);
+}
+
+.h-origin {
+  margin-left: 16rpx;
+  font-size: 24rpx;
+  font-weight: 400;
+  color: var(--lh-text-weak);
+  text-decoration: line-through;
+}
+
+/* ---------- 说明 ---------- */
+.desc {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 27rpx;
+  color: var(--lh-text-sub);
+  line-height: 1.7;
+}
+
+.meta {
+  margin-top: 18rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid var(--lh-line);
+}
+
+.m-item {
+  display: block;
+  font-size: 24rpx;
+  color: var(--lh-text-weak);
+  line-height: 1.9;
+}
+
+.m-v {
+  color: var(--lh-text);
+}
+
+/* ---------- 规格 ---------- */
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.specs {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 18rpx;
+}
+
+.sp {
+  display: inline-flex;
+  align-items: center;
+  height: 64rpx;
+  padding: 0 28rpx;
+  border-radius: 14rpx;
+  border: 1rpx solid var(--lh-line);
+  color: var(--lh-text-sub);
+  font-size: 26rpx;
+  margin: 0 16rpx 16rpx 0;
+  background: #FFFFFF;
+}
+
+.sp--on {
+  border-color: var(--lh-primary);
+  background: var(--lh-primary-soft);
+  color: var(--lh-primary);
+  font-weight: 600;
+}
+
+/* ---------- 表单 ---------- */
+.field {
+  display: flex;
+  align-items: center;
+  height: 92rpx;
+  border-bottom: 1rpx solid var(--lh-line);
+}
+
+.field:last-child {
+  border-bottom: none;
+}
+
+.lb {
+  width: 150rpx;
+  font-size: 27rpx;
+  color: var(--lh-text-sub);
+  flex-shrink: 0;
+}
+
+.inp {
+  flex: 1;
+  font-size: 28rpx;
+  color: #1A1A1A;
+  height: 92rpx;
+}
+
+.inp--fake {
+  color: #1A1A1A;
+}
+
+.ph {
+  color: #B2B7BE;
+  font-size: 26rpx;
+}
+
+.arrow {
+  color: var(--lh-text-weak);
+  font-size: 32rpx;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.st {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 12rpx;
+  background: #F4F5F7;
+  color: var(--lh-primary);
+  font-size: 34rpx;
+  line-height: 60rpx;
+  text-align: center;
+}
+
+.st--dis {
+  color: #C8CDD4;
+}
+
+.st-num {
+  width: 90rpx;
+  text-align: center;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.note {
+  padding: 0 20rpx 20rpx;
+  font-size: 22rpx;
+  color: var(--lh-text-weak);
+  line-height: 1.7;
+}
+
+/* ---------- 底部栏（必须 flex-shrink:0） ---------- */
+.bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 16rpx 24rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  background: #FFFFFF;
+  border-top: 1rpx solid var(--lh-line);
+}
+
+.bar-price {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+}
+
+.bp-cur {
+  font-size: 24rpx;
+  color: #F5222D;
+  font-weight: 600;
+}
+
+.bp-num {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #F5222D;
+  line-height: 1;
+}
+
+.bp-unit {
+  font-size: 22rpx;
+  color: var(--lh-text-sub);
+  margin-left: 6rpx;
+}
+
+.bar .lh-btn {
+  width: 260rpx;
+  flex-shrink: 0;
+}

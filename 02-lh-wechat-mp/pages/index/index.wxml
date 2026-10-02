@@ -52,6 +52,15 @@
 
       <!-- 折叠态 -->
       <block wx:if="{{!poiList.length}}">
+        <view class="shop-entry" bindtap="goShop">
+          <text class="se-ico">🛍️</text>
+          <view class="se-mid">
+            <text class="se-t1">鲤慧商城</text>
+            <text class="se-t2">酒店 / 门票 / 上门服务，点一下就能下单</text>
+          </view>
+          <text class="se-go">去逛逛 ›</text>
+        </view>
+
         <text class="lh-h2">周边便民服务</text>
         <text class="lh-cap quick-sub">15 分钟步行范围内，一键查看</text>
         <view class="quick-grid">

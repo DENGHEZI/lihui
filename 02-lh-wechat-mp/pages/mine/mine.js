@@ -23,7 +23,8 @@ Page({
     appid: config.WX_APPID,
     serverText: config.BASE_URL,
     mcpText: '-',
-    cacheKB: 0
+    cacheKB: 0,
+    orderCount: 0
   },
 
   onShow() {
@@ -36,6 +37,7 @@ Page({
     })
     this.loadStats()
     this.loadConfig()
+    this.loadOrderCount()
     app.getLocation().then((l) => {
       const c = parseCity(l.city)
       const d = parseDistrict(l.district)
@@ -43,6 +45,15 @@ Page({
         locText: [c, d].filter(Boolean).join(' ') || (l.source === 'gps' ? 'GPS 已就绪' : '未定位')
       })
     })
+  },
+
+  /** 我的订单数量（本地订单里未完成的条数） */
+  loadOrderCount() {
+    try {
+      const list = wx.getStorageSync('lh_orders') || []
+      const pending = list.filter((x) => x.status === 'pending' || x.status === 'paid').length
+      this.setData({ orderCount: pending })
+    } catch (e) {}
   },
 
   async loadStats() {
@@ -70,6 +81,12 @@ Page({
 
   goSettings() {
     wx.navigateTo({ url: '/pages/settings/settings' })
+  },
+  goShop() {
+    wx.navigateTo({ url: '/pages/shop/shop' })
+  },
+  goOrder() {
+    wx.navigateTo({ url: '/pages/order/list' })
   },
   goLife() {
     wx.switchTab({ url: '/pages/life/life' })

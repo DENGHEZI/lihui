@@ -28,6 +28,17 @@ const scenicRecommend = (lng, lat, radius) => get('/map/scenic-recommend', { lng
 const lifeReport = (lng, lat, radius) => get('/life/report', { lng, lat, radius: radius || 1200 }, { cacheTtl: 3 * 60 * 1000 })
 const customizePlan = (lng, lat, preference) => post('/life/customize', { lng, lat, preference: preference || {} })
 
+/* ---------------- 商城 / 订单（选品留痕 + 跳第三方下单） ---------------- */
+const shopItems = (q) => get('/shop/items', q || {})
+const shopCategories = () => get('/shop/categories')
+const shopItem = (id) => get('/shop/item', { id })
+const shopHot = () => get('/shop/hot')
+const orderCreate = (p) => post('/order/create', p)
+const orderList = (p) => get('/order/list', p || {})
+const orderDetail = (no) => get('/order/detail', { no })
+const orderStatus = (no, status) => post('/order/status', { no, status })
+const orderSync = (orders) => post('/order/sync', { orders })
+
 /* ---------------- Agent ---------------- */
 function newSessionId() {
   return 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
@@ -96,6 +107,15 @@ module.exports = {
   scenicRecommend,
   lifeReport,
   customizePlan,
+  shopItems,
+  shopCategories,
+  shopItem,
+  shopHot,
+  orderCreate,
+  orderList,
+  orderDetail,
+  orderStatus,
+  orderSync,
   newSessionId,
   agentChat,
   agentTools,

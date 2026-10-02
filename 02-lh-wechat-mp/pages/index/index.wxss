@@ -145,6 +145,42 @@
   box-sizing: border-box;
 }
 
+/* 商城入口横幅 */
+.shop-entry {
+  display: flex;
+  align-items: center;
+  margin: 4rpx 0 24rpx;
+  padding: 20rpx 24rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(120deg, #EAF2FF, #F4F8FF);
+}
+.se-ico {
+  font-size: 44rpx;
+  margin-right: 16rpx;
+}
+.se-mid {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.se-t1 {
+  font-size: 29rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+.se-t2 {
+  font-size: 21rpx;
+  color: var(--lh-text-sub);
+  margin-top: 2rpx;
+}
+.se-go {
+  font-size: 24rpx;
+  color: var(--lh-primary);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
 .quick-sub {
   display: block;
   margin: 8rpx 0 24rpx;
