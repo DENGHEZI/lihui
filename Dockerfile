@@ -39,7 +39,16 @@ COPY 03-lh-server/.env.example ./.env.example
 #   ⚠️ 安全权衡：镜像内含密钥，仅适用于私有云托管镜像仓库；
 #      若需更严格，删掉下面两行、改回在云控制台配环境变量（config 运行时 env 优先于文件）。
 COPY 03-lh-server/.env.cloud ./.env
+
+# ★ 静态数据目录必须逐个显式 COPY —— 云托管是「从 Gitee 拉仓库 build」的，
+#   仓库里有的文件才会进镜像；漏一条 → 容器内 /app/data/xxx.json 不存在，
+#   store.read() 直接返回 null，接口静默返回空数组（表现为「商品打不开 / 列表空白」）。
+#   ⚠️ 以后新增这类静态数据文件（如 data/xxx.json）时，必须在这里同步加一行 COPY，
+#      否则本地跑得好好的，一上云就空。
+#   （运行时才写入的文件 feedback/sessions/tokens/quota/voice/mcp 反而【不能】COPY，
+#     否则会把某个人的历史数据烤进镜像，所有新用户一进去就看到别人的记录。）
 COPY 03-lh-server/data/models.json ./data/models.json
+COPY 03-lh-server/data/shop.json ./data/shop.json
 
 # ★ 必须随镜像一起拷贝：MCP Server 是 stdio 子进程，由 config.mcp.dir 解析路径。
 #   MCP_BASE = path.resolve('/app', '..', '..') + '/04-lh-mcp-servers' = /04-lh-mcp-servers

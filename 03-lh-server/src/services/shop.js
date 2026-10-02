@@ -17,9 +17,17 @@ const CATEGORIES = [
   { key: 'service', name: '本地服务', icon: '🧰' },
 ];
 
+let warnedCatalog = false;
+
 function allItems() {
   const raw = store.read(CATALOG_FILE, null);
   const items = raw && Array.isArray(raw.items) ? raw.items : [];
+  // ★ 目录读不到时打一条明确的日志：容器里最常见的就是 Dockerfile 漏 COPY data/xxx.json，
+  //   此时接口不会报错、只是返回空数组，端上表现为「商品打不开 / 列表空白」，极难自查。
+  if (!raw && !warnedCatalog) {
+    warnedCatalog = true;
+    logger.warn('shop', `未读到 ${CATALOG_FILE}（${store.dataDir}/${CATALOG_FILE}.json），商品列表为空 —— 容器环境请确认 Dockerfile 已 COPY 该文件`);
+  }
   return items.filter((x) => x && x.active !== false && x.id);
 }
 

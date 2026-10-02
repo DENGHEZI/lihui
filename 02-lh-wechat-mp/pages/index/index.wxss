@@ -237,8 +237,27 @@
   margin: 0 2% 16rpx 0;
   box-sizing: border-box;
 }
+.scenic-item {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
 .scenic-item:active {
   background: var(--lh-primary-soft);
+}
+.scenic-item.s-hover {
+  background: var(--lh-primary-soft);
+}
+.s-mid {
+  flex: 1;
+  min-width: 0;
+  margin-right: 12rpx;
+}
+.s-go {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: var(--lh-primary);
+  padding: 4rpx 0;
 }
 .s-name {
   font-size: 28rpx;

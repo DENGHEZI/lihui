@@ -326,6 +326,27 @@ Page({
     wx.navigateTo({ url: `/pages/route/route?name=${encodeURIComponent(p.name)}&lng=${p.lng}&lat=${p.lat}` })
   },
 
+  /**
+   * 休闲推荐卡点击 —— 走 scenery 自己的数组，不能复用 navigate()。
+   * ⚠️ 踩坑：这里早期直接 bindtap="navigate" + data-i，而 navigate() 读的是 poiList；
+   *    折叠态下 poiList 是空数组 → 点一下 p 为 undefined 直接 return，表现就是「卡片点不动」。
+   *    现在改成用 this.data.scenic[index]，坐标来自百度 place 检索（GCJ-02）。
+   */
+  onScenicTap(e) {
+    const idx = Number(e.currentTarget.dataset.i)
+    const s = this.data.scenic[idx]
+    if (!s) return
+    const lng = Number(s.lng)
+    const lat = Number(s.lat)
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
+      wx.showToast({ title: '该景点暂无坐标，换个再看', icon: 'none', duration: 2000 })
+      return
+    }
+    wx.navigateTo({
+      url: `/pages/route/route?name=${encodeURIComponent(s.name)}&lng=${lng}&lat=${lat}`
+    })
+  },
+
   fmtDist(d) {
     if (d === null || d === undefined || d === '') return ''
     return Number(d) >= 1000 ? (Number(d) / 1000).toFixed(1) + 'km' : Math.round(Number(d)) + 'm'

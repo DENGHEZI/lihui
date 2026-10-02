@@ -75,9 +75,12 @@
           <text class="more" bindtap="loadScenic">换一批 ›</text>
         </view>
         <view class="scenic">
-          <view class="scenic-item" wx:for="{{scenic}}" wx:key="uid" bindtap="navigate" data-i="{{index}}">
-            <text class="s-name">{{item.name}}</text>
-            <text class="s-meta">{{item.tag}} · {{item.distText}}</text>
+          <view class="scenic-item" wx:for="{{scenic}}" wx:key="uid" bindtap="onScenicTap" data-i="{{index}}" hover-class="s-hover">
+            <view class="s-mid">
+              <text class="s-name">{{item.name}}</text>
+              <text class="s-meta">{{item.tag}} · {{item.distText}}</text>
+            </view>
+            <text class="s-go">导航 ›</text>
           </view>
         </view>
 

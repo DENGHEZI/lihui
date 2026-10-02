@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>鲤慧 · 地图</title>
+<style>
+  :root{
+    --blue:#1677ff; --blue-soft:#eaf1ff;
+    --txt:#1a1a1a; --txt2:#6b7280; --txt3:#9aa1ad;
+    --card:#ffffff; --line:#eef0f4;
+    --shadow:0 6px 24px rgba(18,26,43,.10);
+    --shadow-sm:0 2px 10px rgba(18,26,43,.08);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#eef1f5;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;color:var(--txt)}
+  #map{position:absolute;inset:0;z-index:0}
+  #map .BMap_mask{background:transparent}
+
+  /* ---------- 顶部搜索胶囊 ---------- */
+  .top{position:absolute;top:0;left:0;right:0;z-index:20;padding:calc(env(safe-area-inset-top) + 10px) 12px 0;pointer-events:none}
+  .pill{pointer-events:auto;display:flex;align-items:center;height:44px;background:#fff;border-radius:22px;
+    box-shadow:var(--shadow-sm);padding:0 6px 0 14px;gap:8px}
+  .pill .city{font-size:14px;font-weight:600;display:flex;align-items:center;gap:2px;color:var(--txt)}
+  .pill .city .caret{font-size:9px;color:var(--txt3)}
+  .pill .divider{width:1px;height:18px;background:var(--line)}
+  .pill input{flex:1;border:0;outline:none;background:transparent;font-size:14px;height:44px;color:var(--txt)}
+  .pill input::placeholder{color:var(--txt3)}
+  .pill .go{width:36px;height:36px;border-radius:18px;background:var(--blue);color:#fff;font-size:15px;
+    display:flex;align-items:center;justify-content:center;border:0}
+
+  /* ---------- 右侧竖向按钮 ---------- */
+  .side{position:absolute;right:12px;z-index:20;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px}
+  .side button{width:44px;height:44px;border-radius:14px;border:0;background:#fff;box-shadow:var(--shadow-sm);
+    font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .side button:active{transform:scale(.94)}
+
+  /* ---------- 中心地名气泡 ---------- */
+  .callout{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:15;pointer-events:none}
+  .callout .bub{background:#fff;border-radius:12px;padding:7px 12px;box-shadow:var(--shadow);font-size:13px;
+    max-width:62vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--txt)}
+  .callout .tip{margin:0 auto;width:0;height:0;border:7px solid transparent;border-top-color:#fff}
+
+  /* ---------- 底部大面板 ---------- */
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:25;background:#fff;border-radius:20px 20px 0 0;
+    box-shadow:0 -4px 20px rgba(18,26,43,.10);padding-bottom:calc(env(safe-area-inset-bottom) + 12px);transition:height .26s ease}
+  .sheet .handle{width:36px;height:4px;border-radius:2px;background:#dfe3ea;margin:8px auto 4px}
+  .sheet .loc-row{display:flex;align-items:center;gap:8px;padding:2px 16px 8px;font-size:13px;color:var(--txt2)}
+  .sheet .loc-row .dot{width:8px;height:8px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+  .sheet .loc-row .addr{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--txt)}
+  .sheet .search-box{margin:0 16px 10px;display:flex;align-items:center;gap:8px;background:#f4f6f9;border-radius:14px;padding:0 12px;height:42px}
+  .sheet .search-box input{flex:1;border:0;background:transparent;outline:none;font-size:14px;color:var(--txt)}
+  .sheet .search-box .cat{font-size:12px;color:var(--txt2);background:#fff;border-radius:20px;padding:5px 10px}
+
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:0 16px 10px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chips span{flex:0 0 auto;font-size:12px;color:var(--txt2);background:#f4f6f9;border-radius:20px;padding:6px 12px}
+
+  .fav{display:flex;gap:12px;padding:2px 16px 12px}
+  .fav button{flex:1;display:flex;align-items:center;gap:8px;height:44px;border:0;border-radius:14px;background:#f4f6f9;
+    font-size:13px;color:var(--txt);justify-content:center}
+
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 4px;padding:2px 12px 14px}
+  .grid button{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:12px;color:var(--txt);padding:6px 0}
+  .grid .ic{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px}
+
+  .rp{max-height:44vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 8px 8px}
+  .rp-item{display:flex;align-items:center;gap:10px;padding:11px 10px;border-radius:12px;cursor:pointer}
+  .rp-item:active{background:#f6f8fb}
+  .rp-item .ic{width:34px;height:34px;border-radius:11px;background:var(--blue-soft);display:flex;align-items:center;justify-content:center;font-size:17px;flex:0 0 auto}
+  .rp-item .m{flex:1;min-width:0}
+  .rp-item .n{font-size:14px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .rp-item .a{font-size:11px;color:var(--txt3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-top:2px}
+  .rp-item .d{font-size:12px;color:var(--blue);flex:0 0 auto}
+
+  /* ---------- 错误遮罩 ---------- */
+  .err-mask{position:absolute;inset:0;z-index:60;background:#f4f6f9;display:none;flex-direction:column;
+    align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center}
+  .err-mask.on{display:flex}
+  .err-mask .t{font-size:15px;font-weight:600}
+  .err-mask .d{font-size:12px;color:var(--txt2);max-width:80vw;word-break:break-all;line-height:1.6}
+  .err-mask .btn{margin-top:6px;border:0;border-radius:20px;background:var(--blue);color:#fff;padding:9px 22px;font-size:14px}
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="top">
+  <div class="pill">
+    <div class="city" id="city">定位中<em class="caret">▼</em></div>
+    <div class="divider"></div>
+    <input id="kw" placeholder="搜索目的地、公交、地铁…" />
+    <button class="go" id="goBtn">⌕</button>
+  </div>
+</div>
+
+<div class="side">
+  <button id="btnLocate" title="回到我的位置">◎</button>
+  <button id="btnAI" title="AI 助手">✦</button>
+  <button id="btnMine" title="我的">☺</button>
+</div>
+
+<div class="callout" id="callout" style="display:none">
+  <div class="bub" id="calloutText"></div>
+  <div class="tip"></div>
+</div>
+
+<div class="sheet" id="sheet" style="height:300px">
+  <div class="handle"></div>
+  <div class="loc-row">
+    <i class="dot"></i><span class="addr" id="locName">正在获取位置…</span>
+    <span id="locDist" style="color:var(--txt3)"></span>
+  </div>
+  <div class="search-box">
+    <span class="cat" id="catNow">分类</span>
+    <input id="kw2" placeholder="你要去哪儿？搜周边、找地点" />
+    <span style="font-size:13px;color:var(--blue)" id="clear2">清空</span>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="fav">
+    <button id="btnHome">🏠 回家</button>
+    <button id="btnWork">🏢 上班</button>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="rp" id="rp" style="display:none"></div>
+</div>
+
+<div class="err-mask" id="errMask">
+  <div class="t" id="errTitle">地图加载失败</div>
+  <div class="d" id="errDetail"></div>
+  <button class="btn" onclick="location.reload()">重新加载</button>
+</div>
+
+<script>
+/* ============ 1. 代理钩子：百度 AK 的 Referer 白名单里没有 web-view 域名，
+      所有 api.map.baidu.com 的请求改走服务端的 /bmap/proxy（那里会伪造 map.baidu.com 的 Referer） ============ */
+(function () {
+  window.__proxyMode = true;
+  var desc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
+  Object.defineProperty(HTMLScriptElement.prototype, 'src', {
+    configurable: true,
+    enumerable: true,
+    get: function () { return desc.get.call(this); },
+    set: function (v) {
+      if (typeof v === 'string' && v.indexOf('api.map.baidu.com') > -1) {
+        desc.set.call(this, '/bmap/proxy?u=' + encodeURIComponent(v));
+      } else {
+        desc.set.call(this, v);
+      }
+    }
+  });
+})();
+
+/* ============ 2. 全局状态 ============ */
+var AK = '__AK__';
+var map = null;
+var marker = null;
+var circle = null;
+var circleLabel = null;
+var geoc = null;
+var ls = null;
+var mapBooted = false;
+var curPt = null;          // 当前中心（BD09）
+var curName = '';
+var homePt = null;
+var workPt = null;
+
+var CATS = ['美食', '公园', '医院', '地铁', '超市', '学校', '酒店', '银行', '停车场', '菜市场'];
+var GRID = [
+  { k: '公交', i: '🚌', bg: '#e6f4ff', url: '/pages/route/route?mode=transit' },
+  { k: '地铁', i: '🚇', bg: '#eaf2ff', url: '/pages/route/route?mode=transit' },
+  { k: '打车', i: '🚕', bg: '#fff4e6', url: '/pages/route/route?mode=driving' },
+  { k: '驾车', i: '🚗', bg: '#eef0ff', url: '/pages/route/route?mode=driving' },
+  { k: '步行', i: '🚶', bg: '#e6f8f0', url: '/pages/route/route?mode=walking' },
+  { k: '骑行', i: '🚴', bg: '#e6fbf7', url: '/pages/route/route?mode=riding' },
+  { k: '火车票', i: '🚄', bg: '#f0efff', url: '/pages/life/life?tab=train' },
+  { k: '更多', i: '⋯', bg: '#f4f6f9', url: '/pages/life/life' }
+];
+
+/* GCJ-02（微信 wx.getLocation）→ BD-09（百度底图） */
+function gcj02ToBd09(lng, lat) {
+  var xPi = 3.14159265358979324 * 3000.0 / 180.0;
+  var a = 6378245.0, ee = 0.00669342162296594323;
+  var dLat = (20 * Math.sin(6 * (lng * Math.PI / 180) * 2) + 20 * Math.sin(2 * (lng * Math.PI / 180) * 3)
+      + 20 * Math.sin((lng * Math.PI / 180) * 12) + 40 * Math.sin((lng * Math.PI / 180) * 2.5) * Math.cos(40 * Math.PI / 180)
+      + 320 * Math.sin((lng * Math.PI / 180) * 12.0) * Math.sin(40 * Math.PI / 180)) * 0.00000001;
+  var dLng = (20 * Math.sin((lng * Math.PI / 180) * 2) + 20 * Math.sin((lng * Math.PI / 180) * 3)
+      + 20 * Math.sin((lng * Math.PI / 180) * 6) + 20 * Math.sin((lng * Math.PI / 180) * 6) * Math.cos(2 * (lat * Math.PI / 180) * 3)
+      + 160 * Math.sin((lng * Math.PI / 180) * 12.0) * Math.sin(2 * (lat * Math.PI / 180) * 3)) * 0.00000001;
+  var radLat = lat / 180.0 * Math.PI;
+  var magic = Math.sin(radLat); magic = 1 - ee * magic * magic;
+  var sqrtMagic = Math.sqrt(magic);
+  dLat = (dLat * 180.0) / (((a * (1 - ee)) / (magic * sqrtMagic)) * Math.PI);
+  dLng = (dLng * 180.0) / (a / sqrtMagic * Math.cos(radLat) * Math.PI);
+  var mgLat = lat + dLat, mgLng = lng + dLng;
+  var x = mgLng * Math.cos(xPi / 180), y = mgLat;
+  var z = Math.sqrt(x * x + y * y) - 2 * 0.0000000000001 * y;
+  var theta = Math.atan2(y, x);
+  var bdLng = z * Math.cos(theta + xPi / 180) + 0.0065, bdLat = z * Math.sin(theta + xPi / 180) + 0.0060;
+  return { lng: bdLng, lat: bdLat };
+}
+
+function goPage(url) {
+  try {
+    if (window.wx && window.wx.miniProgram) window.wx.miniProgram.navigateTo({ url: url });
+    else console.log('[goPage] ' + url);
+  } catch (e) { console.log('[goPage] ' + url); }
+}
+function showTip(t) { var e = document.getElementById('errMask'); document.getElementById('errTitle').textContent = t; e.classList.add('on'); }
+function showErr(d) { document.getElementById('errDetail').textContent = d || ''; showTip('地图加载失败'); }
+function hideTip() { document.getElementById('errMask').classList.remove('on'); }
+
+function blueDotIcon() {
+  return new BMap.Icon('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34"><circle cx="17" cy="17" r="9" fill="#1677ff" fill-opacity=".22"/><circle cx="17" cy="17" r="5.5" fill="#1677ff" stroke="#fff" stroke-width="2"/></svg>'),
+    new BMap.Size(34, 34));
+}
+
+function addMeMarker(pt) {
+  if (marker) { map.removeOverlay(marker); marker = null; }
+  marker = new BMap.Marker(pt, { icon: blueDotIcon() });
+  map.addOverlay(marker);
+}
+function addLifeCircle(pt) {
+  var r = Number('__RADIUS__') || 1200;
+  if (circle) { map.removeOverlay(circle); circle = null; }
+  if (circleLabel) { map.removeOverlay(circleLabel); circleLabel = null; }
+  circle = new BMap.Circle(pt, r, { strokeColor: '#1677ff', strokeWeight: 1, strokeOpacity: .5, fillColor: '#1677ff', fillOpacity: .07 });
+  map.addOverlay(circle);
+  // classic v3.0 的 Circle 没有 setLabel，用独立 Label 盖在圆心上方
+  circleLabel = new BMap.Label('15 分钟生活圈 · ' + (r / 1000).toFixed(1) + 'km', { position: pt, offset: new BMap.Size(0, -r) });
+  circleLabel.setStyle('color:#1677ff;font-size:11px;background:none;border:none;white-space:nowrap;');
+  map.addOverlay(circleLabel);
+}
+
+function reverseGeo(pt) {
+  return new Promise(function (resolve) {
+    if (!geoc) geoc = new BMap.Geocoder();
+    geoc.getLocation(pt, function (rs) {
+      var add = '';
+      try { add = rs.addressComponents.province + rs.addressComponents.city + rs.addressComponents.district + rs.addressComponents.street; } catch (e) { add = ''; }
+      if (!add) { try { add = rs.address; } catch (e) {} }
+      if (!add && rs.surroundingPois && rs.surroundingPois[0]) add = rs.surroundingPois[0].title;
+      curName = add || '当前位置';
+      document.getElementById('locName').textContent = curName;
+      document.getElementById('city').firstChild.textContent = (rs.addressComponents && (rs.addressComponents.city || '')) || '当前';
+      var c = document.getElementById('callout');
+      document.getElementById('calloutText').textContent = curName;
+      c.style.display = 'block';
+      resolve(curName);
+    });
+  });
+}
+
+function locate() {
+  var bd = gcj02ToBd09(window.__lng || window.__origLng, window.__lat || window.__origLat);
+  curPt = new BMap.Point(bd.lng, bd.lat);
+  map.setCenter(curPt);
+  map.setZoom(16);
+  addMeMarker(curPt);
+  addLifeCircle(curPt);
+  reverseGeo(curPt);
+}
+
+/* ============ 3. POI 搜索 ============ */
+function initSearch() {
+  ls = new BMap.LocalSearch(map, {
+    pageSize: 20,
+    renderOptions: { autoViewport: true },
+    onSearchComplete: renderResults
+  });
+}
+function fmtDist(d) {
+  if (d === null || d === undefined) return '';
+  return Number(d) >= 1000 ? (Number(d) / 1000).toFixed(1) + 'km' : Math.round(Number(d)) + 'm';
+}
+function doSearch(kw, expand) {
+  kw = (kw || '').trim();
+  if (!kw) return;
+  if (expand) document.getElementById('sheet').style.height = Math.round(window.innerHeight * 0.72) + 'px';
+  try {
+    ls.search(kw);
+  } catch (e) {
+    showErr('搜索初始化异常：' + e.message);
+  }
+}
+function renderResults(res) {
+  var box = document.getElementById('rp');
+  box.style.display = '';
+  box.innerHTML = '';
+  var n = res.getNumPages ? Math.min(res.getNumPages(), 1) : 1;
+  var total = 0;
+  for (var i = 0; i < 100; i++) {
+    try { var p = res.getPoi(i); if (!p) break; } catch (e) { break; }
+    if (!p) break;
+    total++;
+    var lat = p.point ? p.point.latitude : (p.lat || 0);
+    var lng = p.point ? p.point.longitude : (p.lng || 0);
+    (function (name, addr, la, ln, dist) {
+      var row = document.createElement('div');
+      row.className = 'rp-item';
+      row.innerHTML = '<div class="ic">📍</div><div class="m"><div class="n"></div><div class="a"></div></div>'
+        + '<div class="d"></div>';
+      row.querySelector('.n').textContent = name;
+      row.querySelector('.a').textContent = addr || '';
+      row.querySelector('.d').textContent = fmtDist(dist);
+      row.onclick = function () {
+        map.setCenter(new BMap.Point(ln, la));
+        addMeMarker(new BMap.Point(ln, la));
+        document.getElementById('locName').textContent = name;
+        document.getElementById('calloutText').textContent = name;
+        document.getElementById('callout').style.display = 'block';
+        goPage('/pages/route/route?name=' + encodeURIComponent(name) + '&lng=' + ln + '&lat=' + la);
+      };
+      box.appendChild(row);
+    })(p.title || p.name, (p.address || '') + (p.city ? ' · ' + p.city : ''), lat, lng,
+       p.distance || (p.detailInfo && p.detailInfo.distance));
+  }
+  if (!total) box.innerHTML = '<div style="padding:24px;text-align:center;color:#9aa1ad;font-size:13px">附近没找到，换个词试试</div>';
+}
+function clearResults() {
+  document.getElementById('rp').style.display = 'none';
+  document.getElementById('rp').innerHTML = '';
+  document.getElementById('sheet').style.height = '300px';
+  if (curPt) { addMeMarker(curPt); addLifeCircle(curPt); }
+}
+
+/* ============ 4. 地图就绪 ============ */
+window.bmapReady = function () {
+  try {
+    map = new BMap.Map('map', { enableMapClick: false });
+
+    // 底图走自家瓦片代理（百度瓦片也看 Referer，直连在 web-view 里会被拦）
+    var tl = new BMap.TileLayer();
+    tl.getTilesUrl = function (tile, zoom) {
+      return '/bmap/tile?x=' + tile.x + '&y=' + tile.y + '&z=' + zoom
+        + '&styles=pl&scaler=1&udt=20260929&v=3.0';
+    };
+    map.setMapType(new BMap.MapType('LiHuiMap', tl, { minZoom: 3, maxZoom: 19, tileSize: 256 }));
+
+    curPt = new BMap.Point('__LNG__', '__LAT__');
+    map.centerAndZoom(curPt, 16);
+    map.enableScrollWheelZoom(true);
+    map.enablePinchZoom && map.enablePinchZoom(true);
+    try { map.addControl(new BMap.Scale({ anchor: new BMap.BottomLeftAnchor(12, 78) })); } catch (e) {}
+    mapBooted = true;
+    hideTip();
+
+    try { addMeMarker(curPt); } catch (e) { console.error('marker', e.message); }
+    try { addLifeCircle(curPt); } catch (e) { console.error('circle', e.message); }
+    try { reverseGeo(curPt); } catch (e) { console.error('geo', e.message); }
+    try { initSearch(); } catch (e) { console.error('search', e.message); }
+
+    map.addEventListener('tilesloaded', hideTip);
+    map.addEventListener('dragend', function () {
+      document.getElementById('rp').style.display = 'none';
+    });
+  } catch (e) {
+    console.error('boot', e.message);
+    showTip('初始化失败'); showErr(e.message);
+  }
+};
+
+/* ============ 5. UI 事件 ============ */
+(function bindUI () {
+  var chips = document.getElementById('chips');
+  CATS.forEach(function (c) {
+    var s = document.createElement('span');
+    s.textContent = c;
+    s.onclick = function () {
+      Array.prototype.forEach.call(chips.children, function (x) { x.style.background = '#f4f6f9'; x.style.color = '#6b7280'; });
+      s.style.background = '#1677ff'; s.style.color = '#fff';
+      document.getElementById('catNow').textContent = c;
+      var kw = document.getElementById('kw2');
+      kw.value = c; document.getElementById('kw').value = c;
+      doSearch(c, true);
+    };
+    chips.appendChild(s);
+  });
+
+  (function gridInit() {
+    var g = document.getElementById('grid');
+    GRID.forEach(function (x) {
+      var b = document.createElement('button');
+      b.innerHTML = '<span class="ic" style="background:' + x.bg + '">' + x.i + '</span><span>' + x.k + '</span>';
+      b.onclick = function () { goPage(x.url); };
+      g.appendChild(b);
+    });
+  })();
+
+  function submit(v) {
+    var kw = (v || '').trim();
+    if (!kw) return;
+    document.getElementById('kw').value = kw;
+    document.getElementById('kw2').value = kw;
+    doSearch(kw, true);
+  }
+  document.getElementById('goBtn').onclick = function () { submit(document.getElementById('kw').value); };
+  document.getElementById('kw').addEventListener('keyup', function (e) { if (e.key === 'Enter') submit(this.value); });
+  document.getElementById('kw2').addEventListener('keyup', function (e) { if (e.key === 'Enter') submit(this.value); });
+  document.getElementById('clear2').onclick = function () {
+    document.getElementById('kw2').value = ''; document.getElementById('kw').value = '';
+    clearResults();
+  };
+  document.getElementById('btnLocate').onclick = function () { locate(); };
+  document.getElementById('btnAI').onclick = function () { goPage('/pages/assistant/assistant'); };
+  document.getElementById('btnMine').onclick = function () { goPage('/pages/mine/mine'); };
+
+  document.getElementById('btnHome').onclick = function () { routeTo(homePt || curPt, '回家'); };
+  document.getElementById('btnWork').onclick = function () { routeTo(workPt || curPt, '上班'); };
+
+  function routeTo(pt, label) {
+    goPage('/pages/route/route?name=' + encodeURIComponent(label) + '&lng=' + pt.longitude + '&lat=' + pt.latitude);
+  }
+  try {
+    var h = new URL(location.href).searchParams;
+    if (h.get('home_lat') && h.get('home_lng')) homePt = new BMap.Point(Number(h.get('home_lng')), Number(h.get('home_lat')));
+    if (h.get('work_lat') && h.get('work_lng')) workPt = new BMap.Point(Number(h.get('work_lng')), Number(h.get('work_lat')));
+  } catch (e) {}
+})();
+
+/* ============ 6. 参数（GCJ02，来自小程序 wx.getLocation） ============ */
+(function seed () {
+  try {
+    var p = new URL(location.href).searchParams;
+    var lat = Number(p.get('lat')), lng = Number(p.get('lng'));
+    if (Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng)) {
+      window.__lat = lat; window.__lng = lng;
+    }
+  } catch (e) {}
+})();
+
+/* ============ 7. 载入门户脚本 ============ */
+(function () {
+  var s = document.createElement('script');
+  s.src = 'https://api.map.baidu.com/api?v=3.0&ak=' + encodeURIComponent(AK) + '&callback=bmapReady';
+  document.body.appendChild(s);
+  setTimeout(function () {
+    if (!mapBooted) showErr('百度地图脚本未返回，请确认服务端 AK 在 /bmap/proxy 转发正常（服务端日志 /data/logs）。');
+  }, 9000);
+})();
+</script>
+</body>
+</html>

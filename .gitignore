@@ -18,6 +18,7 @@ node_modules/
 03-lh-server/data/sessions.json
 03-lh-server/data/tokens.json
 03-lh-server/data/voice.json
+03-lh-server/data/orders.json
 
 # ---------- 日志 ----------
 *.log
