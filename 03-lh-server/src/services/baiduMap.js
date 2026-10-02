@@ -175,6 +175,12 @@ async function poiSearch({ query, lng, lat, radius = 1200, pageNum = 0, pageSize
         distance: x.detail_info && x.detail_info.distance !== undefined ? Number(x.detail_info.distance) : null,
         tag: x.detail_info && x.detail_info.tag ? x.detail_info.tag : '',
         type: x.detail_info && x.detail_info.type ? x.detail_info.type : '',
+        // ★ 行政区 / 城市 / 电话要透传出去：订单留痕、供应商查价（要 city）、
+        //   前端展示门店归属都靠它们。之前漏了，导致 catalog 里 district / phone 全空。
+        province: x.province || '',
+        city: x.city || '',
+        district: x.area || '',
+        street: x.street_name || '',
         telephone: (x.telephone || '').replace(/^"/, ''),
         rating: x.detail_info && x.detail_info.overall_rating ? x.detail_info.overall_rating : null,
       };

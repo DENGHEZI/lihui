@@ -5,6 +5,8 @@
  * 订单状态流：pending（已下单，待去第三方支付）→ paid（用户回执已付）→ done / cancelled
  */
 const shop = require('./shop');
+const catalog = require('./catalog');
+const supplier = require('./supplier');
 const store = require('./store');
 
 const col = store.collection('orders', [])
@@ -28,12 +30,15 @@ function makeNo() {
  * 创建订单
  * @param {object} o { deviceId, itemId, spec, qty, date, name, phone, remark, lng, lat }
  */
-function create(o = {}) {
-  const item = shop.get(o.itemId)
+async function create(o = {}) {
+  // 目录可能来自两处：示例目录（shop.json）或百度实时构建的真实 POI（catalog.json）
+  const catalogHit = String(o.itemId || '').startsWith('b_') ? catalog.get(o.itemId) : null
+  const item = catalogHit || shop.get(o.itemId)
   if (!item) throw Object.assign(new Error('商品不存在或已下架'), { code: 1001 })
 
   const qty = Math.max(1, Math.min(Number(o.qty) || 1, 99))
-  const unitPrice = Number(item.price) || 0
+  // 真实 POI 条目 price 为 null（百度不给成交价），用参考价兜底，前端必须让用户看到这是参考价
+  const unitPrice = Number(item.price) > 0 ? Number(item.price) : supplier.estimate(item).price
   const amount = unitPrice * qty
 
   // 第三方下单信息：端上直接拿来跳小程序 / 复制关键词

@@ -207,6 +207,99 @@
 }
 
 /* ---------- 空态 ---------- */
+/* ---------- 数据源切换（真实店源 vs 示例目录） ---------- */
+.srcs {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 4rpx 4rpx 16rpx;
+}
+
+.src {
+  flex: 1;
+  border: 1rpx solid var(--lh-line);
+  background: #FFFFFF;
+  border-radius: 18rpx;
+  padding: 14rpx 16rpx;
+  box-sizing: border-box;
+}
+
+.src--on {
+  border-color: var(--lh-primary);
+  background: var(--lh-primary-soft);
+}
+
+.src-name {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--lh-text);
+}
+
+.src--on .src-name {
+  color: var(--lh-primary);
+}
+
+.src-sub {
+  display: block;
+  font-size: 20rpx;
+  color: var(--lh-text-weak);
+  margin-top: 4rpx;
+}
+
+.src-from {
+  font-size: 20rpx;
+  color: var(--lh-text-weak);
+  flex-shrink: 0;
+}
+
+.quota {
+  display: flex;
+  gap: 12rpx;
+  background: #FFF7E6;
+  border: 1rpx solid #FFE0A3;
+  border-radius: 18rpx;
+  padding: 16rpx 18rpx;
+  margin-bottom: 16rpx;
+}
+
+.q-ico {
+  font-size: 28rpx;
+  flex-shrink: 0;
+}
+
+.q-txt {
+  flex: 1;
+  font-size: 22rpx;
+  color: #8A5A00;
+  line-height: 1.5;
+}
+
+.c-addr {
+  font-size: 21rpx;
+  color: var(--lh-text-weak);
+  margin-top: 4rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.c-tag--real {
+  color: #0FA693;
+  border-color: rgba(15, 166, 147, .35);
+}
+
+.c-price--est {
+  font-size: 32rpx;
+  color: #F5222D;
+}
+
+.foot-note .fn-sub {
+  display: block;
+  margin-top: 8rpx;
+  opacity: .75;
+}
+
 .empty {
   padding: 140rpx 0;
   display: flex;

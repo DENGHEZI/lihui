@@ -30,10 +30,17 @@ Page({
     phone: '',
     remark: '',
     total: 0,
-    submitting: false
+    submitting: false,
+    // 真实价是否已从携程/美团拉到（false = 展示的是参考价，页面会标「参考」）
+    priceReal: false,
+    priceReason: ''
   },
 
-  async onLoad(q) {
+  onLoad(q) {
+    this.fetch(q)
+  },
+
+  async fetch(q) {
     if (!q || !q.id) {
       wx.showToast({ title: '商品不存在', icon: 'none' })
       setTimeout(() => wx.navigateBack(), 800)
@@ -53,16 +60,42 @@ Page({
       const profile = wx.getStorageSync('lh_profile') || {}
       if (profile.name) this.setData({ name: profile.name })
       if (profile.phone) this.setData({ phone: profile.phone })
+      // 真实 POI 没有成交价，详情里问一次服务端：配了携程/美团 key 就给真实价，
+      // 没配就回落参考价（前端会把「参考」角标显示出来，不伪装成实价）
+      this.loadPrice(item)
     } catch (e) {
       wx.showToast({ title: (e && e.msg) || '商品加载失败', icon: 'none' })
       setTimeout(() => wx.navigateBack(), 1000)
     }
   },
 
+  async loadPrice(item) {
+    if (!item) return
+    if (Number(item.price) > 0) {
+      this.setData({ priceReal: false })
+      return
+    }
+    try {
+      const p = await api.shopPrice(item.id)
+      // p.price：优先携程/美团真实价，没有就是参考价（p.estimated = true / source='estimate'）
+      const patch = { priceReal: p.source === 'supplier', priceReason: p.message || '', estUnitPrice: p.price }
+      if (Number(p.price) > 0) {
+        patch.price = p.price
+        patch.unit = p.unit || item.unit || ''
+      }
+      patch.total = Number(p.price || 0) * Number(this.data.qty)
+      this.setData(patch, () => this.recalc())
+    } catch (e) {
+      this.setData({ priceReal: false })
+    }
+  },
+
   recalc() {
     const { item, qty } = this.data
     if (!item) return
-    this.setData({ total: Number(item.price) * Number(qty) })
+    // 真实 POI 的 item.price 可能是 null（百度不给价），此时用参考价兜底
+    const unit = Number(item.price) > 0 ? Number(item.price) : Number(this.data.estUnitPrice || 0)
+    this.setData({ total: unit * Number(qty) })
   },
 
   pickSpec(e) {

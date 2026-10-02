@@ -96,6 +96,44 @@
   text-decoration: line-through;
 }
 
+.h-tag--real {
+  color: #0FA693;
+  border-color: rgba(15, 166, 147, .45);
+}
+
+.h-badge {
+  margin-left: 14rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  color: #8A5A00;
+  background: #FFF3E0;
+  border: 1rpx solid #FFD591;
+  border-radius: 8rpx;
+  padding: 2rpx 10rpx;
+}
+
+.h-badge--real {
+  color: #0FA693;
+  background: #E6FFFB;
+  border-color: rgba(15, 166, 147, .35);
+}
+
+.h-addr {
+  display: block;
+  font-size: 22rpx;
+  color: var(--lh-text-weak);
+  margin-top: 6rpx;
+  line-height: 1.5;
+}
+
+.h-note {
+  display: block;
+  font-size: 20rpx;
+  color: var(--lh-text-weak);
+  margin-top: 8rpx;
+  line-height: 1.5;
+}
+
 /* ---------- 说明 ---------- */
 .desc {
   display: block;

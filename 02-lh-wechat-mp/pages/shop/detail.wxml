@@ -7,11 +7,18 @@
         <text class="h-name">{{item.name}}</text>
         <view class="h-tags">
           <text class="h-tag" wx:for="{{item.tags}}" wx:for-item="t" wx:key="*this">{{t}}</text>
+          <text wx:if="{{item.source === 'baidu'}}" class="h-tag h-tag--real">百度真实店源</text>
         </view>
         <view class="h-price">
-          <text class="h-cur">¥</text>{{item.price}}<text class="h-unit">/{{item.unit}}</text>
+          <text class="h-cur">¥</text>{{item.price || estUnitPrice}}<text class="h-unit">/{{item.unit || '份'}}</text>
           <text wx:if="{{item.originPrice}}" class="h-origin">¥{{item.originPrice}}</text>
+          <!-- 参考价必须标清楚，不能让用户以为这是携程/美团的实价 -->
+          <text wx:if="{{!priceReal}}" class="h-badge">参考价</text>
+          <text wx:else class="h-badge h-badge--real">真实价</text>
         </view>
+        <text wx:if="{{item.address}}" class="h-addr">📍 {{item.address}}</text>
+        <text wx:if="{{item.phone}}" class="h-addr">☎ {{item.phone}}</text>
+        <text wx:if="{{!priceReal && priceReason}}" class="h-note">{{priceReason}}</text>
       </view>
     </view>
 
@@ -21,6 +28,7 @@
       <view class="meta">
         <text class="m-item">下单平台：<text class="m-v">{{item.supplier.platformName || '第三方'}}</text></text>
         <text class="m-item" wx:if="{{item.distText}}">距你：<text class="m-v">{{item.distText}}</text></text>
+        <text class="m-item" wx:if="{{item.city || item.district}}">所在：<text class="m-v">{{item.city || item.district}}</text></text>
       </view>
     </view>
 
@@ -82,7 +90,7 @@
     <view class="bar-price">
       <text class="bp-cur">¥</text>
       <text class="bp-num">{{total}}</text>
-      <text class="bp-unit">/{{item.unit}}</text>
+      <text class="bp-unit">/{{item.unit || '份'}}</text>
     </view>
     <view class="lh-btn {{submitting ? 'lh-btn--dis' : ''}}" bindtap="submit">{{submitting ? '提交中…' : '确认下单'}}</view>
   </view>

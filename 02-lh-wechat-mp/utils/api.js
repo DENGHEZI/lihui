@@ -33,6 +33,11 @@ const shopItems = (q) => get('/shop/items', q || {})
 const shopCategories = () => get('/shop/categories')
 const shopItem = (id) => get('/shop/item', { id })
 const shopHot = () => get('/shop/hot')
+// 真实店源：mode=near（按定位 3km 实时拉百度 POI）/ hot（郴州热门）
+const shopSource = (mode, lng, lat, extra) => get('/shop/source', Object.assign({ mode, lng, lat }, extra || {}), { cacheTtl: 5 * 60 * 1000 })
+const shopSync = (mode, lng, lat, force) => get('/shop/sync', { mode, lng, lat, force }, { cacheTtl: 5 * 60 * 1000 })
+const shopSuppliers = () => get('/shop/suppliers')
+const shopPrice = (id) => get('/shop/price', { id })
 const orderCreate = (p) => post('/order/create', p)
 const orderList = (p) => get('/order/list', p || {})
 const orderDetail = (no) => get('/order/detail', { no })
@@ -111,6 +116,10 @@ module.exports = {
   shopCategories,
   shopItem,
   shopHot,
+  shopSource,
+  shopSync,
+  shopSuppliers,
+  shopPrice,
   orderCreate,
   orderList,
   orderDetail,

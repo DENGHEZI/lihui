@@ -16,7 +16,7 @@ module.exports = {
     if (b.name && String(b.name).length > 40) return fail(res, 1001, '联系人过长');
     if (b.phone && !/^1[3-9]\d{9}$/.test(String(b.phone))) return fail(res, 1001, '手机号格式不正确');
     try {
-      const o = create({
+      const o = await create({
         ...b,
         deviceId: deviceOf(req, b),
         qty: Number(b.qty) || 1,
