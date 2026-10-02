@@ -160,6 +160,10 @@ async function poiSearch({ query, lng, lat, radius = 1200, pageNum = 0, pageSize
   } else {
     params.region = city || '全国';
   }
+  // ⚠️ ret_coord_type 默认 bd09ll。不显式声明就返回百度坐标，
+  // 而端上 wx.getLocation 是 GCJ-02 —— 混用会让所有 POI 打点/距离/导航整体偏移 500~900m
+  //（门店看着"在附近"其实差一个街区）。对外统一 GCJ-02，与 utils/coord.js 的约定一致。
+  params.ret_coord_type = 'gcj02';
   const raw = await call('/place/v2/search', params, { ttl: config.cache.poi });
   const list = raw.results || [];
   return {
@@ -206,11 +210,10 @@ async function route({ mode = 'walking', origin, destination, realtime = false }
   if (mode === 'driving') {
     params.tactics = realtime ? 11 : 0; // 11 = 实时路况避堵
     params.road_type = 0;
-    params.ret_coordtype = 'bd09ll';
   }
-  if (mode === 'transit') {
-    params.ret_coordtype = 'bd09ll';
-  }
+  // ⚠️ 别设 ret_coordtype=bd09ll：origin/destination 传的是端上 wx.getLocation 的 GCJ-02
+  //（坐标拼成 `${lat},${lng}`），返回再按 BD-09 解释一遍 → 起点/终点与路线折线全部错位。
+  // 这里保持百度默认 gcj02，与端上坐标系一致。
   const raw = await call(pathname, params, { ttl: config.cache.route });
   const r = raw.result || {};
   const routes = r.routes || [];
