@@ -44,7 +44,7 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 
 **网页版真机渲染**（自动定位 → IP 兜底 → 天气 → 生活圈体检 → 真实店源）：
 
-![网页版](docs/screenshots/11-web-preview.png)
+![鲤慧网页版真机渲染：自动定位 → IP 兜底 → 天气 → 生活圈体检 → 真实店源](docs/screenshots/11-web-preview.png)
 
 ---
 
@@ -68,19 +68,19 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 
 | 地图主页 · 便民服务 | 15 分钟生活圈 | 生活圈体检报告 |
 | :---------: | :------: | :-----: |
-|     地图主页    |   15分钟圈  |   体检报告  |
+| ![地图主页：便民服务与定位](docs/screenshots/01-home-map.jpg) | ![15 分钟生活圈半径](docs/screenshots/02-home-circle.jpg) | ![生活圈体检报告：医疗 / 教育 / 交通短板](docs/screenshots/03-life-report.jpg) |
 
 | 个性化生活圈方案 | AI 助手 | Token 用量 · 平台信息 |
 | :------: | :---: | :-------------: |
-|   个性化方案  |  AI助手 |        我的       |
+| ![个性化生活圈方案](docs/screenshots/04-life-plan.jpg) | ![AI 助手：MCP 工具编排回答](docs/screenshots/05-assistant.jpg) | ![Token 用量与平台信息](docs/screenshots/06-mine.jpg) |
 
 | 鲤慧商城 · 郴州热门 | 鲤慧商城 · 附近真实 | 我的订单（可跳第三方支付） |
 | :---------: | :---------: | :-----------: |
-|     商城热门    |     商城附近    |      我的订单     |
+| ![鲤慧商城郴州热门：百度实时店源与配额提示条](docs/screenshots/07-mall-hot.jpg) | ![鲤慧商城附近真实：按我的位置 3km 检索](docs/screenshots/08-mall-near.jpg) | ![我的订单：待支付与已取消，跳转第三方支付](docs/screenshots/09-orders.jpg) |
 
 | 模型与语音设置（6 类供应商） | 关怀模式 · 适老化 |
 | :-------------: | :--------: |
-|      模型与语音      |    关怀模式    |
+| ![模型与语音设置：OpenAI 兼容 / DeepSeek / Ollama 多供应商](docs/screenshots/10-models-voice.jpg) | ![关怀模式：适老化与慢速语音](docs/screenshots/03-life-report.jpg) |
 
 > 商城页全部店名 / 地址 / 电话来自**百度地图 place 实时检索**（非内置假数据）；  
 > 配额耗尽时前端弹提示条并回落到最近一次可用结果，**不白板**。
