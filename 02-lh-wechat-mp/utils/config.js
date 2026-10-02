@@ -8,11 +8,13 @@
  *  - 需在小程序后台把 https://api.map.baidu.com 加入 request 合法域名
  */
 const ENV = {
-  // 真机预览：手机与电脑须连同一 WiFi，地址为电脑的局域网 IP（ipconfig 查看）
+  // 云托管（腾讯云 CloudBase Run）—— 已部署验证通过，脱离电脑可用
+  // 注意：需在微信公众平台「开发设置 → 服务器域名 → request 合法域名」加入此域名
+  prod: 'https://springboot-o4hr-322354-12-1498892848.sh.run.tcloudbase.com',
+  // 本地调试（手机与电脑须连同一 WiFi，地址为电脑的局域网 IP）
   dev: 'http://192.168.0.106:8809',
-  prod: 'https://your-domain.com'
 }
-const CURRENT = 'dev'
+const CURRENT = 'prod'
 
 module.exports = {
   APP_NAME: '鲤慧',
