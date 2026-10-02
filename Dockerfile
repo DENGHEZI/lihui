@@ -15,6 +15,13 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app
 
+# 时区：容器默认 UTC，日志会比北京时间早 8 小时（官方 FAQ 明确条目），改为上海时间
+RUN apk add --no-cache tzdata \
+  && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+  && echo "Asia/Shanghai" > /etc/timezone \
+  && apk del tzdata
+ENV TZ=Asia/Shanghai
+
 # 运行时数据目录（Token 账本 / 会话 / 反馈 / 模型配置）。
 RUN mkdir -p /app/data && chmod 700 /app/data
 
