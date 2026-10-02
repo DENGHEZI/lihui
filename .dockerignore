@@ -3,9 +3,9 @@
 .gitignore
 
 # 密钥与运行时数据：默认全部排除；
-# 但构建镜像时需要把以下两个本地文件注入容器（二者都被 .gitignore 忽略，不会进 Gitee）
+# 但构建镜像时需要把以下两个文件注入容器（二者都已放行入库，云托管能从仓库拿到）
 **/.env
-!03-lh-server/.env
+!03-lh-server/.env.cloud
 03-lh-server/data/feedback.json
 03-lh-server/data/logs/
 03-lh-server/data/mcp.json
