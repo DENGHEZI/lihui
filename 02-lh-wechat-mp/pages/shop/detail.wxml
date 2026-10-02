@@ -1,0 +1,89 @@
+<view class="lh-page detail" wx:if="{{item}}">
+  <scroll-view class="scroll" scroll-y>
+    <!-- 商品头 -->
+    <view class="hero">
+      <view class="hero-ico">{{item.icon}}</view>
+      <view class="hero-main">
+        <text class="h-name">{{item.name}}</text>
+        <view class="h-tags">
+          <text class="h-tag" wx:for="{{item.tags}}" wx:for-item="t" wx:key="*this">{{t}}</text>
+        </view>
+        <view class="h-price">
+          <text class="h-cur">¥</text>{{item.price}}<text class="h-unit">/{{item.unit}}</text>
+          <text wx:if="{{item.originPrice}}" class="h-origin">¥{{item.originPrice}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="lh-card block">
+      <text class="lh-h2">商品说明</text>
+      <text class="desc">{{item.desc}}</text>
+      <view class="meta">
+        <text class="m-item">下单平台：<text class="m-v">{{item.supplier.platformName || '第三方'}}</text></text>
+        <text class="m-item" wx:if="{{item.distText}}">距你：<text class="m-v">{{item.distText}}</text></text>
+      </view>
+    </view>
+
+    <!-- 规格 -->
+    <view class="lh-card block" wx:if="{{specs.length}}">
+      <view class="row-between">
+        <text class="lh-h2">选择规格</text>
+        <text class="lh-mini">共 {{specs.length}} 种</text>
+      </view>
+      <view class="specs">
+        <text class="sp {{spec === s ? 'sp--on' : ''}}" wx:for="{{specs}}" wx:for-item="s" wx:key="*this" bindtap="pickSpec" data-s="{{s}}">{{s}}</text>
+      </view>
+    </view>
+
+    <!-- 填单 -->
+    <view class="lh-card block">
+      <text class="lh-h2">填写订单信息</text>
+
+      <view class="field">
+        <text class="lb">联系人</text>
+        <input class="inp" value="{{name}}" placeholder="方便商家联系你" placeholder-class="ph" bindinput="onName" maxlength="20" />
+      </view>
+
+      <view class="field">
+        <text class="lb">手机号</text>
+        <input class="inp" value="{{phone}}" type="number" placeholder="用于接收确认短信" placeholder-class="ph" bindinput="onPhone" maxlength="11" />
+      </view>
+
+      <picker mode="date" start="{{today}}" end="{{maxDate}}" bindchange="onDate">
+        <view class="field">
+          <text class="lb">使用日期</text>
+          <text class="inp inp--fake">{{date || '请选择'}}</text>
+          <text class="arrow">›</text>
+        </view>
+      </picker>
+
+      <view class="field">
+        <text class="lb">数量</text>
+        <view class="stepper">
+          <view class="st {{qty <= 1 ? 'st--dis' : ''}}" bindtap="onQtyMinus">−</view>
+          <text class="st-num">{{qty}}</text>
+          <view class="st" bindtap="onQtyPlus">＋</view>
+        </view>
+      </view>
+
+      <view class="field">
+        <text class="lb">备注</text>
+        <input class="inp" value="{{remark}}" placeholder="例如：需要高楼层 / 晚 10 点到" placeholder-class="ph" bindinput="onRemark" maxlength="60" />
+      </view>
+    </view>
+
+    <view class="note">
+      提交后订单会记录在鲤慧，支付请在下方按钮跳转到 {{item.supplier.platformName || '第三方'}} 完成；鲤慧不收取任何费用，也不接触你的支付信息。
+    </view>
+  </scroll-view>
+
+  <!-- 底部结算栏（flex-shrink:0，永远不被顶掉） -->
+  <view class="bar">
+    <view class="bar-price">
+      <text class="bp-cur">¥</text>
+      <text class="bp-num">{{total}}</text>
+      <text class="bp-unit">/{{item.unit}}</text>
+    </view>
+    <view class="lh-btn {{submitting ? 'lh-btn--dis' : ''}}" bindtap="submit">{{submitting ? '提交中…' : '确认下单'}}</view>
+  </view>
+</view>

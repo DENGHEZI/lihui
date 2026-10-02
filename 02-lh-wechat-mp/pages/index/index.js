@@ -248,6 +248,10 @@ Page({
     wx.switchTab({ url: '/pages/life/life' })
   },
 
+  goShop() {
+    wx.navigateTo({ url: '/pages/shop/shop' })
+  },
+
   toggleCare() {
     const on = setCareMode(!this.data.careMode)
     this.setData({ careMode: on })

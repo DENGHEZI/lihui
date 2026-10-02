@@ -1,0 +1,39 @@
+<view class="lh-page ol">
+  <view class="tabs">
+    <text class="tab {{cur === '' ? 'tab--on' : ''}}" bindtap="onTab" data-k="">全部</text>
+    <text class="tab {{cur === 'pending' ? 'tab--on' : ''}}" bindtap="onTab" data-k="pending">待支付</text>
+    <text class="tab {{cur === 'paid' ? 'tab--on' : ''}}" bindtap="onTab" data-k="paid">已下单</text>
+    <text class="tab {{cur === 'done' ? 'tab--on' : ''}}" bindtap="onTab" data-k="done">已完成</text>
+  </view>
+
+  <scroll-view class="body" scroll-y>
+    <view wx:if="{{!list.length}}" class="empty">
+      <text class="e-ico">🧾</text>
+      <text class="lh-cap">还没有订单</text>
+      <text class="lh-mini">去商城挑个酒店或服务试试</text>
+      <view class="lh-btn empty-btn" bindtap="goShop">逛商城</view>
+    </view>
+
+    <view class="card" wx:for="{{list}}" wx:key="no" bindtap="goDetail" data-no="{{item.no}}">
+      <view class="c-top">
+        <text class="c-ico">{{item.itemIcon}}</text>
+        <text class="c-name">{{item.itemName}}</text>
+        <text class="c-status st-{{item.status}}">{{item.statusText}}</text>
+      </view>
+      <view class="c-mid">
+        <text class="c-meta">×{{item.qty}}{{item.unit}} · {{item.spec || '默认规格'}}</text>
+        <text class="c-amount">¥{{item.amount}}</text>
+      </view>
+      <view class="c-bot">
+        <text class="c-no">单号 {{item.no}}</text>
+        <view class="c-acts" catchtap="">
+          <text class="c-btn c-btn--pri" wx:if="{{item.status === 'pending'}}" catchtap="gotoPay" data-no="{{item.no}}">去支付</text>
+          <text class="c-btn" wx:if="{{item.status === 'pending'}}" catchtap="cancel" data-no="{{item.no}}">取消</text>
+          <text class="c-btn" wx:if="{{item.status === 'paid'}}" catchtap="finish" data-no="{{item.no}}">已完成</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="tip">订单由鲤慧留存记录，实际支付与售后请在第三方平台办理。</view>
+  </scroll-view>
+</view>

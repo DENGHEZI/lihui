@@ -1,0 +1,138 @@
+.od {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 20rpx 24rpx 40rpx;
+  box-sizing: border-box;
+}
+
+.hero {
+  display: flex;
+  align-items: center;
+  background: #FFFFFF;
+  border-radius: 28rpx;
+  padding: 36rpx 32rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, .06);
+}
+
+.hero.pending {
+  background: linear-gradient(120deg, #FFF4E6, #FFFFFF);
+}
+.hero.paid {
+  background: linear-gradient(120deg, #EAF2FF, #FFFFFF);
+}
+.hero.done {
+  background: linear-gradient(120deg, #E6F8F0, #FFFFFF);
+}
+.hero.cancelled {
+  background: #F0F1F3;
+}
+
+.h-ico {
+  font-size: 64rpx;
+  margin-right: 20rpx;
+}
+
+.h-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.h-status {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1A1A1A;
+}
+
+.hero.cancelled .h-status {
+  color: #8F959E;
+}
+
+.h-name {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 26rpx;
+  color: var(--lh-text-sub);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kv {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 68rpx;
+  border-bottom: 1rpx solid var(--lh-line);
+  font-size: 27rpx;
+}
+
+.kv:last-child {
+  border-bottom: none;
+}
+
+.k {
+  color: var(--lh-text-sub);
+}
+
+.v {
+  color: #1A1A1A;
+  max-width: 420rpx;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.amt {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #F5222D;
+}
+
+.total {
+  margin-top: 8rpx;
+  border-top: 1rpx solid var(--lh-line);
+  padding-top: 12rpx;
+  height: auto;
+}
+
+.d {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 25rpx;
+  color: var(--lh-text-sub);
+  line-height: 1.7;
+}
+
+.tip {
+  margin-top: 24rpx;
+  text-align: center;
+  font-size: 21rpx;
+  color: var(--lh-text-weak);
+  line-height: 1.7;
+}
+
+.bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 24rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  background: #FFFFFF;
+  border-top: 1rpx solid var(--lh-line);
+}
+
+.bar .lh-btn {
+  width: 420rpx;
+}

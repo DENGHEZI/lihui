@@ -1,0 +1,65 @@
+<view class="lh-page shop">
+  <!-- 顶部：搜索 + 类目 -->
+  <view class="top">
+    <view class="search-bar">
+      <text class="s-ico">🔍</text>
+      <input
+        class="s-inp"
+        value="{{keyword}}"
+        placeholder="搜酒店、门票、上门服务…"
+        placeholder-class="ph"
+        confirm-type="search"
+        bindinput="onKeyword"
+        bindconfirm="onSearch"
+      />
+      <text wx:if="{{keyword}}" class="s-clear" bindtap="clearKeyword">✕</text>
+    </view>
+
+    <scroll-view class="cats" scroll-x enable-flex show-scrollbar="{{false}}">
+      <view class="cat {{curCat === item.key ? 'cat--on' : ''}}" wx:for="{{categories}}" wx:key="key" bindtap="onCatTap" data-k="{{item.key}}">
+        <text class="cat-ico">{{item.icon}}</text>
+        <text class="cat-name">{{item.name}}</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 列表 -->
+  <scroll-view class="body" scroll-y>
+    <view wx:if="{{loading}}" class="empty">
+      <text class="e-ico">🛍️</text>
+      <text class="lh-cap">正在上架好货…</text>
+    </view>
+
+    <view wx:elif="{{list.length}}" class="cards">
+      <view class="card" wx:for="{{list}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
+        <view class="c-thumb">{{item.icon}}</view>
+        <view class="c-main">
+          <view class="c-row1">
+            <text class="c-name">{{item.name}}</text>
+          </view>
+          <view class="c-tags">
+            <text class="c-tag" wx:for="{{item.tags}}" wx:for-item="t" wx:key="*this">{{t}}</text>
+          </view>
+          <view class="c-row2">
+            <text class="c-price"><text class="cur">¥</text>{{item.price}}<text class="unit">/{{item.unit}}</text></text>
+            <text wx:if="{{item.distText}}" class="c-dist">{{item.distText}}</text>
+          </view>
+          <view class="c-row3">
+            <text class="c-sup">下单平台：{{item.supplier.platformName || '第三方'}}</text>
+            <text class="c-go">去下单 ›</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:else class="empty">
+      <text class="e-ico">🍃</text>
+      <text class="lh-cap">没有符合条件的商品</text>
+      <text class="lh-mini">换个关键词或类目试试</text>
+    </view>
+
+    <view class="foot-note">
+      所有订单由鲤慧留存记录，支付与履约在 {{thirdName}} 等第三方平台完成，鲤慧不接触资金。
+    </view>
+  </scroll-view>
+</view>

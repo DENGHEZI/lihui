@@ -44,6 +44,17 @@
 
   <!-- 功能入口 -->
   <view class="lh-card menu">
+    <view class="menu-row" bindtap="goOrder">
+      <text class="m-ico">🧾</text>
+      <text class="m-txt">我的订单</text>
+      <text wx:if="{{orderCount}}" class="m-badge">{{orderCount}}</text>
+      <text class="m-arrow">›</text>
+    </view>
+    <view class="menu-row" bindtap="goShop">
+      <text class="m-ico">🛍️</text>
+      <text class="m-txt">鲤慧商城（酒店 / 门票 / 本地服务）</text>
+      <text class="m-arrow">›</text>
+    </view>
     <view class="menu-row" bindtap="goSettings">
       <text class="m-ico">⚙️</text>
       <text class="m-txt">模型与语音设置</text>

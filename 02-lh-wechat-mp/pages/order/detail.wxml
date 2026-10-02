@@ -1,0 +1,36 @@
+<view class="lh-page od" wx:if="{{order}}">
+  <scroll-view class="scroll" scroll-y>
+    <view class="hero st-{{order.status}}">
+      <text class="h-ico">{{order.itemIcon}}</text>
+      <view class="h-main">
+        <text class="h-status">{{order.statusText}}</text>
+        <text class="h-name">{{order.itemName}}</text>
+      </view>
+    </view>
+
+    <view class="lh-card">
+      <view class="kv"><text class="k">订单号</text><text class="v">{{order.no}}</text></view>
+      <view class="kv"><text class="k">下单时间</text><text class="v">{{order.createdAt}}</text></view>
+      <view class="kv"><text class="k">规格</text><text class="v">{{order.spec || '默认规格'}}</text></view>
+      <view class="kv"><text class="k">数量</text><text class="v">{{order.qty}} {{order.unit}}</text></view>
+      <view class="kv"><text class="k">使用日期</text><text class="v">{{order.date || '未指定'}}</text></view>
+      <view class="kv"><text class="k">联系人</text><text class="v">{{order.name}}</text></view>
+      <view class="kv"><text class="k">手机号</text><text class="v">{{order.phone}}</text></view>
+      <view class="kv" wx:if="{{order.remark}}"><text class="k">备注</text><text class="v">{{order.remark}}</text></view>
+      <view class="kv total"><text class="k">应付金额</text><text class="v amt">¥{{order.amount}}</text></view>
+    </view>
+
+    <view class="lh-card">
+      <text class="lh-h2">支付方式</text>
+      <text class="d">鲤慧不收钱。请点击下方按钮跳转到 {{order.supplier.platformName || '第三方'}} 完成支付，售后也由该平台负责。</text>
+    </view>
+
+    <view class="tip">订单号请截图留存，有问题可在「我的 → 反馈」告诉我们。</view>
+  </scroll-view>
+
+  <view class="bar">
+    <view class="lh-btn" wx:if="{{order.status !== 'paid' && order.status !== 'done' && order.status !== 'cancelled'}}" bindtap="gotoPay">去支付</view>
+    <view class="lh-btn" wx:if="{{order.status === 'paid'}}" bindtap="finish">标记已完成</view>
+    <view class="lh-btn lh-btn--ghost" wx:if="{{order.status === 'pending'}}" bindtap="cancel">取消订单</view>
+  </view>
+</view>

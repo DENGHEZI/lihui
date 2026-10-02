@@ -3,7 +3,11 @@
     "pages/index/index",
     "pages/life/life",
     "pages/assistant/assistant",
-    "pages/mine/mine"
+    "pages/mine/mine",
+    "pages/shop/shop",
+    "pages/shop/detail",
+    "pages/order/list",
+    "pages/order/detail"
   ],
   "subPackages": [
     { "root": "pages/route", "pages": ["route"] },
@@ -59,6 +63,10 @@
       "desc": "用于定位并生成15分钟生活圈体检报告与便民推荐"
     }
   },
+  "navigatedToMiniProgramAppIdList": [
+    "wx0e6ed4f51db9d078",
+    "wx2c348cf579062e56"
+  ],
   "requiredPrivateInfos": ["getLocation", "chooseLocation"],
   "networkTimeout": {
     "request": 20000,
