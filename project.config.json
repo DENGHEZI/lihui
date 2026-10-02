@@ -14,23 +14,45 @@
       "disablePlugins": [],
       "outputPath": ""
     },
-    "useCompilerPlugins": false
+    "useCompilerPlugins": false,
+    "condition": true
   },
   "compileType": "miniprogram",
   "libVersion": "3.5.0",
-  "simulatorPluginLibVersion": {},
+  "simulatorPluginLibVersion": {
+    "wxext14566970e7e9f62": "2.27.3"
+  },
   "packOptions": {
     "ignore": [
-      { "type": "folder", "value": "00-设计文档" },
-      { "type": "folder", "value": "01-lh-uniapp-多端APP" },
-      { "type": "folder", "value": "03-lh-server" },
-      { "type": "folder", "value": "04-lh-mcp-servers" },
-      { "type": "folder", "value": "docs" },
-      { "type": "folder", "value": ".git" }
+      {
+        "type": "folder",
+        "value": "00-设计文档"
+      },
+      {
+        "type": "folder",
+        "value": "01-lh-uniapp-多端APP"
+      },
+      {
+        "type": "folder",
+        "value": "03-lh-server"
+      },
+      {
+        "type": "folder",
+        "value": "04-lh-mcp-servers"
+      },
+      {
+        "type": "folder",
+        "value": "docs"
+      },
+      {
+        "type": "folder",
+        "value": ".git"
+      }
     ],
     "include": []
   },
   "appid": "wxfc45acb99d454f8a",
   "projectname": "lihui-monorepo",
-  "editorSetting": {}
+  "editorSetting": {},
+  "projectArchitecture": "multiPlatform"
 }

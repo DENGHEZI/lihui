@@ -27,6 +27,9 @@ logs/
 unpackage/
 **/unpackage/dist/
 
+# 微信开发者工具本地生成的多端 i18n 信息（随开发者账号变化，非源码）
+miniapp/
+
 # ---------- IDE / 系统 ----------
 .idea/
 .vscode/
