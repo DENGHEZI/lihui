@@ -55,7 +55,8 @@ module.exports = {
     try {
       const built = await catalog.build(mode, { lng: q.lng, lat: q.lat, radius: q.radius });
       const list = catalog.list(mode, q);
-      return ok(res, { mode, from: built.from, syncedAt: built.syncedAt, ...list });
+      // quotaHit / quotaMessage 必须透传：否则百度配额挂了，端上不知道"是没店还是没额度"
+      return ok(res, { mode, from: built.from, syncedAt: built.syncedAt, quotaHit: !!built.quotaHit, quotaMessage: built.quotaMessage || '', ...list });
     } catch (e) {
       return fail(res, 5000, e.message || '真实店源读取失败');
     }

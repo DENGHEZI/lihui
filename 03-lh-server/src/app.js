@@ -93,8 +93,32 @@ const server = http.createServer(async (req, res) => {
   // 静态
   if (pathname.startsWith('/static/')) return serveStatic(req, res, pathname);
 
-  // 根路径
+  // 根路径 → 鲤慧网页版（绑定 lihui-tech.online 后，访问域名即得网页版；
+  // API 仍走 /api/v1/*，同源无跨域。页面文件缺失时回落原 JSON 自述，不影响服务）
   if (pathname === '/' || pathname === '/index.html') {
+    const webFile = path.join(__dirname, 'static', 'web', 'index.html');
+    try {
+      const html = fs.readFileSync(webFile);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+      return res.end(html);
+    } catch (e) {
+      return json(res, {
+        code: 0,
+        msg: 'ok',
+        data: {
+          name: '鲤慧 LiHui Server',
+          version: '1.0.0',
+          hint: '网页版静态文件缺失，仅返回 API 自述',
+          docs: '见 00-设计文档/03-API与MCP接口文档.md',
+          endpoints: Object.keys(ROUTES),
+        },
+        traceId,
+      });
+    }
+  }
+
+  // 服务端自述（原来挂在 / 的 JSON 挪到这里，调试/健康巡检仍可用）
+  if (pathname === '/server-info') {
     return json(res, {
       code: 0,
       msg: 'ok',
