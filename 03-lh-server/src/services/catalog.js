@@ -23,7 +23,12 @@ const baiduMap = require('./baiduMap');
 const supplier = require('./supplier');
 const { cache } = require('../utils/cache');
 
-const CATALOG = 'catalog'; // data/catalog.json
+const CATALOG = 'catalog'; // 兼容旧单文件（已弃用读写，仅保留常量）
+
+// ★ near / hot 是两份独立目录，必须分文件存：
+//   早先共用 data/catalog.json —— hot tab 一同步就把 near 的 30 条覆盖掉，
+//   near 再同步又覆盖回去，来回空烧百度配额，且两个 tab 永远只显示"最近同步的那个"。
+const fileOf = (mode) => (mode === 'hot' ? 'catalog-hot' : 'catalog-near');
 
 const CATALOG_TTL = 60 * 60 * 1000; // 落盘缓存 1 小时（百度 place 有【日配额】，别把次数烧在刷新上）
 const DEFAULT_RADIUS = 3000;
@@ -143,7 +148,7 @@ async function build(mode = 'near', q = {}) {
     if (mem) return { ...mem, from: 'cache' };
   }
 
-  const disk = store.read(CATALOG, null);
+  const disk = store.read(fileOf(mode), null);
   if (!q.force && disk && disk.mode === mode && disk.items && disk.items.length) {
     if (Date.now() - (disk.syncedAt || 0) < CATALOG_TTL) {
       cache.set(key, disk, CATALOG_TTL);
@@ -196,6 +201,19 @@ async function build(mode = 'near', q = {}) {
   const order = ['hotel', 'ticket', 'food', 'service'];
   items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || a.name.localeCompare(b.name, 'zh'));
 
+  // ⚠️ 配额超限时【禁止用空结果覆盖旧缓存】——
+  //    早先这里无脑 store.write，把之前成功拉到的几十条真实店铺直接清成 0 条，
+  //    配额挂一小时，商城就空一小时。正确做法：配额挂了就继续用旧目录，只标 quotaHit。
+  if (quotaHit.value && !items.length && disk && Array.isArray(disk.items) && disk.items.length) {
+    const keep = {
+      ...disk,
+      quotaHit: true,
+      quotaMessage: `百度地图 place 日配额已用尽（${quotaHit.sample}）。暂显示 ${disk.items.length} 条早前同步的真实店铺，明天 0 点后自动刷新。`,
+    };
+    cache.set(key, keep, 10 * 60 * 1000); // 10 分钟内别再空烧百度
+    return { ...keep, from: 'stale' };
+  }
+
   const out = {
     mode,
     syncedAt: Date.now(),
@@ -205,9 +223,9 @@ async function build(mode = 'near', q = {}) {
     quotaMessage: quotaHit.value ? `百度地图 place 日配额已用尽（${quotaHit.sample}）。已返回当前拿到的 ${items.length} 条真实店铺，明天 0 点后自动恢复。` : '',
   };
   try {
-    store.write(CATALOG, out);
+    store.write(fileOf(mode), out);
   } catch (e) {
-    logger.warn('catalog', `catalog.json 写入失败（不影响本次返回）：${e.message}`);
+    logger.warn('catalog', `${fileOf(mode)}.json 写入失败（不影响本次返回）：${e.message}`);
   }
   cache.set(key, out, CATALOG_TTL);
   return { ...out, from: 'baidu' };
@@ -215,7 +233,7 @@ async function build(mode = 'near', q = {}) {
 
 /** 列表：类目 / 关键词过滤 + 距离排序 + 距离文案 */
 function list(mode, q = {}) {
-  const items = (store.read(CATALOG, { items: [] }).items || []).filter((x) => x && x.active !== false && x.id);
+  const items = (store.read(fileOf(mode), { items: [] }).items || []).filter((x) => x && x.active !== false && x.id);
   let list = items;
   if (q.category) list = list.filter((x) => x.category === q.category);
   if (q.keyword) {
@@ -246,8 +264,13 @@ function list(mode, q = {}) {
 }
 
 function get(id) {
-  const hit = (store.read(CATALOG, { items: [] }).items || []).find((x) => x.id === String(id));
-  return hit || null;
+  // get 不知道条目来自哪个 mode，两边都找（near 优先，条目更多）
+  const files = [fileOf('near'), fileOf('hot')];
+  for (const f of files) {
+    const hit = (store.read(f, { items: [] }).items || []).find((x) => x.id === String(id));
+    if (hit) return hit;
+  }
+  return null;
 }
 
 module.exports = { build, list, get, mapPoi, distanceOf, CATALOG, supplierMeta: META, CATALOG_TTL };

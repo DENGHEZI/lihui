@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="鲤慧 LiHui · 15分钟生活圈智能体检与规划助手（网页版）">
+<title>鲤慧 LiHui · 15分钟生活圈</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>">
+<style>
+  :root {
+    --primary: #1677FF;
+    --primary-weak: #E8F2FF;
+    --gold: #B98629;
+    --bg: #F5F6F8;
+    --card: #FFFFFF;
+    --text: #1F2329;
+    --text-2: #646A73;
+    --text-3: #8F959E;
+    --line: #EDEEF0;
+    --warn-bg: #FFF7E6;
+    --warn-text: #AD6800;
+    --ok: #00B42A;
+    --red: #F53F3F;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6;
+    min-height: 100vh; font-size: 15px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px 48px; }
+
+  /* ---------- 顶栏 ---------- */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(255,255,255,.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .bar { max-width: 720px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+  .logo { display: flex; align-items: baseline; gap: 8px; }
+  .logo b { font-size: 19px; letter-spacing: .5px; }
+  .logo b i { color: var(--primary); font-style: normal; }
+  .logo span { font-size: 12px; color: var(--text-3); }
+  .loc-chip {
+    margin-left: auto; display: flex; align-items: center; gap: 5px;
+    font-size: 12.5px; color: var(--text-2);
+    background: var(--bg); border: 1px solid var(--line);
+    padding: 4px 10px; border-radius: 999px; cursor: pointer; user-select: none;
+    max-width: 46%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .loc-chip:active { transform: scale(.97); }
+  .loc-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); flex: none; }
+  .loc-chip .dot.off { background: var(--text-3); }
+
+  /* ---------- 卡片基类 ---------- */
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px; margin-top: 14px;
+    box-shadow: 0 1px 2px rgba(31,35,41,.03);
+  }
+  .card h2 { font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .card h2 .sub { font-size: 12px; color: var(--text-3); font-weight: 400; margin-left: auto; }
+  .muted { color: var(--text-2); font-size: 13px; }
+
+  /* ---------- 提示条 ---------- */
+  .banner {
+    display: none; margin-top: 14px; padding: 10px 14px; border-radius: 12px;
+    background: var(--warn-bg); color: var(--warn-text); font-size: 13px;
+    border: 1px solid #FFE7BA;
+  }
+  .banner.show { display: block; }
+
+  /* ---------- 定位 / 天气 ---------- */
+  .hero { display: flex; gap: 14px; align-items: stretch; }
+  .hero .left { flex: 1; min-width: 0; }
+  .hero .city { font-size: 21px; font-weight: 700; letter-spacing: .3px; }
+  .hero .meta { font-size: 12.5px; color: var(--text-3); margin-top: 2px; }
+  .hero .meta b { color: var(--text-2); font-weight: 500; }
+  .weather {
+    flex: none; width: 132px; border-left: 1px dashed var(--line); padding-left: 14px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .weather .t { font-size: 26px; font-weight: 700; color: var(--primary); }
+  .weather .t small { font-size: 13px; font-weight: 400; color: var(--text-3); }
+  .weather .d { font-size: 12.5px; color: var(--text-2); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text-2);
+    border-radius: 10px; padding: 7px 14px; font-size: 13px; cursor: pointer;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+  /* ---------- 体检 ---------- */
+  .score-row { display: flex; align-items: center; gap: 16px; }
+  .ring { --pct: 0; --size: 92px; flex: none; width: var(--size); height: var(--size); border-radius: 50%;
+    background: conic-gradient(var(--primary) calc(var(--pct) * 1%), #EEF1F4 0);
+    display: flex; align-items: center; justify-content: center; }
+  .ring .in { width: 74px; height: 74px; border-radius: 50%; background: var(--card);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ring .in b { font-size: 24px; line-height: 1.1; }
+  .ring .in span { font-size: 10.5px; color: var(--text-3); }
+  .level { display: inline-block; font-size: 12px; padding: 2px 10px; border-radius: 999px;
+    background: var(--primary-weak); color: var(--primary); font-weight: 600; }
+  .shortboards { margin-top: 10px; font-size: 12.5px; color: var(--text-2); }
+  .cats { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+  @media (max-width: 430px) { .cats { grid-template-columns: 1fr; } }
+  .cat { padding: 10px 0 2px; border-top: 1px solid var(--line); }
+  .cat .hd { display: flex; align-items: center; font-size: 13.5px; }
+  .cat .hd .n { color: var(--text-3); font-size: 12px; margin-left: auto; }
+  .cat .track { height: 6px; border-radius: 4px; background: #EEF1F4; margin: 7px 0 6px; overflow: hidden; }
+  .cat .fill { height: 100%; border-radius: 4px; background: var(--primary); transition: width .6s ease; }
+  .cat .near { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat.failed .hd .n { color: var(--warn-text); }
+
+  /* ---------- Tabs ---------- */
+  .tabs { display: flex; gap: 8px; margin: 14px 0 4px; flex-wrap: wrap; }
+  .tab {
+    padding: 6px 14px; border-radius: 999px; font-size: 13px; cursor: pointer; user-select: none;
+    background: var(--bg); color: var(--text-2); border: 1px solid transparent;
+  }
+  .tab.on { background: var(--primary-weak); color: var(--primary); border-color: #BAD9FF; font-weight: 600; }
+
+  /* ---------- 列表 ---------- */
+  .list { margin-top: 6px; }
+  .row {
+    display: flex; align-items: center; gap: 12px; padding: 13px 2px;
+    border-bottom: 1px solid var(--line);
+  }
+  .row:last-child { border-bottom: none; }
+  .row .ico { flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--bg);
+    display: flex; align-items: center; justify-content: center; font-size: 19px; }
+  .row .mid { flex: 1; min-width: 0; }
+  .row .nm { font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .ad { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .row .right { flex: none; text-align: right; }
+  .row .dist { font-size: 12.5px; color: var(--primary); font-weight: 600; }
+  .row .price { font-size: 12.5px; color: var(--gold); }
+  .row .price em { font-style: normal; font-size: 10.5px; color: var(--text-3); margin-left: 2px; }
+  .tag-real { display: inline-block; font-size: 10.5px; color: var(--primary); background: var(--primary-weak);
+    border-radius: 4px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; }
+
+  .empty { padding: 34px 0; text-align: center; color: var(--text-3); font-size: 13px; }
+  .spin { width: 22px; height: 22px; margin: 26px auto 14px; border-radius: 50%;
+    border: 2.5px solid var(--line); border-top-color: var(--primary); animation: rot .8s linear infinite; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+
+  footer { margin-top: 28px; text-align: center; font-size: 12px; color: var(--text-3); line-height: 2; }
+  footer .pills { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+  footer .pills span { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 3px 12px; }
+</style>
+</head>
+<body>
+
+<header><div class="bar">
+  <div class="logo"><b>鲤<i>慧</i></b><span>15分钟生活圈 · 网页版</span></div>
+  <div class="loc-chip" id="locChip" title="点击重新定位">
+    <span class="dot off" id="locDot"></span><span id="locText">定位中…</span>
+  </div>
+</div></header>
+
+<div class="wrap">
+  <div class="banner" id="banner"></div>
+
+  <!-- 定位 + 天气 -->
+  <div class="card hero">
+    <div class="left">
+      <div class="city" id="city">—</div>
+      <div class="meta" id="addr">正在获取你的位置</div>
+      <div class="meta" style="margin-top:10px">
+        坐标系 <b>GCJ-02</b> · 半径 <b>1.2 km</b> · <span id="locSrc">—</span>
+      </div>
+      <button class="btn" id="reloc" style="margin-top:12px">🔄 重新定位</button>
+    </div>
+    <div class="weather" id="weather">
+      <div class="t">--°<small>——</small></div>
+      <div class="d">天气加载中</div>
+    </div>
+  </div>
+
+  <!-- 生活圈体检 -->
+  <div class="card">
+    <h2>🩺 生活圈体检 <span class="sub">数据 · 百度地图开放平台</span></h2>
+    <div id="lifeBox"><div class="spin"></div><div class="empty">正在体检你的 15 分钟生活圈</div></div>
+  </div>
+
+  <!-- 便民速查 -->
+  <div class="card">
+    <h2>🧭 便民速查 <span class="sub" id="quickFrom"></span></h2>
+    <div class="tabs" id="quickTabs"></div>
+    <div class="list" id="quickList"><div class="spin"></div></div>
+  </div>
+
+  <!-- 真实店源 -->
+  <div class="card">
+    <h2>🛒 附近真实店源 <span class="sub" id="shopFrom"></span></h2>
+    <div class="tabs">
+      <div class="tab on" data-mode="near" id="tabNear">📍 附近 3km</div>
+      <div class="tab" data-mode="hot" id="tabHot">🔥 郴州热门</div>
+    </div>
+    <div class="list" id="shopList"><div class="spin"></div></div>
+    <div class="muted" style="margin-top:12px">下单与支付在第三方平台完成（携程 / 美团），鲤慧负责选品与留痕；标「参考」的价格为估算，实际以平台为准。</div>
+  </div>
+
+  <footer>
+    <div class="pills"><span>🐟 鲤慧 LiHui</span><span>lihui-tech.online</span></div>
+    店源与 POI 数据来自百度地图开放平台 · 价格为参考估算<br>
+    完整体验（下单 / 助手 / 语音）请使用微信小程序版
+  </footer>
+</div>
+
+<script>
+/* ================= 基础 ================= */
+const API = '/api/v1';
+const $ = (s) => document.querySelector(s);
+const state = { lng: null, lat: null, city: '', district: '', quickKey: 'food', shopMode: 'near' };
+
+/* 设备号（同小程序逻辑， localStorage 持久化） */
+function deviceId() {
+  let id = '';
+  try { id = localStorage.getItem('lh_device_id') || ''; } catch (e) {}
+  if (!id) {
+    id = 'web_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    try { localStorage.setItem('lh_device_id', id); } catch (e) {}
+  }
+  return id;
+}
+
+async function api(path, params) {
+  const qs = params ? '?' + Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== null && v !== '')
+    .map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&') : '';
+  const r = await fetch(API + path + qs, { headers: { 'X-Device-Id': deviceId() } });
+  const body = await r.json();
+  if (body.code !== 0) throw Object.assign(new Error(body.msg || '请求失败'), body);
+  return body.data;
+}
+
+function banner(msg) {
+  const b = $('#banner');
+  if (!msg) { b.classList.remove('show'); return; }
+  b.textContent = msg; b.classList.add('show');
+}
+
+/* ================= WGS-84 → GCJ-02（浏览器定位是 WGS-84，服务端接口收 GCJ-02） ================= */
+function outOfChina(lng, lat) { return lng < 72.004 || lng > 137.8347 || lat < 0.8293 || lat > 55.8271; }
+function tfLat(x, y) {
+  let r = -100 + 2*x + 3*y + .2*y*y + .1*x*y + .2*Math.sqrt(Math.abs(x));
+  r += (20*Math.sin(6*x*Math.PI) + 20*Math.sin(2*x*Math.PI)) * 2 / 3;
+  r += (20*Math.sin(y*Math.PI) + 40*Math.sin(y/3*Math.PI)) * 2 / 3;
+  r += (160*Math.sin(y/12*Math.PI) + 320*Math.sin(y*Math.PI/30)) * 2 / 3;
+  return r;
+}
+function tfLng(x, y) {
+  let r = 300 + x + 2*y + .1*x*x + .1*x*y + .1*Math.sqrt(Math.abs(x));
+  r += (20*Math.sin(6*x*Math.PI) + 20*Math.sin(2*x*Math.PI)) * 2 / 3;
+  r += (20*Math.sin(x*Math.PI) + 40*Math.sin(x/3*Math.PI)) * 2 / 3;
+  r += (150*Math.sin(x/12*Math.PI) + 300*Math.sin(x/30*Math.PI)) * 2 / 3;
+  return r;
+}
+function wgs84ToGcj02(lng, lat) {
+  if (outOfChina(lng, lat)) return { lng, lat };
+  const a = 6378245, ee = .00669342162296594323;
+  let dLat = tfLat(lng - 105, lat - 35), dLng = tfLng(lng - 105, lat - 35);
+  const radLat = lat / 180 * Math.PI; let magic = Math.sin(radLat);
+  magic = 1 - ee * magic * magic;
+  const sqrtMagic = Math.sqrt(magic);
+  dLat = (dLat * 180) / ((a * (1 - ee)) / (magic * sqrtMagic) * Math.PI);
+  dLng = (dLng * 180) / (a / sqrtMagic * Math.cos(radLat) * Math.PI);
+  return { lng: lng + dLng, lat: lat + dLat };
+}
+
+/* ================= 定位 ================= */
+function setLocUI(city, district, src) {
+  state.city = city || state.city; state.district = district || state.district;
+  $('#city').textContent = [state.city, state.district].filter(Boolean).join(' · ') || '郴州';
+  $('#locText').textContent = [state.district || state.city].filter(Boolean).join('') || '已定位';
+  $('#locDot').classList.remove('off');
+  $('#locSrc').textContent = src;
+}
+
+async function locate() {
+  $('#locText').textContent = '定位中…';
+  $('#locDot').classList.add('off');
+  /* ① 浏览器精确定位（WGS-84 → GCJ-02） */
+  const geo = await new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve(p.coords),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 }
+    );
+  });
+  if (geo) {
+    const g = wgs84ToGcj02(Number(geo.longitude), Number(geo.latitude));
+    state.lng = g.lng; state.lat = g.lat;
+    try {
+      const r = await api('/map/reverse-geocode', { lng: g.lng, lat: g.lat });
+      setLocUI(r.city, r.district, '浏览器 GPS · ±' + Math.round(geo.accuracy || 50) + 'm');
+      $('#addr').textContent = r.formatted || '';
+    } catch (e) { setLocUI('', '', '浏览器 GPS'); }
+    return true;
+  }
+  /* ② 回落服务端 IP 锚定（城市级） */
+  try {
+    const d = await api('/ip/locate');
+    const p = d.point || {};
+    if (isFinite(Number(p.lng)) && isFinite(Number(p.lat))) {
+      state.lng = Number(p.lng); state.lat = Number(p.lat);
+      setLocUI(d.city || '', d.district || '', 'IP 锚定 · 城市级');
+      $('#addr').textContent = '未授权精确定位，已按 IP 估算城市中心。点右上角可重试。';
+      banner('浏览器定位未授权，当前为 IP 城市级定位（误差数公里）。授权定位后体验更准。');
+      return true;
+    }
+  } catch (e) {}
+  banner('定位失败：请检查浏览器定位权限，或稍后重试。');
+  $('#locText').textContent = '定位失败';
+  return false;
+}
+
+/* ================= 天气 ================= */
+async function loadWeather() {
+  if (state.lng == null) return;
+  try {
+    const w = await api('/map/weather', { lng: state.lng, lat: state.lat });
+    $('#weather').innerHTML =
+      '<div class="t">' + (w.temperature == null ? '--' : w.temperature) + '°<small>' + (w.text || '') + '</small></div>' +
+      '<div class="d">' + (w.city || '') + ' · 湿度 ' + (w.humidity == null ? '--' : w.humidity + '%') + '</div>';
+  } catch (e) {
+    $('#weather').innerHTML = '<div class="t">--°</div><div class="d">天气暂不可用</div>';
+  }
+}
+
+/* ================= 生活圈体检 ================= */
+const CAT_ICON = { market: '🛒', medical: '🏥', food: '🍜', transit: '🚌', leisure: '🌳', edu: '📚' };
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+async function loadLife() {
+  if (state.lng == null) return;
+  $('#lifeBox').innerHTML = '<div class="spin"></div><div class="empty">正在体检你的 15 分钟生活圈</div>';
+  try {
+    const r = await api('/life/report', { lng: state.lng, lat: state.lat });
+    const cats = (r.categories || []).map((c) => {
+      const pct = c.score == null ? 0 : c.score;
+      const near = c.nearest ? (c.nearest.name || '') + (c.nearest.distance ? ' · ' + fmtM(c.nearest.distance) : '') : '暂无';
+      return '<div class="cat' + (c.failed ? ' failed' : '') + '">' +
+        '<div class="hd">' + (CAT_ICON[c.key] || '📍') + ' ' + esc(c.name) +
+        '<span class="n">' + (c.failed ? '检索受限' : (c.score == null ? '—' : c.score + '分 · ' + c.count + '处')) + '</span></div>' +
+        '<div class="track"><div class="fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="near">最近：' + esc(near) + '</div></div>';
+    }).join('');
+    const sb = (r.shortboards || []).length
+      ? '<div class="shortboards">⚠️ 短板：' + (r.shortboards || []).map(esc).join('；') + '</div>' : '';
+    $('#lifeBox').innerHTML =
+      '<div class="score-row"><div class="ring" style="--pct:' + (r.score || 0) + '"><div class="in"><b>' +
+      (r.score == null ? '--' : r.score) + '</b><span>总分</span></div></div>' +
+      '<div><div class="level">' + esc(r.level || '—') + '</div>' +
+      '<div class="muted" style="margin-top:8px;font-size:12.5px">六类设施加权评分<br>满分 100 · 达标线 60</div></div></div>' + sb +
+      '<div class="cats">' + cats + '</div>';
+  } catch (e) {
+    $('#lifeBox').innerHTML = '<div class="empty">体检引擎繁忙，请稍后重试<br><span class="muted">' + esc(e.message) + '</span></div>';
+  }
+}
+function fmtM(m) { return m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m) + ' m'; }
+
+/* ================= 便民速查 ================= */
+const QUICK = [
+  { key: 'food', name: '🍜 吃饭', query: '餐厅|早餐店' },
+  { key: 'market', name: '🛒 买菜', query: '菜市场|超市' },
+  { key: 'medical', name: '🏥 看病买药', query: '医院|药店' },
+  { key: 'transit', name: '🚌 公交', query: '公交站' },
+  { key: 'leisure', name: '🌳 公园广场', query: '公园|广场' },
+  { key: 'hotel', name: '🏨 住宿', query: '酒店|宾馆' },
+];
+function renderQuickTabs() {
+  $('#quickTabs').innerHTML = QUICK.map((q) =>
+    '<div class="tab' + (q.key === state.quickKey ? ' on' : '') + '" data-k="' + q.key + '">' + q.name + '</div>').join('');
+  $('#quickTabs').querySelectorAll('.tab').forEach((t) => t.onclick = () => { state.quickKey = t.dataset.k; renderQuickTabs(); loadQuick(); });
+}
+async function loadQuick() {
+  const q = QUICK.find((x) => x.key === state.quickKey);
+  $('#quickList').innerHTML = '<div class="spin"></div>';
+  if (state.lng == null) { $('#quickList').innerHTML = '<div class="empty">等待定位…</div>'; return; }
+  try {
+    const r = await api('/map/poi/search', { query: q.query, lng: state.lng, lat: state.lat, radius: 1500, pageSize: 12 });
+    if (r.stale) banner('百度接口暂不可用，便民速查显示的是最近一次可用结果。');
+    $('#quickFrom').textContent = '1.5km 内 · ' + (r.total || (r.items || []).length) + ' 处';
+    const rows = (r.items || []).map((i) =>
+      '<div class="row"><div class="ico">📍</div><div class="mid"><div class="nm">' + esc(i.name) + '</div>' +
+      '<div class="ad">' + esc(i.address || '') + '</div></div>' +
+      '<div class="right"><div class="dist">' + (i.distance ? fmtM(i.distance) : '') + '</div>' +
+      (i.telephone ? '<div class="price" style="color:var(--text-3)">☎ ' + esc(i.telephone) + '</div>' : '') + '</div></div>').join('');
+    $('#quickList').innerHTML = rows || '<div class="empty">附近 1.5km 没找到，换个分类试试</div>';
+  } catch (e) {
+    $('#quickList').innerHTML = '<div class="empty">检索暂不可用：' + esc(e.message) + '</div>';
+  }
+}
+
+/* ================= 真实店源 ================= */
+async function loadShop() {
+  $('#shopList').innerHTML = '<div class="spin"></div>';
+  const p = state.shopMode === 'near' && state.lng != null ? { lng: state.lng, lat: state.lat } : {};
+  try {
+    const r = await api('/shop/source', Object.assign({ mode: state.shopMode }, p));
+    if (r.quotaHit) banner('百度地图今日配额已用尽，店源为缓存数据（约 1 小时内），明日自动恢复。');
+    $('#shopFrom').textContent = r.from || '';
+    const rows = (r.items || []).slice(0, 15).map((i) =>
+      '<div class="row"><div class="ico">' + (i.icon || '🏬') + '</div><div class="mid">' +
+      '<div class="nm">' + esc(i.name) + '<span class="tag-real">百度真实店源</span></div>' +
+      '<div class="ad">' + esc(i.address || '') + (i.phone ? ' · ☎ ' + esc(i.phone) : '') + '</div></div>' +
+      '<div class="right">' +
+      (i.distText ? '<div class="dist">' + esc(i.distText) + '</div>' : '') +
+      (Number(i.price) > 0 || i.estPrice
+        ? '<div class="price">¥' + (Number(i.price) > 0 ? i.price : i.estPrice) + ' 起<em>参考</em></div>' : '') +
+      '</div></div>').join('');
+    $('#shopList').innerHTML = rows || '<div class="empty">附近暂无店源，稍后再试</div>';
+  } catch (e) {
+    $('#shopList').innerHTML = '<div class="empty">店源读取失败：' + esc(e.message) + '</div>';
+  }
+}
+
+/* ================= 事件 & 启动 ================= */
+$('#tabNear').onclick = () => { state.shopMode = 'near'; $('#tabNear').classList.add('on'); $('#tabHot').classList.remove('on'); loadShop(); };
+$('#tabHot').onclick = () => { state.shopMode = 'hot'; $('#tabHot').classList.add('on'); $('#tabNear').classList.remove('on'); loadShop(); };
+$('#locChip').onclick = $('#reloc').onclick = async () => { banner(''); await locate(); loadAll(); };
+
+function loadAll() { loadWeather(); loadLife(); loadQuick(); loadShop(); }
+
+(async function init() {
+  renderQuickTabs();
+  const ok = await locate();
+  loadAll();
+  if (!ok) { loadShop(); } /* 定位失败也至少看热门店源 */
+})();
+</script>
+</body>
+</html>
