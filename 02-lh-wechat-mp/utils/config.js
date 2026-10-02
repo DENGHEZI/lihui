@@ -28,9 +28,9 @@ const CURRENT = 'staging'
  *   3. 把 USE_CLOUD_CONTAINER 改成 true，重新编译
  * 前提：小程序已开通云开发（既然已部署微信云托管，环境通常已存在）。
  */
-const CLOUD_ENV_ID = ''
+const CLOUD_ENV_ID = 'prod-d4gufxdb3ebb426d2'
 const CLOUD_SERVICE = 'springboot-o4hr'
-const USE_CLOUD_CONTAINER = false
+const USE_CLOUD_CONTAINER = true
 
 module.exports = {
   APP_NAME: '鲤慧',
