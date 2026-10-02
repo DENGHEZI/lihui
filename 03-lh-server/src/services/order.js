@@ -6,7 +6,11 @@
  */
 const shop = require('./shop');
 const catalog = require('./catalog');
-const supplier = require('./supplier');
+// ⚠️ 别叫 supplier：create() 里已经有个同名的【商品供应商信息】局部变量（item.supplier），
+//    同名会让第 41 行在 TDZ（暂时性死区）里引用到未初始化的常量 →
+//    "Cannot access 'supplier' before initialization"，且只在【真实 POI 走参考价】这条分支才触发，
+//    用示例商品（price>0）测是测不出来的。所以这里起个别名 priceService。
+const priceService = require('./supplier');
 const store = require('./store');
 
 const col = store.collection('orders', [])
@@ -38,7 +42,7 @@ async function create(o = {}) {
 
   const qty = Math.max(1, Math.min(Number(o.qty) || 1, 99))
   // 真实 POI 条目 price 为 null（百度不给成交价），用参考价兜底，前端必须让用户看到这是参考价
-  const unitPrice = Number(item.price) > 0 ? Number(item.price) : supplier.estimate(item).price
+  const unitPrice = Number(item.price) > 0 ? Number(item.price) : priceService.estimate(item).price
   const amount = unitPrice * qty
 
   // 第三方下单信息：端上直接拿来跳小程序 / 复制关键词
