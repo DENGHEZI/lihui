@@ -30,13 +30,15 @@ COPY 03-lh-server/package.json ./
 COPY 03-lh-server/src ./src
 COPY 03-lh-server/.env.example ./.env.example
 
-# ★ 运行密钥随镜像构建时注入（仅从「被 .gitignore 忽略、不进 Gitee」的本地文件拷贝）。
-#   目的：云端部署后开箱即用，免去在云控制台逐个填环境变量的麻烦。
-#     · .env            → 百度 AK 等（config 用 loadEnvFile 读 /app/.env）
-#     · data/models.json → 云端模型 Key（modelRegistry 读 /app/data/models.json）
+# ★ 运行密钥随镜像构建时注入，云端部署后开箱即用，免去在云控制台逐个填环境变量。
+#   ⚠️ 关键：云托管是【从 Gitee 代码仓库拉代码构建】的，
+#      所以这里 COPY 的文件必须真的存在于仓库里 —— 被 .gitignore 忽略的文件会直接构建失败！
+#     · .env.cloud      → 部署专用（已提交入库），COPY 为 /app/.env，config 用 loadEnvFile 读它
+#     · data/models.json→ 云端模型 Key（已放行入库），modelRegistry 读它
+#     （本地开发的 .env 仍被 gitignore 忽略，不入库）
 #   ⚠️ 安全权衡：镜像内含密钥，仅适用于私有云托管镜像仓库；
 #      若需更严格，删掉下面两行、改回在云控制台配环境变量（config 运行时 env 优先于文件）。
-COPY 03-lh-server/.env ./.env
+COPY 03-lh-server/.env.cloud ./.env
 COPY 03-lh-server/data/models.json ./data/models.json
 
 # ★ 必须随镜像一起拷贝：MCP Server 是 stdio 子进程，由 config.mcp.dir 解析路径。

@@ -8,7 +8,16 @@ node_modules/
 !*.env.example
 
 # ---------- 服务端运行时数据（日志 / Token 账本 / 反馈） ----------
-03-lh-server/data/
+# 注意：不能整目录忽略 03-lh-server/data/，否则 data/models.json（云端模型 Key）
+#      会被一起挡掉，云托管构建时 COPY 不到就部署失败。这里逐一排除运行时文件，
+#      放行 models.json 入库。
+03-lh-server/data/feedback.json
+03-lh-server/data/logs/
+03-lh-server/data/mcp.json
+03-lh-server/data/quota.json
+03-lh-server/data/sessions.json
+03-lh-server/data/tokens.json
+03-lh-server/data/voice.json
 
 # ---------- 日志 ----------
 *.log
