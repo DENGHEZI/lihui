@@ -180,7 +180,7 @@ Page({
       if (!list.length) wx.showToast({ title: '附近没找到，试试 AI 助手', icon: 'none' })
     } catch (e) {
       this.setData({ poiList: [] })
-      wx.showToast({ title: (e && e.msg) || '搜索失败，请确认服务端已启动', icon: 'none', duration: 2400 })
+      wx.showToast({ title: (e && (e.msg || e.errMsg)) || '搜索失败，请稍后重试', icon: 'none', duration: 2400 })
     } finally {
       this.setData({ loadingPoi: false })
     }

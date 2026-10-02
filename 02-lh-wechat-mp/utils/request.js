@@ -68,6 +68,19 @@ function getCacheSizeKB() {
   try { return wx.getStorageInfoSync().currentSize || 0 } catch (e) { return 0 }
 }
 
+/* ---------------- 网络错误人话化 ----------------
+ * wx.request 的 fail(err) 只给一句 errMsg，原来统一弹「网络异常，请确认服务端已启动」，
+ * 把真正原因（最常见的「域名不在白名单」）全吞了。这里精确识别并给出可行动提示。
+ */
+function networkHint(err) {
+  const m = String((err && err.errMsg) || '请求失败')
+  if (/not in domain list/i.test(m)) return '域名未加入小程序白名单'
+  if (/timeout/i.test(m)) return '请求超时，稍后再试'
+  if (/ssl|https|certificate/i.test(m)) return 'HTTPS/证书校验失败'
+  if (/fail url|url not|domain/i.test(m)) return '请求地址被微信拦截'
+  return m.length > 22 ? m.slice(0, 22) + '…' : m
+}
+
 /* ---------------- 请求 ---------------- */
 function request(path, { method = 'GET', data = {}, loading = false, loadingText = '加载中', cacheTtl = 0 } = {}) {
   // 命中缓存直接返回（零网络、零等待）
@@ -115,7 +128,7 @@ function request(path, { method = 'GET', data = {}, loading = false, loadingText
         reject(body)
       },
       fail: (err) => {
-        wx.showToast({ title: '网络异常，请确认服务端已启动且域名已加入白名单', icon: 'none', duration: 2600 })
+        wx.showToast({ title: networkHint(err), icon: 'none', duration: 3000 })
         reject(err)
       },
       complete: () => {
