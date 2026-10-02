@@ -7,10 +7,17 @@
 *15 分钟，看清你的生活半径。*
 
 ![Platform](https://img.shields.io/badge/端-微信小程序_|_Web_|_Android_|_HarmonyOS_|_iOS-1677FF)
+
 ![Server](https://img.shields.io/badge/服务端-Node.js_零依赖-00B96B)
+
 ![MCP](https://img.shields.io/badge/MCP-8_Servers_即插即用-FF8A00)
+
 ![Router](https://img.shields.io/badge/API-50%2B%20路由-6C5CE7)
+
 ![Coordin](https://img.shields.io/badge/坐标-GCJ%2F02_统一治理-00B96B)
+
+
+
 ![License](https://img.shields.io/badge/License-MIT-8F959E)
 
 </div>
@@ -21,18 +28,18 @@
 
 同一套后端，三种入口，打开即用：
 
-| 入口 | 形态 | 说明 |
-|---|---|---|
-| **网页版** | 浏览器直接打开 | 自动定位 + 生活圈体检 + 便民速查 + 真实店源，**零安装、扫码即用** |
-| **微信小程序** | 微信扫一扫 | 地图主页 / 商城 / 订单 / 模型与语音，全功能端 |
-| **多端 APP** | Android / HarmonyOS / iOS | uni-app 工程，同一套 UI 规范 |
+| 入口         | 形态                        | 说明                                      |
+| ---------- | ------------------------- | --------------------------------------- |
+| **网页版**    | 浏览器直接打开                   | 自动定位 + 生活圈体检 + 便民速查 + 真实店源，**零安装、扫码即用** |
+| **微信小程序**  | 微信扫一扫                     | 地图主页 / 商城 / 订单 / 模型与语音，全功能端             |
+| **多端 APP** | Android / HarmonyOS / iOS | uni-app 工程，同一套 UI 规范                    |
 
 ```bash
 # 网页版本地起服务后浏览器访问（根路径即网页，/server-info 是原 JSON 自述）
 node 03-lh-server/src/app.js     # → http://localhost:8809/
 ```
 
-> 网页版把浏览器 **WGS-84 定位在前端内联换算成 GCJ-02** 再打接口，
+> 网页版把浏览器 **WGS-84 定位在前端内联换算成 GCJ-02** 再打接口，  
 > 与小程序 `wx.getLocation({ type: 'gcj02' })`、百度返回值共用同一坐标系，避免「偏 500～900 米」。
 
 **网页版真机渲染**（自动定位 → IP 兜底 → 天气 → 生活圈体检 → 真实店源）：
@@ -51,8 +58,8 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 
 围绕赛题核心「15 分钟生活圈」，鲤慧为每一类人群回答三个问题：
 
-> 🏥 我的生活圈**缺什么**？（六类设施体检评分）
-> 🚶 缺的东西**去哪补**？（周边检索 + 路线规划）
+> 🏥 我的生活圈**缺什么**？（六类设施体检评分）  
+> 🚶 缺的东西**去哪补**？（周边检索 + 路线规划）  
 > 💬 补的过程**谁帮我**？（AI 助手 · MCP 工具编排 · 语音交互）
 
 ---
@@ -60,22 +67,22 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 ## 📱 真机一览
 
 | 地图主页 · 便民服务 | 15 分钟生活圈 | 生活圈体检报告 |
-|:---:|:---:|:---:|
-| ![地图主页](docs/screenshots/01-home-map.jpg) | ![15分钟圈](docs/screenshots/02-home-circle.jpg) | ![体检报告](docs/screenshots/03-life-report.jpg) |
+| :---------: | :------: | :-----: |
+|     地图主页    |   15分钟圈  |   体检报告  |
 
 | 个性化生活圈方案 | AI 助手 | Token 用量 · 平台信息 |
-|:---:|:---:|:---:|
-| ![个性化方案](docs/screenshots/04-life-plan.jpg) | ![AI助手](docs/screenshots/05-assistant.jpg) | ![我的](docs/screenshots/06-mine.jpg) |
+| :------: | :---: | :-------------: |
+|   个性化方案  |  AI助手 |        我的       |
 
 | 鲤慧商城 · 郴州热门 | 鲤慧商城 · 附近真实 | 我的订单（可跳第三方支付） |
-|:---:|:---:|:---:|
-| ![商城热门](docs/screenshots/07-mall-hot.jpg) | ![商城附近](docs/screenshots/08-mall-near.jpg) | ![我的订单](docs/screenshots/09-orders.jpg) |
+| :---------: | :---------: | :-----------: |
+|     商城热门    |     商城附近    |      我的订单     |
 
 | 模型与语音设置（6 类供应商） | 关怀模式 · 适老化 |
-|:---:|:---:|
-| ![模型与语音](docs/screenshots/10-models-voice.jpg) | ![关怀模式](docs/screenshots/03-life-report.jpg) |
+| :-------------: | :--------: |
+|      模型与语音      |    关怀模式    |
 
-> 商城页全部店名 / 地址 / 电话来自**百度地图 place 实时检索**（非内置假数据）；
+> 商城页全部店名 / 地址 / 电话来自**百度地图 place 实时检索**（非内置假数据）；  
 > 配额耗尽时前端弹提示条并回落到最近一次可用结果，**不白板**。
 
 ---
@@ -84,47 +91,49 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 
 ### 🆓 免费基础版（开箱即用，无需任何 Key）
 
-| 功能 | 说明 |
-|---|---|
-| 📍 **IP 自动锚定** | 端上 GPS 校正 → 百度 IP 定位 → 逆地理补区县 → 内置城市兜底，四级策略链 |
-| 🎯 **生活圈体检** | 六类设施加权评分（医疗 25% · 商业 20% · 交通 20% · 教育 15% · 餐饮 10% · 休闲 10%），短板定位 + 步行可达分析 |
-| 🔍 **周边便民检索** | 看病买药 / 买菜购物 / 公交地铁 等 8 类一键直达，复合关键词自动拆分检索 |
-| 🗺 **路线规划** | 步行 / 骑行 / 驾车（实时避堵）/ 公交四种模式，省钱方案对比 |
-| 🗣 **语音交互** | 录音 → 识别 → 播报全链路，自定义音色 / 语速 / 方言 / 唤醒词 |
-| 👵 **关怀模式** | 一键适老化：大字号、高对比（WCAG AAA）、慢速语音、单步引导 |
-| 💰 **Token 计量** | 按天 / 设备 / 模型聚合记账，配额校验，本机实测 313 Token ≈ ¥0.0004 |
+| 功能              | 说明                                                                          |
+| --------------- | --------------------------------------------------------------------------- |
+| 📍 **IP 自动锚定**  | 端上 GPS 校正 → 百度 IP 定位 → 逆地理补区县 → 内置城市兜底，四级策略链                                |
+| 🎯 **生活圈体检**    | 六类设施加权评分（医疗 25% · 商业 20% · 交通 20% · 教育 15% · 餐饮 10% · 休闲 10%），短板定位 + 步行可达分析 |
+| 🔍 **周边便民检索**   | 看病买药 / 买菜购物 / 公交地铁 等 8 类一键直达，复合关键词自动拆分检索                                    |
+| 🗺 **路线规划**     | 步行 / 骑行 / 驾车（实时避堵）/ 公交四种模式，省钱方案对比                                           |
+| 🗣 **语音交互**     | 录音 → 识别 → 播报全链路，自定义音色 / 语速 / 方言 / 唤醒词                                       |
+| 👵 **关怀模式**     | 一键适老化：大字号、高对比（WCAG AAA）、慢速语音、单步引导                                           |
+| 💰 **Token 计量** | 按天 / 设备 / 模型聚合记账，配额校验，本机实测 313 Token ≈ ¥0.0004                              |
 
 ### 🔑 接入 API 后（能力全开）
 
-| 功能 | 说明 |
-|---|---|
-| 🤖 **AI 助手** | 意图识别 → MCP 工具编排 → 汇总生成人性化回复 + 结构化卡片 |
-| 🌐 **多供应商模型** | OpenAI 兼容 / Anthropic / Gemini / Ollama / 百度千帆 / DeepSeek，客户端可视化增删改测 |
-| 🧩 **MCP 工具生态** | 8 个 MCP Server 即插即用，支持从 ModelScope 检索安装 |
-| ☀️ **天气与景区** | 实时天气 + AQI，周边出行休闲推荐 |
-| 🖥 **桌面动作** | 生成 `baidumap://` 等 URI Scheme，一键跳转地图 App 导航 |
+| 功能              | 说明                                                                   |
+| --------------- | -------------------------------------------------------------------- |
+| 🤖 **AI 助手**    | 意图识别 → MCP 工具编排 → 汇总生成人性化回复 + 结构化卡片                                  |
+| 🌐 **多供应商模型**   | OpenAI 兼容 / Anthropic / Gemini / Ollama / 百度千帆 / DeepSeek，客户端可视化增删改测 |
+| 🧩 **MCP 工具生态** | 8 个 MCP Server 即插即用，支持从 ModelScope 检索安装                              |
+| ☀️ **天气与景区**    | 实时天气 + AQI，周边出行休闲推荐                                                  |
+| 🖥 **桌面动作**     | 生成 `baidumap://` 等 URI Scheme，一键跳转地图 App 导航                          |
 
 ---
 
 ## 💡 八个创新点（工程 · 产品 · 合规）
 
 ### 1️⃣ 坐标系统一治理引擎 —— 把「偏 500~900 米」当系统性问题根治
-同一份数据在三个入口要过三种坐标系：小程序 `wx.getLocation` 是 **GCJ-02**，
-网页浏览器 `navigator.geolocation` 是 **WGS-84**，百度接口默认吐 **BD-09**。
+
+同一份数据在三个入口要过三种坐标系：小程序 `wx.getLocation` 是 **GCJ-02**，  
+网页浏览器 `navigator.geolocation` 是 **WGS-84**，百度接口默认吐 **BD-09**。  
 鲤慧的做法不是「各自补个偏移」，而是**把坐标系当成接口契约**：
 
-| 位置 | 处理 |
-|---|---|
-| 百度 POI 检索 | 强制 `ret_coord_type=gcj02`，出口统一 GCJ-02 |
-| 路线规划入参 | 不设 `bd09ll`（入参本就是 GCJ-02，设错直接偏移） |
-| 跳转 URI | `baidumap://…&coord_type=gcj02` |
-| 网页端 | 前端内联 `wgs84ToGcj02` 标准偏移算法，先转换再请求 |
-| 工具层 | `src/utils/coord.js` 备 `bd09ToGcj02` 等，任何新入口先声明坐标系 |
+| 位置        | 处理                                                 |
+| --------- | -------------------------------------------------- |
+| 百度 POI 检索 | 强制 `ret_coord_type=gcj02`，出口统一 GCJ-02              |
+| 路线规划入参    | 不设 `bd09ll`（入参本就是 GCJ-02，设错直接偏移）                   |
+| 跳转 URI    | `baidumap://…&coord_type=gcj02`                    |
+| 网页端       | 前端内联 `wgs84ToGcj02` 标准偏移算法，先转换再请求                  |
+| 工具层       | `src/utils/coord.js` 备 `bd09ToGcj02` 等，任何新入口先声明坐标系 |
 
 > 修复前用户反馈「位置不对」时，实际是 4 处坐标系混用叠加，单点修都只能缓解。
 
 ### 2️⃣ Stale-Aware 缓存 —— 第三方接口限流也不会白板
-百度 place 是**日配额**接口（超限返回 `302`），naive 实现会：一次超限 → 空结果覆盖旧目录 →
+
+百度 place 是**日配额**接口（超限返回 `302`），naive 实现会：一次超限 → 空结果覆盖旧目录 →  
 「配额一挂，商城空一整天」。鲤慧做了三层：
 
 ```
@@ -137,11 +146,13 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 - 配额状态 `quotaHit` 一路透传到端上，前端显式弹提示条
 
 ### 3️⃣ AK / Key 不落端 —— 密钥集中化 + 用户自带 Key 双通道
+
 - 百度地图 Web 服务 AK **只存服务端**，端上只拿渲染结果；
 - 用户自己的 LLM Key 走「我的 → 模型设置」可视化录入，支持 **OpenAI 兼容 / Anthropic / Gemini / Ollama / DeepSeek / 智谱** 6 类供应商，遮蔽显示、随时增删测；
 - 服务端兜底 `.env` 环境变量，端上不留任何密钥字符串。
 
 ### 4️⃣ 零依赖服务端 —— 没有 `npm install` 的服务端
+
 `03-lh-server` 用 **node 内置模块**（`http` / `fs` / `child_process` / `crypto`）手写路由、序列化、MCP 桥接：
 
 - 无 `node_modules`、无构建步骤，`node src/app.js` 直接起
@@ -149,46 +160,51 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 - 主进程再 spawn **8 个 MCP stdio 子进程**，崩溃自动重启（≤3 次）
 
 ### 5️⃣ 可解释的生活圈体检评分（不是拍脑袋给分）
+
 六类设施**加权**评分，权重写死在服务端、短板可定位、分数可追因：
 
 | 医疗 25% | 商业 20% | 交通 20% | 教育 15% | 餐饮 10% | 休闲 10% |
-|:---:|:---:|:---:|:---:|:---:|:---:|
+| :----: | :----: | :----: | :----: | :----: | :----: |
 
 输出 = 环形总分 + 六类条形 + **短板一句话建议**（不只是「你分低」）。
 
 ### 6️⃣ Agent = 完整 MCP Client（2024-11-05 协议）
+
 不是「调个 LLM 拼字符串」，是真的 MCP 客户端：
 
 ```
 启动 → 拉起 8 个 MCP Server(stdio) → initialize → tools/list 能力发现
      → 按意图 tools/call → 汇总成人性化回复 + 结构化卡片
 ```
+
 8 个 Server：`baidu-map · life-circle · cost-optimizer · ip-anchor · desktop-action · emotion · voice · feedback`
 
 ### 7️⃣ 适老化关怀模式（无障碍不是加分项）
-一键开启：大字号 + WCAG AAA 高对比 + 慢速语音 + 单步引导 + 方言音色，
+
+一键开启：大字号 + WCAG AAA 高对比 + 慢速语音 + 单步引导 + 方言音色，  
 语音引擎可换（百度语音 / 系统 TTS），老人模式自动放慢加响。
 
 ### 8️⃣ 第三方履约、鲤慧不碰资金
+
 商城/订单只做**两件事**：留存订单记录（单号 `LH+日期+随机`）、生成跳转去第三方平台支付履约。
 
-> 所有订单由鲤慧留存记录，支付与履约在第三方平台完成，鲤慧不接触资金。
+> 所有订单由鲤慧留存记录，支付与履约在第三方平台完成，鲤慧不接触资金。  
 > 前端每次都把这句免责说明打在店源下方，避免「鲤慧收钱了？」的误解。
 
 ---
 
 ## 📊 项目数据
 
-| 维度 | 数量 |
-|---|---|
-| 端 | 4（微信小程序 · 网页版 · Android · HarmonyOS/iOS） |
-| MCP Server | 8（16+ tools） |
-| API 路由 | 50+ |
-| 服务端依赖 | **0**（纯 Node 内置模块） |
-| 生活圈设施类目 | 6 类加权体检 + 8 类便民速查 |
-| 支持的模型供应商 | 6（OpenAI 兼容 / Anthropic / Gemini / Ollama / DeepSeek / 智谱） |
-| 定位降级链 | 4 级（端上 GPS → IP 锚定 → 逆地理补区 → 城市兜底） |
-| 语音链路 | 录音 → 识别 → 播报（音色/语速/方言可配） |
+| 维度         | 数量                                                         |
+| ---------- | ---------------------------------------------------------- |
+| 端          | 4（微信小程序 · 网页版 · Android · HarmonyOS/iOS）                   |
+| MCP Server | 8（16+ tools）                                               |
+| API 路由     | 50+                                                        |
+| 服务端依赖      | **0**（纯 Node 内置模块）                                         |
+| 生活圈设施类目    | 6 类加权体检 + 8 类便民速查                                          |
+| 支持的模型供应商   | 6（OpenAI 兼容 / Anthropic / Gemini / Ollama / DeepSeek / 智谱） |
+| 定位降级链      | 4 级（端上 GPS → IP 锚定 → 逆地理补区 → 城市兜底）                         |
+| 语音链路       | 录音 → 识别 → 播报（音色/语速/方言可配）                                   |
 
 ---
 
@@ -219,8 +235,8 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-> **Agent = MCP Client**：`03-lh-server/src/mcp/client.js` 实现完整 MCP 客户端，
-> 启动时逐个拉起 MCP Server（stdio 子进程，崩溃自动重启 ≤3 次），
+> **Agent = MCP Client**：`03-lh-server/src/mcp/client.js` 实现完整 MCP 客户端，  
+> 启动时逐个拉起 MCP Server（stdio 子进程，崩溃自动重启 ≤3 次），  
 > `initialize → tools/list` 完成能力发现，按用户意图 `tools/call`，支持 `toOpenAITools()` 转 function-calling。
 
 ---
@@ -238,7 +254,7 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 └── README.md
 ```
 
-> ⚠️ **五个包完全独立**：各自拥有 `package.json` / `manifest.json` / `project.config.json`，
+> ⚠️ **五个包完全独立**：各自拥有 `package.json` / `manifest.json` / `project.config.json`，  
 > 无共享目录、无跨包相对引用，删掉任意一个包，其余照常编译。
 
 ---
@@ -260,7 +276,7 @@ node src/app.js             # 默认 0.0.0.0:8809
 （项目根必须精确到含 app.json 的这一层）
 ```
 
-真机调试：`utils/config.js` 的 `dev` 改为电脑局域网 IP（如 `http://192.168.0.106:8809`），
+真机调试：`utils/config.js` 的 `dev` 改为电脑局域网 IP（如 `http://192.168.0.106:8809`），  
 手机与电脑连同一 WiFi，并放行防火墙 8809 入站。
 
 ### ③ 多端 APP（Android / HarmonyOS / iOS）
@@ -279,7 +295,7 @@ node index.js               # stdio JSON-RPC 2.0，可用任意 MCP Client 挂�
 
 ### ⑤ Docker 一键部署（推荐服务器场景）
 
-> ⚠️ **必须在项目根目录执行**（`D:/鲤慧-LiHui`），**不是** `03-lh-server/` 子目录。
+> ⚠️ **必须在项目根目录执行**（`D:/鲤慧-LiHui`），**不是** `03-lh-server/` 子目录。  
 > Dockerfile 里的 `COPY` 路径带 `03-lh-server/` 前缀，在子目录构建会直接 COPY 失败。
 
 ```bash
@@ -307,31 +323,32 @@ docker run -d --name lihui -p 8809:8809 \
   -v lihui-data:/app/data lihui-server
 ```
 
-> 镜像基于 `node:22-alpine`；服务端与全部 MCP Server **均零依赖**（只用 node 内置模块），无需 `npm install`；
-> AK 通过环境变量注入，**不写进镜像**；`data/` 运行时数据（Token 账本、反馈）走 Docker 卷持久化。
+> 镜像基于 `node:22-alpine`；服务端与全部 MCP Server **均零依赖**（只用 node 内置模块），无需 `npm install`；  
+> AK 通过环境变量注入，**不写进镜像**；`data/` 运行时数据（Token 账本、反馈）走 Docker 卷持久化。  
 > 镜像内已包含 `04-lh-mcp-servers/`（MCP 子进程目录，位置 `/04-lh-mcp-servers`，与 `config.mcp.dir` 解析结果一致）。
 
 **部署后自检三项**（缺一项就是部署有问题）：
 
-| 检查项 | 命令 | 期望 |
-|---|---|---|
-| 服务存活 | `curl http://127.0.0.1:8809/api/v1/health` | 200 |
-| 云端模型 | `curl http://127.0.0.1:8809/api/v1/model/active` | 有 `hasKey: true` 的云端模型 |
-| MCP 进程 | `curl http://127.0.0.1:8809/api/v1/mcp/list` | `baidu-map` / `life-circle` 等全部 `running` |
+| 检查项    | 命令                                               | 期望                                        |
+| ------ | ------------------------------------------------ | ----------------------------------------- |
+| 服务存活   | `curl http://127.0.0.1:8809/api/v1/health`       | 200                                       |
+| 云端模型   | `curl http://127.0.0.1:8809/api/v1/model/active` | 有 `hasKey: true` 的云端模型                    |
+| MCP 进程 | `curl http://127.0.0.1:8809/api/v1/mcp/list`     | `baidu-map` / `life-circle` 等全部 `running` |
 
 ---
 
 #### 部署失败报错对照表
 
-| 报错 / 现象 | 原因 | 解决 |
-|---|---|---|
-| `COPY failed: no source files were specified`<br>或 `failed to compute cache key` | 在 `03-lh-server/` 里执行了 `docker build` | 回到项目根目录执行；compose 的 `build.context` 也是 `.` |
-| `The BAIDU_AK variable is not set` | 老版本 compose 用了 `${BAIDU_AK:?}` 强制变量，未设置直接退出 | 已改为 `${BAIDU_AK:-}`；现在只需建 `.env` 填入即可 |
-| 容器 `health` 是 200，但所有检索/生活圈/导航**没数据** | **镜像内缺 `04-lh-mcp-servers`**（旧版 Dockerfile 漏 COPY，MCP 子进程 spawn ENOENT） | 已修复，执行 `docker compose up -d --build` 重建镜像；或进容器确认 `docker exec lihui-server ls /04-lh-mcp-servers` |
-| `/model/active` 没有云端模型、回答退化成纯规则 | 容器里没有 `data/models.json`，且未注入 `LLM_API_KEY` | 在 `.env` 填 `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` 并重启 |
-| `docker: command not found` | 没装 Docker，或 Docker Desktop 未启动 | 装 Docker Desktop 并启动托盘服务 |
-| 起得来但外部访问不通 | 宿主机防火墙未放行 8809；或服务器安全组没开 | 开端口 8809；确认 `HOST=0.0.0.0`（容器内默认如此） |
-| `bind: address already in use` | 8809 被本机另一个服务端进程占用（宿主机直跑的那份） | `netstat -ano \| findstr :8809` 找到 PID 结束掉，或改 `PORT` |
+| 报错 / 现象                                                                            | 原因                                                                      | 解决                                                                                                 |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `COPY failed: no source files were specified`<br />或 `failed to compute cache key` | 在 `03-lh-server/` 里执行了 `docker build`                                   | 回到项目根目录执行；compose 的 `build.context` 也是 `.`                                                         |
+| `The BAIDU_AK variable is not set`                                                 | 老版本 compose 用了 `${BAIDU_AK:?}` 强制变量，未设置直接退出                             | 已改为 `${BAIDU_AK:-}`；现在只需建 `.env` 填入即可                                                              |
+| 容器 `health` 是 200，但所有检索/生活圈/导航**没数据**                                              | **镜像内缺 `04-lh-mcp-servers`**（旧版 Dockerfile 漏 COPY，MCP 子进程 spawn ENOENT） | 已修复，执行 `docker compose up -d --build` 重建镜像；或进容器确认 `docker exec lihui-server ls /04-lh-mcp-servers` |
+| `/model/active` 没有云端模型、回答退化成纯规则                                                    | 容器里没有 `data/models.json`，且未注入 `LLM_API_KEY`                             | 在 `.env` 填 `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` 并重启                                        |
+| `docker: command not found`                                                        | 没装 Docker，或 Docker Desktop 未启动                                          | 装 Docker Desktop 并启动托盘服务                                                                           |
+| 起得来但外部访问不通                                                                         | 宿主机防火墙未放行 8809；或服务器安全组没开                                                | 开端口 8809；确认 `HOST=0.0.0.0`（容器内默认如此）                                                                |
+| `bind: address already in use`                                                     | 8809 被本机另一个服务端进程占用（宿主机直跑的那份）                                            | `netstat -ano \| findstr :8809` 找到 PID 结束掉，或改 `PORT`                                               |
+
 
 ### ⑥ 腾讯云托管 / 微信云托管部署（CloudBase Run）
 
