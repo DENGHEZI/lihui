@@ -12,6 +12,7 @@ Page({
     curCat: '',
     list: [],
     loading: true,
+    emptyHint: '',
     thirdName: '携程 / 美团'
   },
 
@@ -41,10 +42,18 @@ Page({
         lng: loc.lng,
         lat: loc.lat
       })
-      this.setData({ list: d.items || [], loading: false })
+      const items = d.items || []
+      this.setData({
+        list: items,
+        loading: false,
+        // 接口 200 但 items 为空 = 服务端没读到 data/shop.json（容器里最常见）
+        emptyHint: items.length ? '' : '暂时没有匹配的商品，换一个类目或关键词试试'
+      })
     } catch (e) {
-      this.setData({ loading: false })
-      wx.showToast({ title: (e && (e.msg || e.errMsg)) || '商品加载失败', icon: 'none', duration: 2200 })
+      this.setData({
+        loading: false,
+        emptyHint: (e && (e.msg || e.errMsg)) || '商品加载失败，请稍后重试'
+      })
     }
   },
 

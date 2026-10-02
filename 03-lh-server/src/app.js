@@ -11,7 +11,19 @@ const config = require('./config');
 const logger = require('./utils/logger');
 const { json, fail, readBody, clientIp, TRACE } = require('./utils/http');
 const hub = require('./mcp/hub');
-const bmapSite = require('./services/bmapSite');
+
+// ★ 可选模块：百度底图站点（/map-home、瓦片代理、JS API 代理）。
+//   早先这里是直接 require，而这个 service 一度【没提交进 Gitee】——
+//   云托管从仓库 build 时 require 直接抛错，整个进程起不来，健康检查全挂。
+//   现在降级处理：模块缺失只让地图站停用，主服务（定位/商城/订单/助手）照常可用。
+//   ⚠️ 但同时要保证文件真的入库（见本文件末尾的启动自检）。
+let bmapSite = null;
+try {
+  bmapSite = require('./services/bmapSite');
+} catch (e) {
+  bmapSite = null;
+  logger.warn('app', `百度底图站点模块缺失，/map-home 与瓦片代理已停用: ${e.message}`);
+}
 
 /* ---------------- 路由表 ---------------- */
 const modules = ['./routes/system', './routes/ip', './routes/map', './routes/life', './routes/agent', './routes/mcp', './routes/model', './routes/voice', './routes/token', './routes/feedback', './routes/action', './routes/shop', './routes/order'];
@@ -101,7 +113,7 @@ const server = http.createServer(async (req, res) => {
   const isPlainHealth = pathname === '/health' || pathname === '/ping';
 
   // 百度底图站点（web-view 首页 / 瓦片代理 / JS API 代理），不走 /api/v1 前缀
-  if (pathname === '/map-home' || pathname === '/map_home' || pathname.startsWith('/bmap/')) {
+  if (bmapSite && (pathname === '/map-home' || pathname === '/map_home' || pathname.startsWith('/bmap/'))) {
     return await bmapSite.handle(req, res, u);
   }
 
@@ -154,6 +166,14 @@ async function bootstrap() {
     logger.info('app', `百度地图 AK：${config.baidu.ak ? config.baidu.ak.slice(0, 6) + '****' + config.baidu.ak.slice(-4) : '未配置'}`);
     logger.info('app', `数据目录：${config.dataDir}`);
     logger.info('app', `路由数量：${Object.keys(ROUTES).length}`);
+
+    // ★ 启动自检：静态数据文件必须在镜像里，否则接口会「静默返回空」，
+    //   本地跑得好好的、一上云就空白（典型：商品列表打不开）。
+    for (const f of ['models.json', 'shop.json']) {
+      const p = path.join(config.dataDir, f);
+      if (fs.existsSync(p)) continue;
+      logger.warn('app', `缺少静态数据 ${f}（期望 ${p}）→ 对应接口会返回空。容器环境请确认 Dockerfile 里有 COPY 这一行。`);
+    }
 
     if (config.mcp.autostart) {
       logger.info('app', '正在拉起 MCP Server…');

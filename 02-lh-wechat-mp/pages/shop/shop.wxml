@@ -30,6 +30,12 @@
       <text class="lh-cap">正在上架好货…</text>
     </view>
 
+    <!-- 空结果 / 加载失败都给个明确提示，别只留一块白板 —— 否则用户只会说「商品打不开」 -->
+    <view wx:elif="{{emptyHint}}" class="empty">
+      <text class="e-ico">📭</text>
+      <text class="lh-cap">{{emptyHint}}</text>
+    </view>
+
     <view wx:elif="{{list.length}}" class="cards">
       <view class="card" wx:for="{{list}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
         <view class="c-thumb">{{item.icon}}</view>
