@@ -309,7 +309,8 @@ async function ruleOrchestrate({ text, ctx, plan }) {
       cards.push({ type: 'route', distance: d.distance, duration: d.duration, mode: d.mode, polyline: d.polyline, congestion: d.congestion });
       lines.push(`路线：约 ${(d.distance / 1000).toFixed(1)} 公里，预计 ${Math.round((d.duration || 0) / 60)} 分钟${d.congestion ? '，' + d.congestion : ''}。`);
       if (plan === 'pro') {
-        actions.push({ type: 'open_app', app: '百度地图', uri: `baidumap://map/direction?origin=${p.lat},${p.lng}&destination=${p.lat + 0.008},${p.lng + 0.006}&mode=walking&coord_type=bd09ll` });
+        // ⚠️ coord_type=gcj02：p 来自端上报的 GCJ-02 定位，写 bd09ll 会整个错位
+        actions.push({ type: 'open_app', app: '百度地图', uri: `baidumap://map/direction?origin=${p.lat},${p.lng}&destination=${p.lat + 0.008},${p.lng + 0.006}&mode=walking&coord_type=gcj02` });
       }
     }
   }

@@ -8,7 +8,9 @@ const hub = require('../mcp/hub');
 const APP_SCHEME = {
   百度地图: {
     scheme: 'baidumap://',
-    direction: (o, d, m) => `baidumap://map/direction?origin=${o}&destination=${d}&mode=${m || 'walking'}&coord_type=bd09ll&src=lihui`,
+    // ⚠️ coord_type 用 gcj02：origin/destination 是端上 wx.getLocation(type:'gcj02') 的坐标，
+    // 写 bd09ll 会让百度按百度坐标系解释，起终点直接错位几百米。
+    direction: (o, d, m) => `baidumap://map/direction?origin=${o}&destination=${d}&mode=${m || 'walking'}&coord_type=gcj02&src=lihui`,
     search: (kw, c) => `baidumap://map/place/search?query=${encodeURIComponent(kw)}&region=${encodeURIComponent(c || '')}&src=lihui`,
     wx: { appId: 'wxde8ac0a21135c07d', pathPrefix: 'pages/index/index' },
   },
