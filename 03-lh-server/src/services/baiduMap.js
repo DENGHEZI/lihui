@@ -164,7 +164,21 @@ async function poiSearch({ query, lng, lat, radius = 1200, pageNum = 0, pageSize
   // 而端上 wx.getLocation 是 GCJ-02 —— 混用会让所有 POI 打点/距离/导航整体偏移 500~900m
   //（门店看着"在附近"其实差一个街区）。对外统一 GCJ-02，与 utils/coord.js 的约定一致。
   params.ret_coord_type = 'gcj02';
-  const raw = await call('/place/v2/search', params, { ttl: config.cache.poi });
+  // ⚠️ 2026-10 防御：place 的坐标参数若被判无效（百度参数改版的前兆），
+  //   自动换无下划线参数名重试一次，避免检索功能整体静默失效
+  let raw;
+  try {
+    raw = await call('/place/v2/search', params, { ttl: config.cache.poi });
+  } catch (e) {
+    if (e.baiduStatus === 2 && /coord/i.test(e.message || '')) {
+      const retryParams = { ...params };
+      delete retryParams.coord_type;
+      retryParams.coordtype = 'gcj02';
+      raw = await call('/place/v2/search', retryParams, { ttl: config.cache.poi });
+    } else {
+      throw e;
+    }
+  }
   const list = raw.results || [];
   return {
     total: raw.total || list.length,
@@ -206,7 +220,10 @@ async function route({ mode = 'walking', origin, destination, realtime = false }
   const pathname = ROUTE_PATH[mode] || ROUTE_PATH.walking;
   const params = { origin, destination };
   // 统一声明入参坐标系为 GCJ-02（端上 location 与 POI 均为 GCJ-02）
-  params.coord_type = 3;
+  // ⚠️ 2026-10 实测（百度改版）：directionlite 的参数名是 coordtype（无下划线），
+  //   旧写法 coord_type=3 现在一律报 status=2 "[coord_type] format is invalid"；
+  //   取值用字符串 gcj02（实测 origin/destination 回显与入参一致，无偏移）。
+  params.coordtype = 'gcj02';
   if (mode === 'driving') {
     params.tactics = realtime ? 11 : 0; // 11 = 实时路况避堵
     params.road_type = 0;
@@ -321,6 +338,7 @@ function fallbackLocate(cityName) {
 }
 
 module.exports = {
+  call, // 导出给 isochrone 等高级封装复用（ak 注入 / status 校验 / 缓存）
   ipLocate,
   geocode,
   reverseGeocode,

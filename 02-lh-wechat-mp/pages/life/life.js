@@ -27,7 +27,15 @@ Page({
       { key: 'mid', name: '适中' },
       { key: 'high', name: '宽松' }
     ],
-    pref: { budget: 'low', withElderly: true, needPark: true, maxWalkMinutes: 15 }
+    pref: { budget: 'low', withElderly: true, needPark: true, maxWalkMinutes: 15 },
+    /* 步行等时圈 */
+    iso: null,
+    isoLoading: false,
+    isoMinutes: 15,
+    isoPolygons: [],
+    isoMarkers: [],
+    isoScale: 15,
+    isoCenter: { lng: 112.938814, lat: 28.228209 }
   },
 
   onLoad() {
@@ -75,6 +83,92 @@ Page({
       this.setData({ report: null })
       wx.showToast({ title: (e && e.msg) || '体检失败，下拉重试', icon: 'none' })
     }
+  },
+
+  /* ---------------- 步行等时圈 + 服务盲区 ---------------- */
+  async loadIsochrone() {
+    if (this.data.isoLoading) return
+    this.setData({ isoLoading: true })
+    try {
+      const d = await api.lifeIsochrone(
+        this.data.center.lng,
+        this.data.center.lat,
+        this.data.isoMinutes,
+        5
+      )
+      const { polygons, markers } = this.buildIsoShapes(d)
+      const reachKm = (d.summary && d.summary.maxReachM ? d.summary.maxReachM : 1500) * 2 / 1000
+      const isoScale = reachKm < 0.6 ? 17 : reachKm < 1.2 ? 16 : reachKm < 2.5 ? 15 : reachKm < 5 ? 14 : 13
+      this.setData({
+        iso: d,
+        isoPolygons: polygons,
+        isoMarkers: markers,
+        isoScale,
+        isoCenter: this.data.center,
+        isoLoading: false
+      })
+    } catch (e) {
+      this.setData({ isoLoading: false })
+      wx.showToast({ title: (e && e.msg) || '等时圈计算失败', icon: 'none' })
+    }
+  },
+
+  /** 等时圈 → map 组件 shapes：主多边形 + 盲区格（红正方形 polygon，零 icon 依赖） */
+  buildIsoShapes(d) {
+    const isoPolygon = {
+      points: (d.polygon || []).map((p) => ({ latitude: p.lat, longitude: p.lng })),
+      strokeWidth: 2,
+      strokeColor: '#1677FFCC',
+      fillColor: '#1677FF1E',
+      zIndex: 2
+    }
+    // 盲区格：按 grid 索引还原正方形（与 bbox 对齐），红色半透明
+    const blind = (d.blindZones || []).map((z, idx) => {
+      const n = d.grid
+      const lons = (d.polygon || []).map((p) => p.lng)
+      const lats = (d.polygon || []).map((p) => p.lat)
+      const minLng = Math.min.apply(null, lons), maxLng = Math.max.apply(null, lons)
+      const minLat = Math.min.apply(null, lats), maxLat = Math.max.apply(null, lats)
+      const x0 = minLng + (z.i / n) * (maxLng - minLng)
+      const x1 = minLng + ((z.i + 1) / n) * (maxLng - minLng)
+      const y0 = minLat + (z.j / n) * (maxLat - minLat)
+      const y1 = minLat + ((z.j + 1) / n) * (maxLat - minLat)
+      return {
+        points: [
+          { latitude: y0, longitude: x0 },
+          { latitude: y0, longitude: x1 },
+          { latitude: y1, longitude: x1 },
+          { latitude: y1, longitude: x0 }
+        ],
+        strokeWidth: 1,
+        strokeColor: '#F53F3FAA',
+        fillColor: '#F53F3F4D',
+        zIndex: 3,
+        _label: z.score
+      }
+    })
+    // 家 marker：callout 显示覆盖分
+    const markers = [{
+      id: 1,
+      latitude: d.center.lat,
+      longitude: d.center.lng,
+      width: 1,
+      height: 1,
+      alpha: 0,
+      callout: {
+        content: '🏠 家 · 覆盖 ' + (d.coverageScore == null ? '--' : d.coverageScore) + '分',
+        display: 'ALWAYS',
+        borderRadius: 8,
+        padding: 6,
+        fontSize: 12
+      }
+    }]
+    return { polygons: [isoPolygon].concat(blind), markers }
+  },
+
+  onIsoMinutes(e) {
+    this.setData({ isoMinutes: Number(e.currentTarget.dataset.m) || 15 })
+    this.loadIsochrone()
   },
 
   async customize() {
