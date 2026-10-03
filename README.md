@@ -78,9 +78,9 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 | :---------: | :---------: | :-----------: |
 | ![鲤慧商城郴州热门：百度实时店源与配额提示条](docs/screenshots/07-mall-hot.jpg) | ![鲤慧商城附近真实：按我的位置 3km 检索](docs/screenshots/08-mall-near.jpg) | ![我的订单：待支付与已取消，跳转第三方支付](docs/screenshots/09-orders.jpg) |
 
-| 模型与语音设置（6 类供应商） | 关怀模式 · 适老化 |
-| :-------------: | :--------: |
-| ![模型与语音设置：OpenAI 兼容 / DeepSeek / Ollama 多供应商](docs/screenshots/10-models-voice.jpg) | ![关怀模式：适老化与慢速语音](docs/screenshots/03-life-report.jpg) |
+| 模型与语音设置（6 类供应商） | 关怀模式 · 适老化 | 步行等时圈 · 服务盲区 |
+| :-------------: | :--------: | :-----: |
+| ![模型与语音设置：OpenAI 兼容 / DeepSeek / Ollama 多供应商](docs/screenshots/10-models-voice.jpg) | ![关怀模式：适老化与慢速语音](docs/screenshots/03-life-report.jpg) | ![步行等时圈与服务盲区：真实路网批量算路 + 覆盖分盲区识别（30 分钟档真机实测）](docs/screenshots/12-isochrone.jpg) |
 
 > 商城页全部店名 / 地址 / 电话来自**百度地图 place 实时检索**（非内置假数据）；  
 > 配额耗尽时前端弹提示条并回落到最近一次可用结果，**不白板**。
@@ -176,6 +176,10 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 | **双配额池隔离** | 实测发现批量算路与 place 检索配额池互不共享 → 两个独立熔断器，**检索配额烧完的日子等时圈照样真算** |
 | **盲区口径可解释** | 圈内 N×N 格 × 六类覆盖度加权，`score<40` 判盲区；候选格再实测「家→格中心」，插值偏乐观的格自动剔除 |
 | **可视化** | 网页版零依赖 SVG（等时圈+盲区热区+六类雷达图+参考圈），小程序 `map polygons` 原生渲染 |
+
+**小程序真机实测**（30 分钟档 · 郴州）：等时圈边界 + 盲区格热区原生渲染，覆盖加权分 / 盲区格占比 / 等时圈面积 / 最远可达四格指标与引擎徽章（`routematrix-batch`）全量透出：
+
+![步行等时圈与服务盲区：小程序 map polygons 真机渲染（30 分钟档实测，引擎 routematrix-batch）](docs/screenshots/12-isochrone.jpg)
 
 > 📐 算法细节、踩坑实测（百度 `coord_type`→`coordtype` 改版、矩阵返回 `{text,value}` 对象结构）与对比测试报告见 **[00-设计文档/07-等时圈与盲区算法设计.md](00-设计文档/07-等时圈与盲区算法设计.md)**
 
