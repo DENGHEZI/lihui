@@ -1,0 +1,69 @@
+# 鲤慧 LiHui · CI（零依赖：无需 npm install，直接 node 内置能力自检）
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  selfcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 全仓 JS 语法检查（服务端 + 小程序 + MCP）
+        run: |
+          fails=0
+          # core.quotepath=off：中文路径（如 01-lh-uniapp-多端APP/）默认会被转义成 octal 导致读不到文件
+          for f in $(git -c core.quotepath=off ls-files '*.js'); do
+            node --check "$f" 2>/dev/null || { echo "✗ SYNTAX: $f"; fails=$((fails+1)); }
+          done
+          echo "checked $(git -c core.quotepath=off ls-files '*.js' | wc -l) files, $fails failed"
+          exit $fails
+
+      - name: 等时圈数学性质自测（15 项）
+        run: node 03-lh-server/tests/isochrone.test.js
+
+      - name: 模块图完整性（require 链 / 循环依赖 / 导出缺失）
+        run: |
+          cd 03-lh-server
+          node -e "
+            require('./src/config');
+            require('./src/services/lifeShared');
+            require('./src/services/isochrone');
+            require('./src/services/baiduMap');
+            require('./src/routes/life');
+            console.log('MODULES_OK');
+          "
+
+      - name: 服务端冷启动冒烟（无 AK 环境，3 秒存活即通过）
+        run: |
+          cd 03-lh-server
+          timeout 6 node src/app.js &
+          SERVER_PID=$!
+          sleep 4
+          if kill -0 $SERVER_PID 2>/dev/null; then
+            echo "SERVER_ALIVE"
+            kill $SERVER_PID 2>/dev/null || true
+          else
+            echo "✗ 服务端启动即退出"
+            exit 1
+          fi
+
+      - name: README 图片引用完整性（防止图片语法被改写成纯文本）
+        run: |
+          cnt_ref=$(grep -oE "docs/screenshots/[^)]+\.(jpg|png|jpeg)" README.md | sort -u | wc -l)
+          cnt_missing=0
+          for p in $(grep -oE "docs/screenshots/[^)]+\.(jpg|png|jpeg)" README.md | sort -u); do
+            [ -f "$p" ] || { echo "✗ MISSING: $p"; cnt_missing=$((cnt_missing+1)); }
+          done
+          echo "README 引用图片 $cnt_ref 张，缺失 $cnt_missing 张"
+          [ "$cnt_ref" -ge 1 ] && [ "$cnt_missing" -eq 0 ]

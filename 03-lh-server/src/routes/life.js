@@ -1,20 +1,13 @@
 /**
  * 鲤慧 LiHui · 15 分钟生活圈体检路由
  * 通过 MCP Hub 调起 life-circle MCP Server；失败时服务端本地兜底计算。
+ * 六类口径 / 配额熔断 / 单类检索抽至 services/lifeShared.js（与等时圈引擎共享）。
  */
 const { ok, fail } = require('../utils/http');
 const hub = require('../mcp/hub');
-const baiduMap = require('../services/baiduMap');
 const logger = require('../utils/logger');
-
-const CATEGORIES = [
-  { key: 'medical', name: '医疗', weight: 0.25, keywords: ['医院', '社区卫生服务中心', '药店'], need: 2 },
-  { key: 'education', name: '教育', weight: 0.15, keywords: ['幼儿园', '小学', '中学'], need: 1 },
-  { key: 'market', name: '商业', weight: 0.2, keywords: ['超市', '菜市场', '便利店'], need: 2 },
-  { key: 'food', name: '餐饮', weight: 0.1, keywords: ['餐厅', '早餐店'], need: 3 },
-  { key: 'transit', name: '交通', weight: 0.2, keywords: ['公交', '地铁站', '停车场'], need: 1 },
-  { key: 'leisure', name: '休闲', weight: 0.1, keywords: ['公园', '广场', '体育'], need: 1 },
-];
+const { CATEGORIES, isQuotaBlocked, noteQuotaError, fetchCategory } = require('../services/lifeShared');
+const { buildIsochrone } = require('../services/isochrone');
 
 function numOr(v, d) {
   const n = Number(v);
@@ -27,45 +20,6 @@ function withTimeout(promise, ms, fallback) {
     promise.catch(() => fallback),
     new Promise((resolve) => setTimeout(() => resolve(fallback), ms)),
   ]);
-}
-
-/** 配额熔断：百度 302(天配额超限)/401(并发超限) 后 10 分钟内短路检索，避免空烧请求 */
-let quotaBlockedUntil = 0;
-function isQuotaBlocked() {
-  return Date.now() < quotaBlockedUntil;
-}
-function noteQuotaError(e) {
-  if (e && (e.baiduStatus === 302 || e.baiduStatus === 401)) {
-    quotaBlockedUntil = Date.now() + 10 * 60 * 1000;
-    logger.warn('life', `baidu quota blocked (status=${e.baiduStatus}), 熔断 10 分钟`);
-    return true;
-  }
-  return false;
-}
-
-/** 单类设施检索：RRF 融合一轮 → 全部关键词逐路二次确认 → 仍失败标记 failed 供降权处理 */
-async function fetchCategory(c, lng, lat, radius, stagger = 0) {
-  if (isQuotaBlocked()) return { items: [], failed: true, quota: true };
-  if (stagger) await new Promise((r) => setTimeout(r, stagger)); // 类间错峰，防百度 QPS 瞬时超限
-  try {
-    const r = await baiduMap.poiSearch({ query: c.keywords.join('|'), lng, lat, radius, pageSize: 20 });
-    if ((r.items || []).length) return { items: r.items, failed: false };
-  } catch (e) {
-    noteQuotaError(e);
-  }
-  if (isQuotaBlocked()) return { items: [], failed: true, quota: true };
-  const parts = await Promise.all(
-    c.keywords.map((k) =>
-      baiduMap.poiSearch({ query: k, lng, lat, radius, pageSize: 20 }).catch((e) => {
-        noteQuotaError(e);
-        return null;
-      })
-    )
-  );
-  for (const p of parts) {
-    if (p && (p.items || []).length) return { items: p.items, failed: false };
-  }
-  return { items: [], failed: true, quota: isQuotaBlocked() };
 }
 
 /** 服务端本地兜底计算（不依赖 MCP；六类互相隔离，单类故障不拖垮总分） */
@@ -149,6 +103,27 @@ module.exports = {
     } catch (e2) {
       logger.error('life', `local diagnose failed: ${e2.message}`);
       return fail(res, 5003, '体检引擎繁忙，请稍后再试');
+    }
+  },
+
+  /** GET /api/v1/life/isochrone?lng=&lat=&minutes=15&grid=5
+   *  步行等时圈 + 六类覆盖 + 服务盲区（命题一核心能力：真实路网而非直线圆）。
+   *  降级链内建：批量矩阵 → 并发单点算路 → 理想圆（engine 字段显式标注）。 */
+  'GET /life/isochrone': async (req, res, q) => {
+    const lng = numOr(q.lng, NaN);
+    const lat = numOr(q.lat, NaN);
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return fail(res, 1001, 'lng/lat 必填');
+    try {
+      const data = await buildIsochrone({
+        lng,
+        lat,
+        minutes: numOr(q.minutes, 15),
+        grid: numOr(q.grid, 5),
+      });
+      return ok(res, data);
+    } catch (e) {
+      logger.error('life', `isochrone failed: ${e.message}`);
+      return fail(res, 5004, '等时圈计算失败，请稍后再试');
     }
   },
 

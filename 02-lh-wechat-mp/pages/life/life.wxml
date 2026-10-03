@@ -40,6 +40,69 @@
     </view>
   </view>
 
+  <!-- 步行等时圈 + 服务盲区 -->
+  <view class="lh-card iso-card">
+    <view class="iso-head">
+      <text class="lh-h2">步行等时圈 · 服务盲区</text>
+      <view class="iso-mins">
+        <text
+          class="iso-min {{isoMinutes === item ? 'on' : ''}}"
+          wx:for="{{[10, 15, 20, 30]}}"
+          wx:key="*this"
+          bindtap="onIsoMinutes"
+          data-m="{{item}}"
+        >{{item}}分</text>
+      </view>
+    </view>
+
+    <view wx:if="{{isoLoading}}" class="iso-loading">
+      <text class="lh-cap">正在沿真实路网计算 {{isoMinutes}} 分钟步行等时圈…</text>
+    </view>
+
+    <block wx:if="{{iso && !isoLoading}}">
+      <map
+        class="iso-map"
+        longitude="{{isoCenter.lng}}"
+        latitude="{{isoCenter.lat}}"
+        scale="{{isoScale}}"
+        polygons="{{isoPolygons}}"
+        markers="{{isoMarkers}}"
+        show-location
+        enable-rotate="{{false}}"
+      ></map>
+
+      <view class="iso-stats">
+        <view class="iso-stat">
+          <text class="iso-num {{iso.coverageScore >= 60 ? 'good' : (iso.coverageScore < 40 ? 'bad' : '')}}">{{iso.coverageScore}}</text>
+          <text class="iso-lab">覆盖加权分</text>
+        </view>
+        <view class="iso-stat">
+          <text class="iso-num {{iso.summary.blindCount > 0 ? 'bad' : 'good'}}">{{iso.summary.blindCount}}/{{iso.summary.gridInside}}</text>
+          <text class="iso-lab">盲区格（{{iso.summary.blindRatio}}%）</text>
+        </view>
+        <view class="iso-stat">
+          <text class="iso-num">{{iso.summary.circleAreaKm2}}km²</text>
+          <text class="iso-lab">等时圈面积</text>
+        </view>
+        <view class="iso-stat">
+          <text class="iso-num">{{iso.summary.maxReachM >= 1000 ? iso.summary.maxReachM / 1000 + 'km' : iso.summary.maxReachM + 'm'}}</text>
+          <text class="iso-lab">最远可达</text>
+        </view>
+      </view>
+
+      <view class="iso-legend">
+        <view class="lg-row"><view class="lg-sw lg-iso"></view><text class="lh-mini">步行等时圈（步速 {{iso.walkSpeed}}m/min × 路网弯曲 {{iso.detourFactor}}）</text></view>
+        <view class="lg-row"><view class="lg-sw lg-blind"></view><text class="lh-mini">服务盲区格（覆盖分 &lt; 40，矩阵实测复核）</text></view>
+        <view class="lg-row"><view class="lg-sw lg-eng {{iso.degraded ? 'warn' : ''}}"></view><text class="lh-mini">引擎：{{iso.engine}}{{iso.hint ? ' · ' + iso.hint : ''}}</text></view>
+      </view>
+    </block>
+
+    <view wx:if="{{!iso && !isoLoading}}" class="iso-entry">
+      <text class="lh-cap">不止直线圆 —— 沿真实路网算出你步行 {{isoMinutes}} 分钟能到哪，并标出设施覆盖不到的盲区</text>
+      <button class="lh-btn iso-go" bindtap="loadIsochrone">生成我的步行等时圈</button>
+    </view>
+  </view>
+
   <view class="lh-card" wx:if="{{report.shortboards.length}}">
     <text class="lh-h2">短板提醒</text>
     <view class="warn-row" wx:for="{{report.shortboards}}" wx:key="*this">

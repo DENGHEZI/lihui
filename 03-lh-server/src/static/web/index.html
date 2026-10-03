@@ -115,6 +115,33 @@
   .cat .near { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cat.failed .hd .n { color: var(--warn-text); }
 
+  /* ---------- 等时圈 ---------- */
+  .iso-ctl { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .iso-ctl .lbl { font-size: 12.5px; color: var(--text-3); }
+  .iso-ctl .mtab {
+    padding: 4px 12px; border-radius: 999px; font-size: 12.5px; cursor: pointer; user-select: none;
+    background: var(--bg); color: var(--text-2); border: 1px solid transparent;
+  }
+  .iso-ctl .mtab.on { background: var(--primary-weak); color: var(--primary); border-color: #BAD9FF; font-weight: 600; }
+  .iso-ctl .go { margin-left: auto; }
+  .iso-svg-wrap { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #FDFDFE; }
+  .iso-svg-wrap svg { display: block; width: 100%; height: auto; }
+  .iso-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  @media (max-width: 480px) { .iso-stats { grid-template-columns: repeat(2, 1fr); } }
+  .iso-stat { background: var(--bg); border-radius: 10px; padding: 9px 10px; }
+  .iso-stat b { font-size: 17px; display: block; line-height: 1.25; }
+  .iso-stat b.bad { color: var(--red); }
+  .iso-stat b.good { color: var(--ok); }
+  .iso-stat span { font-size: 11px; color: var(--text-3); }
+  .iso-bottom { display: flex; gap: 16px; margin-top: 14px; align-items: flex-start; flex-wrap: wrap; }
+  .iso-radar { flex: none; width: 216px; }
+  .iso-legend { flex: 1; min-width: 220px; font-size: 12px; color: var(--text-2); line-height: 1.9; }
+  .iso-legend .li { display: flex; align-items: center; gap: 7px; }
+  .iso-legend .sw { flex: none; width: 13px; height: 13px; border-radius: 3px; border: 1px solid var(--line); }
+  .eng-badge { display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: 999px;
+    background: var(--primary-weak); color: var(--primary); font-weight: 600; }
+  .eng-badge.degraded { background: var(--warn-bg); color: var(--warn-text); }
+
   /* ---------- Tabs ---------- */
   .tabs { display: flex; gap: 8px; margin: 14px 0 4px; flex-wrap: wrap; }
   .tab {
@@ -184,6 +211,20 @@
   <div class="card">
     <h2>🩺 生活圈体检 <span class="sub">数据 · 百度地图开放平台</span></h2>
     <div id="lifeBox"><div class="spin"></div><div class="empty">正在体检你的 15 分钟生活圈</div></div>
+  </div>
+
+  <!-- 步行等时圈 + 服务盲区 -->
+  <div class="card">
+    <h2>⏱ 步行等时圈 · 服务盲区 <span class="sub">真实路网算路 · 批量矩阵</span></h2>
+    <div class="iso-ctl" id="isoCtl">
+      <span class="lbl">步行</span>
+      <div class="mtab" data-m="10">10 分钟</div>
+      <div class="mtab on" data-m="15">15 分钟</div>
+      <div class="mtab" data-m="20">20 分钟</div>
+      <div class="mtab" data-m="30">30 分钟</div>
+      <button class="btn primary go" id="isoGo">重新计算</button>
+    </div>
+    <div id="isoBox"><div class="spin"></div><div class="empty">正在计算你的步行等时圈…</div></div>
   </div>
 
   <!-- 便民速查 -->
@@ -344,7 +385,7 @@ async function loadWeather() {
 }
 
 /* ================= 生活圈体检 ================= */
-const CAT_ICON = { market: '🛒', medical: '🏥', food: '🍜', transit: '🚌', leisure: '🌳', edu: '📚' };
+const CAT_ICON = { market: '🛒', medical: '🏥', food: '🍜', transit: '🚌', leisure: '🌳', edu: '📚', education: '📚' };
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 async function loadLife() {
@@ -374,6 +415,126 @@ async function loadLife() {
   }
 }
 function fmtM(m) { return m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m) + ' m'; }
+
+/* ================= 步行等时圈 + 服务盲区 ================= */
+/* 零依赖手绘 SVG：等时圈多边形 + 盲区网格 + 参考圈 + 六类覆盖雷达图 */
+const ISO_MINUTES = () => Number(document.querySelector('#isoCtl .mtab.on').dataset.m) || 15;
+const ENG_NAME = {
+  'routematrix-batch': '批量矩阵算路 1×36',
+  'directionlite-concurrent': '并发单点算路 ×36',
+  'ideal-circle-degraded': '理想圆估算（降级）',
+};
+
+function loadIsochrone() {
+  if (state.lng == null) { $('#isoBox').innerHTML = '<div class="empty">等待定位…</div>'; return; }
+  $('#isoBox').innerHTML = '<div class="spin"></div><div class="empty">正在沿真实路网计算 ' + ISO_MINUTES() + ' 分钟步行等时圈…</div>';
+  api('/life/isochrone', { lng: state.lng, lat: state.lat, minutes: ISO_MINUTES(), grid: 5 })
+    .then(renderIsochrone)
+    .catch((e) => { $('#isoBox').innerHTML = '<div class="empty">等时圈计算失败：' + esc(e.message) + '</div>'; });
+}
+
+function renderIsochrone(d) {
+  const W = 640, H = 400, PAD = 34;
+  const c = d.center;
+  const MLAT = 111320;
+  const MLNG = 111320 * Math.cos((c.lat * Math.PI) / 180);
+  const proj = (lng, lat) => ({ x: (lng - c.lng) * MLNG, y: (c.lat - lat) * MLAT }); // 米制，y 北正
+
+  /* 米制 bbox（等时圈多边形）→ 等比缩放 fit 画布 */
+  let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+  d.polygon.forEach((p) => {
+    const m = proj(p.lng, p.lat);
+    minX = Math.min(minX, m.x); maxX = Math.max(maxX, m.x);
+    minY = Math.min(minY, m.y); maxY = Math.max(maxY, m.y);
+  });
+  const range = Math.max(maxX - minX, maxY - minY) || 1;
+  const scale = Math.min(W - PAD * 2, H - PAD * 2) / range;
+  const ox = (minX + maxX) / 2, oy = (minY + maxY) / 2;
+  const X = (x) => (W / 2 + (x - ox) * scale).toFixed(1);
+  const Y = (y) => (H / 2 - (y - oy) * scale).toFixed(1); // SVG y 向下
+
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
+  /* 参考圈（500m 步进虚线 + 刻度） */
+  const refMax = Math.ceil(Math.max(maxX - minX, maxY - minY) / 2 / 500) * 500;
+  for (let r = 500; r <= refMax + 1; r += 500) {
+    svg += '<circle cx="' + X(0) + '" cy="' + Y(0) + '" r="' + (r * scale).toFixed(1) +
+      '" fill="none" stroke="#C9D4E4" stroke-width="1" stroke-dasharray="4 5"/>' +
+      '<text x="' + X(0) + '" y="' + (Number(Y(0)) - r * scale - 4).toFixed(1) +
+      '" font-size="10" fill="#8F959E" text-anchor="middle">' + r + 'm</text>';
+  }
+  /* 盲区 / 覆盖网格（j=0 最南 → SVG y 最大，翻转 j） */
+  (d.cells || []).forEach((cell) => {
+    if (!cell.insideCircle) return;
+    const n = d.grid;
+    const gx0 = minX + (cell.i / n) * (maxX - minX), gx1 = minX + ((cell.i + 1) / n) * (maxX - minX);
+    const gy0 = minY + (cell.j / n) * (maxY - minY), gy1 = minY + ((cell.j + 1) / n) * (maxY - minY);
+    const fill = cell.blind ? 'rgba(245,63,63,.30)' : cell.outsideVerified ? 'rgba(143,149,158,.14)' : 'rgba(22,119,255,.10)';
+    const stroke = cell.blind ? 'rgba(245,63,63,.75)' : 'none';
+    svg += '<rect x="' + X(gx0) + '" y="' + Y(gy1) + '" width="' + ((gx1 - gx0) * scale).toFixed(1) +
+      '" height="' + ((gy1 - gy0) * scale).toFixed(1) + '" fill="' + fill + '"' +
+      (stroke ? ' stroke="' + stroke + '" stroke-width="1"' : '') + ' rx="2"/>';
+  });
+  /* 等时圈多边形 */
+  const pts = d.polygon.map((p) => { const m = proj(p.lng, p.lat); return X(m.x) + ',' + Y(m.y); }).join(' ');
+  svg += '<polygon points="' + pts + '" fill="rgba(22,119,255,.14)" stroke="#1677FF" stroke-width="2" stroke-linejoin="round"/>';
+  /* 36 方向采样点 */
+  d.bearings.forEach((b) => { const m = proj(b.lng, b.lat); svg += '<circle cx="' + X(m.x) + '" cy="' + Y(m.y) + '" r="2.4" fill="#1677FF"/>'; });
+  /* 家 */
+  svg += '<circle cx="' + X(0) + '" cy="' + Y(0) + '" r="6" fill="#F53F3F" stroke="#fff" stroke-width="2"/>' +
+    '<text x="' + X(0) + '" y="' + (Number(Y(0)) + 20) + '" font-size="11" fill="#1F2329" text-anchor="middle" font-weight="600">🏠 家</text>';
+  /* 指北针 */
+  svg += '<g transform="translate(' + (W - 26) + ',30)"><path d="M0,-11 L5,7 L0,3 L-5,7 Z" fill="#646A73"/><text x="0" y="19" font-size="9" fill="#8F959E" text-anchor="middle">N</text></g>';
+  svg += '</svg>';
+
+  const s = d.summary || {};
+  const eng = d.engine || '';
+  const engineBadge = '<span class="eng-badge' + (d.degraded ? ' degraded' : '') + '">' + (ENG_NAME[eng] || eng) + '</span>';
+  const stats =
+    '<div class="iso-stat"><b class="' + (d.coverageScore >= 60 ? 'good' : d.coverageScore < 40 ? 'bad' : '') + '">' + (d.coverageScore == null ? '--' : d.coverageScore) + '</b><span>覆盖加权分</span></div>' +
+    '<div class="iso-stat"><b class="' + (s.blindCount > 0 ? 'bad' : 'good') + '">' + (s.blindCount || 0) + '<small style="font-size:11px;color:var(--text-3)">/' + (s.gridInside || 0) + ' 格</small></b><span>服务盲区（' + (s.blindRatio || 0) + '%）</span></div>' +
+    '<div class="iso-stat"><b>' + (s.circleAreaKm2 == null ? '--' : s.circleAreaKm2) + '<small style="font-size:11px"> km²</small></b><span>等时圈面积</span></div>' +
+    '<div class="iso-stat"><b>' + (s.maxReachM ? fmtM(s.maxReachM) : '--') + '</b><span>最远可达半径</span></div>';
+
+  /* 雷达图（六类覆盖） */
+  const RADAR_R = 74, RC = 108;
+  const axes = (d.coverage || []).map((cov, i, arr) => {
+    const ang = -Math.PI / 2 + (i * 2 * Math.PI) / arr.length;
+    return { cov, ang };
+  });
+  const rp = (v, ang) => (RC + Math.cos(ang) * RADAR_R * (v / 100)).toFixed(1) + ',' + (RC + Math.sin(ang) * RADAR_R * (v / 100)).toFixed(1);
+  let radar = '<svg viewBox="0 0 216 216" xmlns="http://www.w3.org/2000/svg">';
+  [33, 66, 100].forEach((lv) => {
+    radar += '<polygon points="' + axes.map((a) => rp(lv, a.ang)).join(' ') + '" fill="none" stroke="#E5E9F0" stroke-width="1"/>';
+  });
+  axes.forEach((a) => {
+    radar += '<line x1="' + RC + '" y1="' + RC + '" x2="' + (RC + Math.cos(a.ang) * RADAR_R).toFixed(1) + '" y2="' + (RC + Math.sin(a.ang) * RADAR_R).toFixed(1) + '" stroke="#E5E9F0"/>';
+  });
+  const validAxes = axes.filter((a) => !a.cov.failed);
+  if (validAxes.length === axes.length && axes.length) {
+    radar += '<polygon points="' + axes.map((a) => rp(a.cov.ratio || 0, a.ang)).join(' ') + '" fill="rgba(22,119,255,.25)" stroke="#1677FF" stroke-width="2"/>';
+  }
+  axes.forEach((a) => {
+    const lx = RC + Math.cos(a.ang) * (RADAR_R + 22), ly = RC + Math.sin(a.ang) * (RADAR_R + 20);
+    radar += '<text x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" font-size="11" fill="#646A73" text-anchor="middle">' +
+      (CAT_ICON[a.cov.key] || '📍') + esc(a.cov.name) + '</text>' +
+      '<text x="' + lx.toFixed(1) + '" y="' + (ly + 13).toFixed(1) + '" font-size="10" fill="' + (a.cov.failed ? '#AD6800' : '#1677FF') + '" text-anchor="middle">' +
+      (a.cov.failed ? '受限' : (a.cov.ratio == null ? '--' : a.cov.ratio + '%')) + '</text>';
+  });
+  radar += '</svg>';
+
+  const legend =
+    '<div class="li"><span class="sw" style="background:rgba(22,119,255,.14);border-color:#1677FF"></span>步行等时圈（' + esc(String(d.minutes)) + ' 分钟 · 步速 ' + d.walkSpeed + 'm/min · 弯曲系数 ' + d.detourFactor + '）</div>' +
+    '<div class="li"><span class="sw" style="background:rgba(22,119,255,.10)"></span>圈内正常格（各类设施步行可达）</div>' +
+    '<div class="li"><span class="sw" style="background:rgba(245,63,63,.30);border-color:#F53F3F"></span>服务盲区格（加权覆盖分 &lt; 40，已实测复核 ' + (s.verifiedCells || 0) + ' 格）</div>' +
+    '<div class="li"><span class="sw" style="background:#fff;border-style:dashed;border-color:#C9D4E4"></span>直线距离参考圈（500m 步进）</div>' +
+    '<div class="li" style="margin-top:6px">' + engineBadge + ' <span style="color:var(--text-3)">耗时约 ' + d.minutes + ' 分钟口径 · ' + (d.bearings || []).length + ' 方向采样 · Catmull-Rom 平滑</span></div>' +
+    (d.hint ? '<div class="li" style="color:var(--warn-text);margin-top:6px">⚠️ ' + esc(d.hint) + '</div>' : '');
+
+  $('#isoBox').innerHTML =
+    '<div class="iso-svg-wrap">' + svg + '</div>' +
+    '<div class="iso-stats">' + stats + '</div>' +
+    '<div class="iso-bottom"><div class="iso-radar">' + radar + '</div><div class="iso-legend">' + legend + '</div></div>';
+}
 
 /* ================= 便民速查 ================= */
 const QUICK = [
@@ -435,8 +596,16 @@ async function loadShop() {
 $('#tabNear').onclick = () => { state.shopMode = 'near'; $('#tabNear').classList.add('on'); $('#tabHot').classList.remove('on'); loadShop(); };
 $('#tabHot').onclick = () => { state.shopMode = 'hot'; $('#tabHot').classList.add('on'); $('#tabNear').classList.remove('on'); loadShop(); };
 $('#locChip').onclick = $('#reloc').onclick = async () => { banner(''); await locate(); loadAll(); };
+$('#isoGo').onclick = loadIsochrone;
+document.querySelectorAll('#isoCtl .mtab').forEach((t) => {
+  t.onclick = () => {
+    document.querySelectorAll('#isoCtl .mtab').forEach((x) => x.classList.remove('on'));
+    t.classList.add('on');
+    loadIsochrone();
+  };
+});
 
-function loadAll() { loadWeather(); loadLife(); loadQuick(); loadShop(); }
+function loadAll() { loadWeather(); loadLife(); loadIsochrone(); loadQuick(); loadShop(); }
 
 (async function init() {
   renderQuickTabs();
