@@ -117,7 +117,7 @@ module.exports = {
       const data = await buildIsochrone({
         lng,
         lat,
-        minutes: numOr(q.minutes, 15),
+        minutes: numOr(q.minutes, 30),
         grid: numOr(q.grid, 5),
       });
       return ok(res, data);

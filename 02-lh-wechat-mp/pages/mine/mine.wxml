@@ -62,7 +62,7 @@
     </view>
     <view class="menu-row" bindtap="goLife">
       <text class="m-ico">◔</text>
-      <text class="m-txt">15 分钟生活圈体检</text>
+      <text class="m-txt">30 分钟生活圈体检</text>
       <text class="m-arrow">›</text>
     </view>
     <view class="menu-row" bindtap="goFeedback">

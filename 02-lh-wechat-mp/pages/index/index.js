@@ -47,7 +47,14 @@ Page({
     voice.loadVoiceConfig().then((c) => {
       this.setData({ voiceName: c.speaker || '度丫丫' })
     })
+    // 订阅全局定位变化：定位 settle 时刷新首页中心点（客户反馈「定位位置和地点没有变化」）
+    this._onLocChange = (loc) => this.syncLocationIfMoved(loc, true)
+    app.on('locationChange', this._onLocChange)
     this.bootstrap()
+  },
+
+  onUnload() {
+    if (this._onLocChange) app.off('locationChange', this._onLocChange)
   },
 
   onShow() {
@@ -57,6 +64,44 @@ Page({
       // 关怀模式：抽屉默认更高，减少翻找步骤
       sheetMin: care ? 380 : 300
     })
+    // 切回首页时若全局定位已更新（且与当前展示差异明显），静默同步
+    this.syncLocationIfMoved(app.globalData.location, false)
+  },
+
+  /** 两点球面距离（米），用于判断「定位是否真的移动了」 */
+  distM(lng1, lat1, lng2, lat2) {
+    const R = 6371000
+    const rad = (d) => (Number(d) * Math.PI) / 180
+    const dLat = rad(lat2 - lat1)
+    const dLng = rad(lng2 - lng1)
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2
+    return 2 * R * Math.asin(Math.sqrt(a))
+  },
+
+  /**
+   * 全局定位与首页展示同步。
+   * @param {object|null} loc 全局定位
+   * @param {boolean} pushed 是否来自 locationChange 事件（true=定位刚刷新）
+   * 规则：移动 >80m 或首次拿到城市文案才刷新，避免 GPS 抖动造成地图乱跳。
+   */
+  syncLocationIfMoved(loc, pushed) {
+    if (!loc || !Number.isFinite(Number(loc.lng)) || !Number.isFinite(Number(loc.lat))) return
+    const c = this.data.center
+    const moved = this.distM(c.lng, c.lat, Number(loc.lng), Number(loc.lat))
+    const firstCity = !this._cityApplied && (loc.city || loc.district)
+    const need = pushed ? moved > 80 : moved > 80 || firstCity
+    if (!need) return
+    this._cityApplied = true
+    this._lastLocTs = loc.ts
+    this.applyLocation(loc, [loc.city, loc.district].filter(Boolean).join(' ') || this.data.cityText)
+    // 位置真正变了（>200m）：周边推荐 / 天气跟着刷新；有搜索词就顺带重搜
+    if (moved > 200) {
+      this.loadScenic()
+      this.loadWeather()
+      if (this.data.lastQuery) this.doSearch(this.data.lastQuery, this.data.curIcon)
+    }
   },
 
   async bootstrap() {
@@ -96,6 +141,7 @@ Page({
       cityShort: parseCity(cityText) || '当前',
       locSourceText: src
     })
+    if (cityText && cityText !== '当前位置') this._cityApplied = true
     this.updateMarkers()
     this.updateCircle()
   },
@@ -215,6 +261,92 @@ Page({
     this.setData({ poiList: [], lastQuery: '' })
     this.collapseSheet()
     this.updateMarkers()
+  },
+
+  /* ---------- 地址补查（用户共创） ----------
+   * 客户发现地址缺失/不准：就地报 → 云端留存 → 之后所有人检索自动生效。
+   * 提交成功本地立即生效（乐观更新），不等下一次检索。 */
+  fixAddr(e) {
+    const i = Number(e.currentTarget.dataset.i)
+    const p = this.data.poiList[i]
+    if (!p) return
+    wx.showModal({
+      title: '补充「' + (p.name || '该地点') + '」的地址',
+      editable: true,
+      placeholderText: '请输入详细地址，如：北湖区xx路xx号',
+      confirmText: '提交',
+      success: async (r) => {
+        if (!r.confirm) return
+        const addr = (r.content || '').trim()
+        if (!addr) return wx.showToast({ title: '地址不能为空', icon: 'none' })
+        try {
+          await api.addrFix({
+            // suggest 结果没有百度 uid（uid='sug' 是本地占位），按名字+坐标云端判重即可
+            uid: p.uid && p.uid !== 'sug' ? p.uid : '',
+            name: p.name,
+            lng: Number(p.lng) || this.data.center.lng,
+            lat: Number(p.lat) || this.data.center.lat,
+            address: addr
+          })
+          this.setData({ ['poiList[' + i + '].address']: addr })
+          wx.showToast({ title: '感谢补充，已同步云端', icon: 'success' })
+        } catch (err) {
+          wx.showToast({ title: (err && err.msg) || '提交失败，稍后再试', icon: 'none' })
+        }
+      }
+    })
+  },
+
+  /** 补一个地图上没有的地点（两步弹窗：名称 → 地址，坐标取当前定位） */
+  addPlace() {
+    wx.showModal({
+      title: '补充新地点 · 第 1 步',
+      editable: true,
+      placeholderText: '地点名称，如：张记早餐店',
+      confirmText: '下一步',
+      success: (r1) => {
+        if (!r1.confirm) return
+        const name = (r1.content || '').trim()
+        if (!name) return wx.showToast({ title: '名称不能为空', icon: 'none' })
+        wx.showModal({
+          title: '补充新地点 · 第 2 步',
+          editable: true,
+          placeholderText: '详细地址，如：北湖区xx路xx号',
+          confirmText: '提交',
+          success: async (r2) => {
+            if (!r2.confirm) return
+            const addr = (r2.content || '').trim()
+            if (!addr) return wx.showToast({ title: '地址不能为空', icon: 'none' })
+            try {
+              await api.addrFix({
+                name,
+                address: addr,
+                lng: this.data.center.lng,
+                lat: this.data.center.lat
+              })
+              wx.showToast({ title: '已收录，感谢补充', icon: 'success' })
+              // 顺手把新地点塞进当前列表（带「用户补充」标），所见即所得
+              this.setData({
+                poiList: this.data.poiList.concat([{
+                  uid: 'user_' + Date.now().toString(36),
+                  name,
+                  address: addr,
+                  lng: this.data.center.lng,
+                  lat: this.data.center.lat,
+                  distText: '',
+                  tag: '用户补充',
+                  userAdded: true
+                }])
+              })
+              this.updatePoiMarkers()
+              this.expandSheet()
+            } catch (err) {
+              wx.showToast({ title: (err && err.msg) || '提交失败，稍后再试', icon: 'none' })
+            }
+          }
+        })
+      }
+    })
   },
 
   async loadScenic() {
@@ -353,6 +485,6 @@ Page({
   },
 
   onShareAppMessage() {
-    return { title: '鲤慧 · 15 分钟生活圈智能体检', path: '/pages/index/index' }
+    return { title: '鲤慧 · 30 分钟生活圈智能体检', path: '/pages/index/index' }
   }
 })

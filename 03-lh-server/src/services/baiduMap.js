@@ -184,10 +184,15 @@ async function poiSearch({ query, lng, lat, radius = 1200, pageNum = 0, pageSize
     total: raw.total || list.length,
     items: list.map((x) => {
       const l = x.location || {};
+      // ⚠️ 地址回填：百度部分 POI（尤其小区/站台/新店）address 为空字符串，
+      //    端上就会显示「地址未知」—— 客户反馈「一些地址没有出来」。
+      //    用 province+city+area 拼一级行政区兜底（如「湖南省郴州市北湖区」），比空白强。
+      const addrFallback = [x.province, x.city, x.area].filter(Boolean).join('');
       return {
         uid: x.uid || '',
         name: x.name || '',
-        address: x.address || '',
+        address: x.address || addrFallback || '',
+        addressEstimated: !x.address && !!addrFallback, // 标记这是行政区级地址，不是门牌
         lng: Number(l.lng),
         lat: Number(l.lat),
         distance: x.detail_info && x.detail_info.distance !== undefined ? Number(x.detail_info.distance) : null,

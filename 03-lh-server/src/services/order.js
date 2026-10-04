@@ -22,6 +22,12 @@ const STATUS = {
   cancelled: '已取消',
 }
 
+/** 金额一律落到「分」，避免浮点误差（0.1+0.2 那类问题在金额上很刺眼） */
+function round2(n) {
+  const v = Number(n)
+  return Number.isFinite(v) ? Math.round(v * 100) / 100 : 0
+}
+
 /** 订单号：LH + yyyymmdd + 6 位随机 */
 function makeNo() {
   const d = new Date()
@@ -41,9 +47,32 @@ async function create(o = {}) {
   if (!item) throw Object.assign(new Error('商品不存在或已下架'), { code: 1001 })
 
   const qty = Math.max(1, Math.min(Number(o.qty) || 1, 99))
-  // 真实 POI 条目 price 为 null（百度不给成交价），用参考价兜底，前端必须让用户看到这是参考价
-  const unitPrice = Number(item.price) > 0 ? Number(item.price) : priceService.estimate(item).price
-  const amount = unitPrice * qty
+
+  /* —— 单价口径（重要） ——
+   * 以前服务端自己 estimate() 一次，而端上/详情页走的是 /shop/price（优先真实价），
+   * 两条链路取价不同 → 用户看到的「应付金额」和落库的 amount 对不上，就是「订单金额不对」。
+   * 现在以【用户在详情页确认过那一刻的单价】为准（前端会把当时展示的单价一起带过来），
+   * 服务端只做合法性校验（必须 >0、≤100000），没有时才回落到 estimate()。
+   * 这样「看到多少就是多少」，不重复估算。
+   */
+  const clientUnit = Number(o.unitPrice)
+  const hasCatalogPrice = Number(item.price) > 0
+  let unitPrice = 0
+  let priceSource = 'estimate'
+  if (hasCatalogPrice) {
+    unitPrice = Number(item.price)
+    priceSource = 'catalog'
+  } else if (Number.isFinite(clientUnit) && clientUnit > 0 && clientUnit <= 100000) {
+    unitPrice = clientUnit
+    priceSource = (o.priceSource === 'supplier' || o.priceSource === 'estimate') ? o.priceSource : 'client'
+  } else {
+    unitPrice = priceService.estimate(item).price
+  }
+  if (!(unitPrice > 0)) {
+    throw Object.assign(new Error('无法获取该商品单价，请稍后重试'), { code: 1002 })
+  }
+  // ⚠️ 浮点：128.5 × 3 在中国金融/展示语境下必须落到「分」，不能出现 385.49999999999994
+  const amount = Math.round(unitPrice * qty * 100) / 100
 
   // 第三方下单信息：端上直接拿来跳小程序 / 复制关键词
   const supplier = item.supplier || {}
@@ -63,8 +92,12 @@ async function create(o = {}) {
     spec: o.spec || (item.specs && item.specs[0]) || '',
     qty,
     unit: item.unit || '份',
-    price: unitPrice,
+    // price 保留兼容旧端（详情页「单价」），unitPrice 是新口径的显式字段名
+    price: round2(unitPrice),
+    unitPrice: round2(unitPrice),
     amount,
+    priceSource,
+    isEstimate: priceSource === 'estimate',
     date: o.date || '',
     name: o.name || '',
     phone: o.phone || '',

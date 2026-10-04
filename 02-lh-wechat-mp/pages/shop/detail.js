@@ -81,21 +81,39 @@ Page({
       const patch = { priceReal: p.source === 'supplier', priceReason: p.message || '', estUnitPrice: p.price }
       if (Number(p.price) > 0) {
         patch.price = p.price
+        patch.estUnitPrice = p.price
         patch.unit = p.unit || item.unit || ''
       }
-      patch.total = Number(p.price || 0) * Number(this.data.qty)
+      // 总价交给 recalc() 统一算（落到分），避免这里再算一遍又出现浮点尾数
       this.setData(patch, () => this.recalc())
     } catch (e) {
       this.setData({ priceReal: false })
     }
   },
 
+  /**
+   * 单价 × 数量 = 总价。
+   * ⚠️ 两处硬性要求（客户反馈「订单金额不对」就是踩在这）：
+   *   1) 单价口径必须和订单落库一致 —— recalc 算出的就是接下来要传给服务端的 unitPrice，
+   *      服务端不再自己 estimate()，否则「页面显示 386 / 订单写 358」这种对不上。
+   *   2) 金额必须落到「分」—— 128.5 × 3 不能出现 385.49999999999994。
+   */
   recalc() {
     const { item, qty } = this.data
     if (!item) return
     // 真实 POI 的 item.price 可能是 null（百度不给价），此时用参考价兜底
     const unit = Number(item.price) > 0 ? Number(item.price) : Number(this.data.estUnitPrice || 0)
-    this.setData({ total: unit * Number(qty) })
+    const q = Number(qty) || 1
+    const priceSource = Number(item.price) > 0
+      ? 'catalog'
+      : this.data.priceReal
+      ? 'supplier'
+      : 'estimate'
+    this.setData({
+      unitPrice: Math.round(unit * 100) / 100,
+      total: Math.round(unit * q * 100) / 100,
+      priceSource
+    })
   },
 
   pickSpec(e) {
@@ -129,8 +147,13 @@ Page({
   },
 
   async submit() {
-    const { item, qty, spec, date, name, phone, remark, submitting } = this.data
+    // unitPrice 直接取 recalc() 的结果，保证「页面显示多少 = 订单记多少」
+    const { item, qty, spec, date, name, phone, remark, submitting, unitPrice, priceSource } = this.data
     if (submitting) return
+    if (!(unitPrice > 0)) {
+      wx.showToast({ title: '单价还没拿到，请稍候再提交', icon: 'none', duration: 2200 })
+      return
+    }
     if (!name.trim()) return wx.showToast({ title: '请填写联系人', icon: 'none' })
     if (!/^1[3-9]\d{9}$/.test(phone.trim())) return wx.showToast({ title: '请填写正确手机号', icon: 'none' })
 
@@ -146,7 +169,9 @@ Page({
         phone: phone.trim(),
         remark: remark.trim(),
         lng: loc.lng,
-        lat: loc.lat
+        lat: loc.lat,
+        unitPrice,
+        priceSource
       })
       // 本地留一份 + 记住联系人，下次下单少填一遍
       this.saveLocal(order)

@@ -157,6 +157,9 @@ function request(path, { method = 'GET', data = {}, loading = false, loadingText
     }
 
     // ① 优先走微信云托管内网通道：不受 request 合法域名限制
+    //    ⚠️ 客户反馈「首页全没有变化 + HTTPS/证书校验失败」：
+    //    以前 callContainer 一失败就直接 reject，整个数据链路全断且无回落。
+    //    现在失败时自动降级走一次 wx.request（staging/局域网域名），并把真实原因打到 console。
     if (canUseCloudContainer()) {
       wx.cloud.callContainer({
         config: { env: config.CLOUD_ENV_ID },
@@ -165,8 +168,25 @@ function request(path, { method = 'GET', data = {}, loading = false, loadingText
         data,
         header: Object.assign({ 'X-WX-SERVICE': config.CLOUD_SERVICE }, header),
         success: onSuccess,
-        fail: onFail,
-        complete: onComplete
+        fail: (err) => {
+          console.warn('[鲤慧-网络] callContainer 失败，降级 wx.request：', path, err && err.errMsg)
+          if (config.BASE_URL) {
+            wx.request({
+              url: config.BASE_URL + path,
+              method,
+              data,
+              timeout: 20000,
+              header,
+              success: onSuccess,
+              fail: onFail,
+              complete: onComplete // 降级结束后才收 loading
+            })
+          } else {
+            onComplete()
+            onFail(err)
+          }
+        },
+        complete: () => {} // 外层不收 loading，交给降级通道或 onSuccess 内部逻辑
       })
       return
     }

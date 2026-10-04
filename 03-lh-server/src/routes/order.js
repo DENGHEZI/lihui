@@ -16,10 +16,22 @@ module.exports = {
     if (b.name && String(b.name).length > 40) return fail(res, 1001, '联系人过长');
     if (b.phone && !/^1[3-9]\d{9}$/.test(String(b.phone))) return fail(res, 1001, '手机号格式不正确');
     try {
+      // unitPrice：端上在详情页确认后回传的「当时展示的单价」，保证「看到多少就是多少」；
+      // 没传则服务端自行 estimate()，前端会看到「参考价」标记。
+      const unitPrice = b.unitPrice === undefined || b.unitPrice === null || b.unitPrice === ''
+        ? undefined
+        : Number(b.unitPrice);
+      if (unitPrice !== undefined && (!Number.isFinite(unitPrice) || unitPrice <= 0)) {
+        return fail(res, 1001, '单价不合法');
+      }
+      if (unitPrice !== undefined && unitPrice > 100000) {
+        return fail(res, 1001, '单价超出合理范围');
+      }
       const o = await create({
         ...b,
         deviceId: deviceOf(req, b),
         qty: Number(b.qty) || 1,
+        unitPrice,
       });
       return ok(res, o);
     } catch (e) {

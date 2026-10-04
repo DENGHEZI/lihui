@@ -3,6 +3,7 @@
  */
 const { ok, fail } = require('../utils/http');
 const baiduMap = require('../services/baiduMap');
+const addrFix = require('../services/addrFix');
 const logger = require('../utils/logger');
 
 const numOr = (v, d) => {
@@ -104,7 +105,17 @@ module.exports = {
     const key = poiKey(q);
     try {
       const data = await baiduMap.poiSearch(args);
-      if (data && data.items && data.items.length) poiCacheSet(key, data);
+      if (data && data.items && data.items.length) {
+        // 地址补查：客户补报的地址覆盖命中条目；「地图上没有的地点」按关键词注入
+        data.items = addrFix.applyToItems(data.items);
+        data.items = addrFix.augment(data.items, {
+          query: q.query,
+          lng: args.lng,
+          lat: args.lat,
+          radius: args.radius,
+        });
+        poiCacheSet(key, data);
+      }
       return ok(res, data);
     } catch (e) {
       logger.warn('map', `poi search failed: ${e.message}`);
@@ -187,4 +198,45 @@ module.exports = {
       return ok(res, { total: 0, items: [], degraded: true });
     }
   },
+
+  /* ---------------- 地址补查（用户共创） ----------------
+   * 客户发现地址缺失 / 不准 / 地图上没有的地点，一键补报；
+   * 云端留存后，之后所有人的检索结果自动生效（详见 services/addrFix.js）。 */
+
+  /** POST /api/v1/map/addr-fix { uid?, name, lng, lat, address, phone? } */
+  'POST /map/addr-fix': async (req, res, q, body) => {
+    const b = body || {};
+    try {
+      const rec = addrFix.submit({
+        uid: b.uid,
+        name: b.name,
+        address: b.address,
+        lng: b.lng,
+        lat: b.lat,
+        phone: b.phone,
+        deviceId: b.deviceId || req.headers['x-device-id'] || 'anonymous',
+      });
+      logger.info('addr-fix', `${rec.merged ? '合并计票' : '新增'}: ${rec.name} @ ${rec.address}`);
+      return ok(res, { id: rec.id, status: rec.status, merged: !!rec.merged, kind: rec.kind });
+    } catch (e) {
+      return fail(res, e.code || 5000, e.message || '提交失败');
+    }
+  },
+
+  /** GET /api/v1/map/addr-fix/list?status=&kind=&page= —— 管理端审核/浏览 */
+  'GET /map/addr-fix/list': async (req, res, q) => ok(res, addrFix.list(q)),
+
+  /** POST /api/v1/map/addr-fix/status { id, status } —— 预留审核位 */
+  'POST /map/addr-fix/status': async (req, res, q, body) => {
+    const b = body || {};
+    if (!b.id) return fail(res, 1001, 'id 必填');
+    try {
+      return ok(res, addrFix.setStatus(b.id, b.status));
+    } catch (e) {
+      return fail(res, e.code || 5000, e.message || '操作失败');
+    }
+  },
+
+  /** GET /api/v1/map/addr-fix/summary —— 管理端看板 */
+  'GET /map/addr-fix/summary': async (req, res) => ok(res, addrFix.summary()),
 };

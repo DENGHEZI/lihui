@@ -24,11 +24,16 @@ const planRoute = ({ mode = 'walking', origin, destination, realtime = false }) 
 const weather = (lng, lat) => get('/map/weather', { lng, lat }, { cacheTtl: 10 * 60 * 1000 })
 const scenicRecommend = (lng, lat, radius) => get('/map/scenic-recommend', { lng, lat, radius: radius || 3000 }, { cacheTtl: 10 * 60 * 1000 })
 
+/* ---------------- 地址补查（用户共创） ----------------
+ * 客户发现地址缺失/不准、或地图上没有的地点，一键补报 → 云端留存 → 全员检索自动生效 */
+const addrFix = (p) => post('/map/addr-fix', p)
+const addrFixList = (q) => get('/map/addr-fix/list', q || {})
+
 /* ---------------- 生活圈 ---------------- */
 const lifeReport = (lng, lat, radius) => get('/life/report', { lng, lat, radius: radius || 1200 }, { cacheTtl: 3 * 60 * 1000 })
 const customizePlan = (lng, lat, preference) => post('/life/customize', { lng, lat, preference: preference || {} })
 // 步行等时圈 + 服务盲区（真实路网批量算路，非直线圆）
-const lifeIsochrone = (lng, lat, minutes, grid) => get('/life/isochrone', { lng, lat, minutes: minutes || 15, grid: grid || 5 }, { cacheTtl: 10 * 60 * 1000 })
+const lifeIsochrone = (lng, lat, minutes, grid) => get('/life/isochrone', { lng, lat, minutes: minutes || 30, grid: grid || 5 }, { cacheTtl: 10 * 60 * 1000 })
 
 /* ---------------- 商城 / 订单（选品留痕 + 跳第三方下单） ---------------- */
 const shopItems = (q) => get('/shop/items', q || {})
@@ -112,6 +117,8 @@ module.exports = {
   planRoute,
   weather,
   scenicRecommend,
+  addrFix,
+  addrFixList,
   lifeReport,
   customizePlan,
   lifeIsochrone,

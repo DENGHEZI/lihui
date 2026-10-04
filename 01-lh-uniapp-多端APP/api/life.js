@@ -1,5 +1,5 @@
 /**
- * 鲤慧 LiHui · 15 分钟生活圈 API
+ * 鲤慧 LiHui · 30 分钟生活圈 API
  */
 import { get, post } from './request.js'
 

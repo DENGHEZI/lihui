@@ -18,6 +18,25 @@ App({
     plan: 'pro'
   },
 
+  /* —— 极简事件总线：定位变化时通知各页面刷新 ——
+   * 客户反馈「首页定位位置和地点没有变化」，根因是 globalData.location 变更后
+   * 没有任何页面能感知（tab 页 onLoad 只走一次、onShow 里也只读了缓存）。
+   * 现在定位 settle 时 emit('locationChange')，首页等页面订阅后自行刷新。 */
+  _listeners: {},
+  on(evt, fn) {
+    if (!this._listeners[evt]) this._listeners[evt] = []
+    if (this._listeners[evt].indexOf(fn) === -1) this._listeners[evt].push(fn)
+  },
+  off(evt, fn) {
+    const a = this._listeners[evt]
+    if (a) this._listeners[evt] = a.filter((f) => f !== fn)
+  },
+  emit(evt, data) {
+    ;(this._listeners[evt] || []).slice().forEach((f) => {
+      try { f(data) } catch (e) { console.warn('[鲤慧-事件] 处理器异常', evt, e) }
+    })
+  },
+
   onLaunch() {
     this.globalData.deviceId = ensureDeviceId()
     this.globalData.careMode = getCareMode()
@@ -71,6 +90,8 @@ App({
             loc.coord = 'gcj02'
           }
           self.globalData.location = loc
+          // 广播定位变化：首页 / 生活圈等订阅页据此刷新地图中心与周边数据
+          self.emit('locationChange', loc)
           // GPS 结果回写服务端，让「无坐标 / IP 兜底」的请求也能精确定位
           if (loc.source === 'gps' || loc.source === 'gps-coarse') {
             try {

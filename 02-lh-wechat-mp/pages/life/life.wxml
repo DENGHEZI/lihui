@@ -2,7 +2,7 @@
   <view class="hero">
     <view class="hero-top">
       <view>
-        <text class="lh-h1">15 分钟生活圈体检</text>
+        <text class="lh-h1">30 分钟生活圈体检</text>
         <text class="lh-cap hero-sub">{{centerText}} · 步行半径 {{radius}} 米</text>
       </view>
       <view class="care {{careMode ? 'on' : ''}}" bindtap="toggleCare">{{careMode ? '关怀模式' : '标准模式'}}</view>
@@ -47,7 +47,7 @@
       <view class="iso-mins">
         <text
           class="iso-min {{isoMinutes === item ? 'on' : ''}}"
-          wx:for="{{[10, 15, 20, 30]}}"
+          wx:for="{{[15, 30, 45, 60]}}"
           wx:key="*this"
           bindtap="onIsoMinutes"
           data-m="{{item}}"

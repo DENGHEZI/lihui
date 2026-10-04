@@ -27,11 +27,11 @@ Page({
       { key: 'mid', name: '适中' },
       { key: 'high', name: '宽松' }
     ],
-    pref: { budget: 'low', withElderly: true, needPark: true, maxWalkMinutes: 15 },
-    /* 步行等时圈 */
+    pref: { budget: 'low', withElderly: true, needPark: true, maxWalkMinutes: 30 },
+    /* 步行等时圈（默认 30 分钟：客户要求把体检半径从 15 分钟扩到 30 分钟，覆盖变大） */
     iso: null,
     isoLoading: false,
-    isoMinutes: 15,
+    isoMinutes: 30,
     isoPolygons: [],
     isoMarkers: [],
     isoScale: 15,
@@ -45,6 +45,25 @@ Page({
 
   onShow() {
     this.setData({ careMode: getCareMode() })
+    // 定位与上次展示差异 >200m 时静默重算（客户反馈「位置和地点没有变化」）
+    const loc = app.globalData.location
+    if (!loc || !Number.isFinite(Number(loc.lng))) return
+    const c = this.data.center
+    const R = 6371000
+    const rad = (d) => (Number(d) * Math.PI) / 180
+    const dLat = rad(loc.lat - c.lat)
+    const dLng = rad(loc.lng - c.lng)
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(c.lat)) * Math.cos(rad(loc.lat)) * Math.sin(dLng / 2) ** 2
+    const moved = 2 * R * Math.asin(Math.sqrt(a))
+    if (moved > 200) {
+      this._lastLocTs = loc.ts
+      this.setData({
+        center: { lng: Number(loc.lng), lat: Number(loc.lat) },
+        centerText: [loc.city, loc.district].filter(Boolean).join(' ') || '当前位置'
+      })
+      this.loadReport()
+      if (this.data.iso) this.loadIsochrone() // 已算过等时圈就跟着重算，别留着旧圈
+    }
   },
 
   onPullDownRefresh() {
@@ -167,7 +186,7 @@ Page({
   },
 
   onIsoMinutes(e) {
-    this.setData({ isoMinutes: Number(e.currentTarget.dataset.m) || 15 })
+    this.setData({ isoMinutes: Number(e.currentTarget.dataset.m) || 30 })
     this.loadIsochrone()
   },
 
@@ -204,7 +223,7 @@ Page({
       this.setData({
         rateResult: {
           dimensions: [
-            { name: '便利度', hint: '基于 15 分钟步行可达性判断' },
+            { name: '便利度', hint: '基于 30 分钟步行可达性判断' },
             { name: '价格透明度', hint: '优先选择明码标价的商家' },
             { name: '服务态度', hint: '参考平台评价与口碑' },
             { name: '适老友好', hint: '无障碍通道、座椅、放大镜等' }
@@ -246,6 +265,6 @@ Page({
   },
 
   onShareAppMessage() {
-    return { title: '我的 15 分钟生活圈体检报告', path: '/pages/life/life' }
+    return { title: '我的 30 分钟生活圈体检报告', path: '/pages/life/life' }
   }
 })

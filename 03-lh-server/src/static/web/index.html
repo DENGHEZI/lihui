@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="鲤慧 LiHui · 15分钟生活圈智能体检与规划助手（网页版）">
-<title>鲤慧 LiHui · 15分钟生活圈</title>
+<meta name="description" content="鲤慧 LiHui · 30分钟生活圈智能体检与规划助手（网页版）">
+<title>鲤慧 LiHui · 30分钟生活圈</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>">
 <style>
   :root {
@@ -182,7 +182,7 @@
 <body>
 
 <header><div class="bar">
-  <div class="logo"><b>鲤<i>慧</i></b><span>15分钟生活圈 · 网页版</span></div>
+  <div class="logo"><b>鲤<i>慧</i></b><span>30分钟生活圈 · 网页版</span></div>
   <div class="loc-chip" id="locChip" title="点击重新定位">
     <span class="dot off" id="locDot"></span><span id="locText">定位中…</span>
   </div>
@@ -210,7 +210,7 @@
   <!-- 生活圈体检 -->
   <div class="card">
     <h2>🩺 生活圈体检 <span class="sub">数据 · 百度地图开放平台</span></h2>
-    <div id="lifeBox"><div class="spin"></div><div class="empty">正在体检你的 15 分钟生活圈</div></div>
+    <div id="lifeBox"><div class="spin"></div><div class="empty">正在体检你的 30 分钟生活圈</div></div>
   </div>
 
   <!-- 步行等时圈 + 服务盲区 -->
@@ -218,10 +218,10 @@
     <h2>⏱ 步行等时圈 · 服务盲区 <span class="sub">真实路网算路 · 批量矩阵</span></h2>
     <div class="iso-ctl" id="isoCtl">
       <span class="lbl">步行</span>
-      <div class="mtab" data-m="10">10 分钟</div>
-      <div class="mtab on" data-m="15">15 分钟</div>
-      <div class="mtab" data-m="20">20 分钟</div>
-      <div class="mtab" data-m="30">30 分钟</div>
+      <div class="mtab" data-m="15">15 分钟</div>
+      <div class="mtab on" data-m="30">30 分钟</div>
+      <div class="mtab" data-m="45">45 分钟</div>
+      <div class="mtab" data-m="60">60 分钟</div>
       <button class="btn primary go" id="isoGo">重新计算</button>
     </div>
     <div id="isoBox"><div class="spin"></div><div class="empty">正在计算你的步行等时圈…</div></div>
@@ -390,7 +390,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({
 
 async function loadLife() {
   if (state.lng == null) return;
-  $('#lifeBox').innerHTML = '<div class="spin"></div><div class="empty">正在体检你的 15 分钟生活圈</div>';
+  $('#lifeBox').innerHTML = '<div class="spin"></div><div class="empty">正在体检你的 30 分钟生活圈</div>';
   try {
     const r = await api('/life/report', { lng: state.lng, lat: state.lat });
     const cats = (r.categories || []).map((c) => {
@@ -418,7 +418,7 @@ function fmtM(m) { return m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round
 
 /* ================= 步行等时圈 + 服务盲区 ================= */
 /* 零依赖手绘 SVG：等时圈多边形 + 盲区网格 + 参考圈 + 六类覆盖雷达图 */
-const ISO_MINUTES = () => Number(document.querySelector('#isoCtl .mtab.on').dataset.m) || 15;
+const ISO_MINUTES = () => Number(document.querySelector('#isoCtl .mtab.on').dataset.m) || 30;
 const ENG_NAME = {
   'routematrix-batch': '批量矩阵算路 1×36',
   'directionlite-concurrent': '并发单点算路 ×36',

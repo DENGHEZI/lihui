@@ -54,7 +54,7 @@
 			<scroll-view scroll-y class="sheet-body">
 				<view v-if="!poiList.length" class="quick">
 					<text class="lh-h2">周边便民服务</text>
-					<text class="lh-cap quick-sub">15 分钟步行范围内，一键查看</text>
+					<text class="lh-cap quick-sub">30 分钟步行范围内，一键查看</text>
 					<view class="quick-grid">
 						<view v-for="s in quickServices" :key="s.key" class="quick-item" @click="quickSearch(s)">
 							<text class="q-ico">{{ s.icon }}</text>
@@ -276,7 +276,7 @@ export default {
 				this.lastQuery = this.keyword || query
 				this.updatePoiMarkers()
 				if (!this.poiList.length) {
-					uni.showToast({ title: '附近 15 分钟范围内没找到，可试试 AI 助手', icon: 'none' })
+					uni.showToast({ title: '附近 30 分钟范围内没找到，可试试 AI 助手', icon: 'none' })
 				}
 			} catch (e) {
 				this.poiList = []
