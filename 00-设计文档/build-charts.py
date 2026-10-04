@@ -58,24 +58,24 @@ def smooth_closed(pts, per=8):
 # ---------- 图 1：等时圈对比（直线圆 vs 真实路网） ----------
 def fig_iso_compare(path):
     fig, axes = plt.subplots(1, 2, figsize=(7.6, 3.9))
-    # 右图：36 方向实测辐射半径（585~1150m，含路网绕行扰动）
-    base_r = 865.0
+    # 右图：36 方向实测辐射半径（30 分钟档真机实测 ~1000~1991m，含路网绕行扰动）
+    base_r = 1450.0
     radii = []
     for i in range(36):
         a = math.radians(i * 10)
-        r = base_r + 150 * math.sin(2 * a + 0.6) + 95 * math.cos(3 * a + 1.2) + 70 * math.sin(5 * a)
-        radii.append(max(560.0, min(1180.0, r)))
+        r = base_r + 300 * math.sin(2 * a + 0.6) + 190 * math.cos(3 * a + 1.2) + 140 * math.sin(5 * a)
+        radii.append(max(1000.0, min(1990.0, r)))
     pts = [(r * math.cos(math.radians(i * 10)), r * math.sin(math.radians(i * 10)))
            for i, r in enumerate(radii)]
     smooth = smooth_closed(pts, 8)
 
-    # 左：正圆 r=1200m
+    # 左：正圆 r=2400m（30 分钟 × 80m/min）
     ax = axes[0]
     th = np.linspace(0, 2 * math.pi, 200)
-    ax.fill(1200 * np.cos(th), 1200 * np.sin(th), color=GRAY, alpha=0.55)
-    ax.plot(1200 * np.cos(th), 1200 * np.sin(th), color='#8b979c', lw=1)
-    ax.set_title('直线圆（常见做法）\n半径 1200m 恒定', fontsize=9.5, color=INK)
-    ax.text(0, -0.055, '4.52 km²', transform=ax.transAxes, ha='center',
+    ax.fill(2400 * np.cos(th), 2400 * np.sin(th), color=GRAY, alpha=0.55)
+    ax.plot(2400 * np.cos(th), 2400 * np.sin(th), color='#8b979c', lw=1)
+    ax.set_title('直线圆（常见做法）\n半径 2400m 恒定', fontsize=9.5, color=INK)
+    ax.text(0, -0.055, '18.10 km²', transform=ax.transAxes, ha='center',
             fontsize=13, color='#7a8588', fontweight='bold')
 
     # 右：真实等时圈 + 5×5 盲区格
@@ -83,7 +83,7 @@ def fig_iso_compare(path):
     poly = MplPolygon(smooth, closed=True, facecolor=BRAND, alpha=0.42, edgecolor=BRAND_D, lw=1.6)
     ax.add_patch(poly)
     # 5×5 论域网格 + 盲区判定（外圈与边角格覆盖度低 → 判为盲区）
-    span = 1100.0
+    span = 2200.0
     cell = 2 * span / 5
     for gi in range(6):
         v = -span + gi * cell
@@ -96,7 +96,7 @@ def fig_iso_compare(path):
             cy = -span + (gj + 0.5) * cell
             dist = math.hypot(cx, cy)
             inpoly = seg_inside(cx, cy, smooth)
-            if inpoly and dist > 620:
+            if inpoly and dist > 1240:
                 blind_cnt += 1
                 ax.add_patch(Rectangle((cx - cell / 2, cy - cell / 2), cell, cell,
                                        facecolor='#e05252', alpha=0.55, lw=1.4,
@@ -105,14 +105,14 @@ def fig_iso_compare(path):
             markeredgewidth=2, zorder=5)
     ax.text(0, -175, '家', ha='center', fontsize=9, color=BRAND_D, fontweight='bold')
     ax.set_title('真实路网等时圈（本产品）\n3 轮二分 + 外推 + 样条平滑', fontsize=9.5, color=INK)
-    ax.text(0, -0.055, '1.83 km²', transform=ax.transAxes, ha='center',
+    ax.text(0, -0.055, '5.59 km²', transform=ax.transAxes, ha='center',
             fontsize=13, color=BRAND_D, fontweight='bold')
 
-    fig.suptitle('同一点位 · 15 分钟步行可达范围对比（郴州 113.014, 25.57）', fontsize=10, color=BRAND_D)
+    fig.suptitle('同一点位 · 30 分钟步行可达范围对比（郴州 113.014, 25.57）', fontsize=10, color=BRAND_D)
     for ax in axes:
         ax.set_aspect('equal')
-        ax.set_xlim(-1500, 1500)
-        ax.set_ylim(-1500, 1500)
+        ax.set_xlim(-2600, 2600)
+        ax.set_ylim(-2600, 2600)
         ax.axis('off')
         ax.grid(False)
     # 图例
@@ -146,19 +146,19 @@ def seg_inside(x, y, poly):
 # ---------- 图 2：面积对比柱状 ----------
 def fig_area_bar(path):
     fig, ax = plt.subplots(figsize=(3.5, 2.5))
-    vals = [4.52, 1.83]
+    vals = [18.10, 5.59]
     bars = ax.bar(['直线圆', '真实等时圈'], vals, color=[GRAY, BRAND], width=0.5)
-    ax.bar_label(bars, ['4.52 km²', '1.83 km²'], fontsize=9.5,
+    ax.bar_label(bars, ['18.10 km²', '5.59 km²'], fontsize=9.5,
                  color=BRAND_D, fontweight='bold')
     ax.set_ylabel('可达面积（km²）', fontsize=8.5, color=INK)
-    ax.set_ylim(0, 5.6)
+    ax.set_ylim(0, 22)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.tick_params(labelsize=8.5)
-    ax.text(0.5, 3.4, '−59%', ha='center', fontsize=11, color=RED, fontweight='bold')
-    ax.annotate('', xy=(1, 2.0), xytext=(0, 4.3),
+    ax.text(0.5, 15.0, '−69%', ha='center', fontsize=11, color=RED, fontweight='bold')
+    ax.annotate('', xy=(1, 6.2), xytext=(0, 17.5),
                 arrowprops=dict(arrowstyle='<-', color=RED, lw=1.2))
-    ax.set_title('直线圆高估可达面积 59%', fontsize=9.5, color=BRAND_D)
+    ax.set_title('直线圆高估可达面积 69%', fontsize=9.5, color=BRAND_D)
     fig.tight_layout()
     fig.savefig(path, dpi=170, bbox_inches='tight', facecolor='white')
     plt.close(fig)
