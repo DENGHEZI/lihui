@@ -14,7 +14,9 @@ Page({
   data: {
     center: { lng: 112.938814, lat: 28.228209 },
     centerText: '正在定位…',
-    radius: 1200,
+    // 体检报告检索半径：对齐 30 分钟步行口径（3120m = 30 × 80 × 1.3）。
+    // ⚠️ 之前漏改导致「报告还是 15 分钟、地图圈没变化」——报告和等时圈必须同一口径
+    radius: 3120,
     careMode: false,
     report: null,
     plan: null,

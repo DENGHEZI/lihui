@@ -126,7 +126,8 @@ export default {
 		return {
 			center: { lng: 112.938814, lat: 28.228209 },
 			centerText: '正在定位…',
-			radius: 1200,
+			// 体检半径对齐 30 分钟步行口径（30 × 80m/min × 1.3 弯曲）
+			radius: 3120,
 			careMode: false,
 			report: null,
 			plan: null,
