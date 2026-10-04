@@ -485,6 +485,6 @@ Page({
   },
 
   onShareAppMessage() {
-    return { title: '鲤慧 · 30 分钟生活圈智能体检', path: '/pages/index/index' }
+    return { title: '鲤慧 · 15 分钟生活圈智能体检', path: '/pages/index/index' }
   }
 })

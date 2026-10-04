@@ -230,7 +230,7 @@ function addLifeCircle(pt) {
   circle = new BMap.Circle(pt, r, { strokeColor: '#1677ff', strokeWeight: 1, strokeOpacity: .5, fillColor: '#1677ff', fillOpacity: .07 });
   map.addOverlay(circle);
   // classic v3.0 的 Circle 没有 setLabel，用独立 Label 盖在圆心上方
-  circleLabel = new BMap.Label('30 分钟生活圈 · ' + (r / 1000).toFixed(1) + 'km', { position: pt, offset: new BMap.Size(0, -r) });
+  circleLabel = new BMap.Label('15 分钟生活圈 · ' + (r / 1000).toFixed(1) + 'km', { position: pt, offset: new BMap.Size(0, -r) });
   circleLabel.setStyle('color:#1677ff;font-size:11px;background:none;border:none;white-space:nowrap;');
   map.addOverlay(circleLabel);
 }

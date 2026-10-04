@@ -52,9 +52,8 @@ module.exports = {
   WX_APPID: 'wxfc45acb99d454f8a',
 
   DEFAULT_PLAN: 'pro',
-  // 生活圈半径 = 30 分钟步行可达（30 × 80m/min × 1.3 路网弯曲系数 ≈ 3120m）
-  // 客户反馈「生活圈大小没变化」：原来固定 1200m，与 30 分钟口径不一致，现统一
-  DEFAULT_RADIUS: 3120,
+  // 生活圈检索半径：默认 15 分钟档（赛题口径）≈1200m；等时圈可切 30/45/60 档
+  DEFAULT_RADIUS: 1200,
 
   // 周边便民服务快捷入口（bg 为图标底色，高德式柔和分类色）
   QUICK_SERVICES: [

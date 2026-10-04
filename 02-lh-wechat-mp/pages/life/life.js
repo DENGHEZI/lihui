@@ -14,9 +14,8 @@ Page({
   data: {
     center: { lng: 112.938814, lat: 28.228209 },
     centerText: '正在定位…',
-    // 体检报告检索半径：对齐 30 分钟步行口径（3120m = 30 × 80 × 1.3）。
-    // ⚠️ 之前漏改导致「报告还是 15 分钟、地图圈没变化」——报告和等时圈必须同一口径
-    radius: 3120,
+    // 体检报告检索半径：默认 15 分钟档（赛题口径 1200m），与等时圈默认档一致
+    radius: 1200,
     careMode: false,
     report: null,
     plan: null,
@@ -29,11 +28,11 @@ Page({
       { key: 'mid', name: '适中' },
       { key: 'high', name: '宽松' }
     ],
-    pref: { budget: 'low', withElderly: true, needPark: true, maxWalkMinutes: 30 },
-    /* 步行等时圈（默认 30 分钟：客户要求把体检半径从 15 分钟扩到 30 分钟，覆盖变大） */
+    pref: { budget: 'low', withElderly: true, needPark: true, maxWalkMinutes: 15 },
+    /* 步行等时圈：默认 15 分钟（赛题口径）；30/45/60 为扩展档，客户可自行切换 */
     iso: null,
     isoLoading: false,
-    isoMinutes: 30,
+    isoMinutes: 15,
     isoPolygons: [],
     isoMarkers: [],
     isoScale: 15,
@@ -191,7 +190,7 @@ Page({
   },
 
   onIsoMinutes(e) {
-    this.setData({ isoMinutes: Number(e.currentTarget.dataset.m) || 30 })
+    this.setData({ isoMinutes: Number(e.currentTarget.dataset.m) || 15 })
     this.loadIsochrone()
   },
 

@@ -3,7 +3,7 @@
 		<view class="hero">
 			<view class="hero-top">
 				<view>
-					<text class="lh-h1">30 分钟生活圈体检</text>
+					<text class="lh-h1">15 分钟生活圈体检</text>
 					<text class="lh-cap hero-sub">{{ centerText }} · 步行半径 {{ radius }} 米</text>
 				</view>
 				<view class="care" :class="{ on: careMode }" @click="toggleCare">
@@ -126,8 +126,8 @@ export default {
 		return {
 			center: { lng: 112.938814, lat: 28.228209 },
 			centerText: '正在定位…',
-			// 体检半径对齐 30 分钟步行口径（30 × 80m/min × 1.3 弯曲）
-			radius: 3120,
+			// 体检半径：默认 15 分钟档（赛题口径）
+			radius: 1200,
 			careMode: false,
 			report: null,
 			plan: null,
@@ -178,7 +178,7 @@ export default {
 		async loadScenicPlan() {
 			try {
 				const r = await chat({
-					text: '给我一份 30 分钟生活圈方案',
+					text: '给我一份 15 分钟生活圈方案',
 					lng: this.center.lng,
 					lat: this.center.lat
 				})
@@ -219,7 +219,7 @@ export default {
 				uni.hideLoading()
 				this.rateResult = {
 					dimensions: [
-						{ name: '便利度', hint: '基于 30 分钟步行可达性判断' },
+						{ name: '便利度', hint: '基于 15 分钟步行可达性判断' },
 						{ name: '价格透明度', hint: '优先选择明码标价的商家' },
 						{ name: '服务态度', hint: '参考平台评价与口碑' },
 						{ name: '适老友好', hint: '无障碍通道、座椅、放大镜等' }

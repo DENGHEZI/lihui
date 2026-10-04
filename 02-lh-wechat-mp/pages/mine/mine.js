@@ -114,12 +114,12 @@ Page({
     wx.showModal({
       title: '关于鲤慧',
       content:
-        '鲤慧 LiHui v1.0.0\n基于百度地图开放能力的「30 分钟生活圈」智能体检与规划助手。\n\n多端 APP：Android / HarmonyOS / iOS\n微信小程序：本包\n\n所有百度地图能力经服务端中转，服务端 AK 不下发到端上。',
+        '鲤慧 LiHui v1.0.0\n基于百度地图开放能力的「15 分钟生活圈」智能体检与规划助手。\n\n多端 APP：Android / HarmonyOS / iOS\n微信小程序：本包\n\n所有百度地图能力经服务端中转，服务端 AK 不下发到端上。',
       showCancel: false
     })
   },
 
   onShareAppMessage() {
-    return { title: '鲤慧 · 30 分钟生活圈智能体检', path: '/pages/index/index' }
+    return { title: '鲤慧 · 15 分钟生活圈智能体检', path: '/pages/index/index' }
   }
 })

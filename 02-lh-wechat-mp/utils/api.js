@@ -33,7 +33,7 @@ const addrFixList = (q) => get('/map/addr-fix/list', q || {})
 const lifeReport = (lng, lat, radius) => get('/life/report', { lng, lat, radius: radius || 1200 }, { cacheTtl: 3 * 60 * 1000 })
 const customizePlan = (lng, lat, preference) => post('/life/customize', { lng, lat, preference: preference || {} })
 // 步行等时圈 + 服务盲区（真实路网批量算路，非直线圆）
-const lifeIsochrone = (lng, lat, minutes, grid) => get('/life/isochrone', { lng, lat, minutes: minutes || 30, grid: grid || 5 }, { cacheTtl: 10 * 60 * 1000 })
+const lifeIsochrone = (lng, lat, minutes, grid) => get('/life/isochrone', { lng, lat, minutes: minutes || 15, grid: grid || 5 }, { cacheTtl: 10 * 60 * 1000 })
 
 /* ---------------- 商城 / 订单（选品留痕 + 跳第三方下单） ---------------- */
 const shopItems = (q) => get('/shop/items', q || {})

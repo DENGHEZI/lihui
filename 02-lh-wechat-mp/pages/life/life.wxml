@@ -2,7 +2,7 @@
   <view class="hero">
     <view class="hero-top">
       <view>
-        <text class="lh-h1">30 分钟生活圈体检</text>
+        <text class="lh-h1">15 分钟生活圈体检</text>
         <text class="lh-cap hero-sub">{{centerText}} · 步行半径 {{radius}} 米</text>
       </view>
       <view class="care {{careMode ? 'on' : ''}}" bindtap="toggleCare">{{careMode ? '关怀模式' : '标准模式'}}</view>

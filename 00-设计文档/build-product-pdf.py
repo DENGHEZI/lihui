@@ -302,10 +302,10 @@ def draw_cover(canvas, doc):
     canvas.setLineWidth(1.2)
     canvas.line(w * 0.5 - 2.4 * cm, h * 0.762, w * 0.5 + 2.4 * cm, h * 0.762)
     canvas.setFont(F['cn'], 12.2)
-    canvas.drawCentredString(w * 0.5, h * 0.712, '基于百度地图开放能力的「30 分钟生活圈」智能体检与规划助手')
+    canvas.drawCentredString(w * 0.5, h * 0.712, '基于百度地图开放能力的「15 分钟生活圈」智能体检与规划助手')
     canvas.setFont(F['cn'], 9.8)
     canvas.setFillColor(colors.Color(1, 1, 1, alpha=0.78))
-    canvas.drawCentredString(w * 0.5, h * 0.668, '30 分钟，看清你的生活半径')
+    canvas.drawCentredString(w * 0.5, h * 0.668, '15 分钟，看清你的生活半径')
     # 徽章：细白描边胶囊（无填充），置于环上方深底区，对比清晰
     canvas.setFont(F['cnb'], 8.6)
     badges = ['4 端通吃', '零依赖服务端', '8 MCP Server', '65 API 路由', '真实路网等时圈']
@@ -366,7 +366,7 @@ def build_story():
     st.append(P('<b>鲤慧</b>是一套「<b>一码多端 + 服务端中转 + MCP 工具生态</b>」的地图智能助手：'
                 '客户端只负责<b>呈现与采集</b>；百度地图能力、大模型调用、MCP 工具调度、Token 计量全部由服务端'
                 '<b>统一中转</b>，从而做到三件事——<b>AK 不落端、能力可插拔、成本可核算</b>。'))
-    st.append(P('围绕赛题核心「30 分钟生活圈」，鲤慧为每一类人群回答三个问题：'))
+    st.append(P('围绕赛题核心「15 分钟生活圈」，鲤慧为每一类人群回答三个问题：'))
     st.extend(BULLET([
         '<b>我的生活圈缺什么？</b>——六类设施加权体检评分，短板可定位、分数可追因；',
         '<b>缺的东西去哪补？</b>——周边真实店源检索 + 路线规划；',
@@ -382,10 +382,10 @@ def build_story():
         widths=[2.6 * cm, 3.6 * cm, 10.8 * cm]))
     st.append(Spacer(1, 9))
     st.append(STATCARD([
-        ('−69%', '直线圆高估可达面积（30 分钟档实测）', 'bigr'),
+        ('−59%', '直线圆高估可达面积（15 分钟档实测）', 'bigr'),
         ('135×', '算路配额压缩比（540 → 4 次/体检）', 'big'),
         ('4 次', '一次体检算路请求（实测）', 'big'),
-        ('5.59 km²', '30 分钟真实等时圈面积（真机）', 'big'),
+        ('5.59 km²', '30 分钟档真实等时圈面积（真机扩展验证）', 'big'),
     ]))
     st.append(Spacer(1, 7))
     st.append(IMG('11-web-preview.png', max_w=15.5 * cm, max_h=14.0 * cm))
@@ -445,20 +445,20 @@ def build_story():
     st.append(RULE())
     st.append(CALLOF('为什么是核心',
                      '赛题把「等时圈生成」设为 40% 权重的评分项，而最省事的画法是「以家为圆心画个正圆」。'
-                     '鲤慧 30 分钟档真机实测证明这种画法<b>系统性高估可达面积 69%</b>（18.10 → 5.59 km²），因此本产品按百度官方推荐口径实现了完整引擎。'))
+                     '鲤慧实测证明这种画法<b>系统性高估可达面积 59%</b>，因此本产品按百度官方推荐口径实现了完整引擎。'))
 
     st.append(IMG('fig1-isochrone-compare.png', max_w=16.4 * cm, max_h=9.8 * cm, folder=ASSET))
-    st.append(CAP('图 5　同一点位、同一时间预算（30 分钟）下的可达范围对比：'
+    st.append(CAP('图 5　同一点位、同一时间预算（15 分钟）下的可达范围对比：'
                   '左 = 直线圆；右 = 真实路网等时圈 + 5×5 网格盲区判定'))
     st.append(Spacer(1, 5))
-    st.append(P('3.1　直线圆 vs 真实路网（同一点位，30 分钟）', 'h2'))
+    st.append(P('3.1　直线圆 vs 真实路网（同一点位，15 分钟）', 'h2'))
     st.append(TABLE(
-        ['假设', '半径 2400m 正圆', '路网 + 实测 duration'],
-        [['面积', '18.10 km²', '<b>5.59 km²（−69%）</b>'],
-         ['可达半径', '2400 m（恒定）', '<b>~1000 ~ 1991 m（各向异，真机实测）</b>']],
+        ['假设', '半径 1200m 正圆', '路网 + 实测 duration'],
+        [['面积', '4.52 km²', '<b>1.83 km²（−59%）</b>'],
+         ['可达半径', '1200 m（恒定）', '<b>585 ~ 1150 m（各向异）</b>']],
         widths=[3.4 * cm, 6.4 * cm, 7.2 * cm], highlight_col=2))
     st.append(CALLOF('结论',
-                     '按真实路网，80 m/min 步速在城市中心因过街等待与支路绕行，30 分钟预算下有效直线半径仅约 <b>1000~1991 m</b>（真机实测最远 1991 m）。'
+                     '按真实路网，80 m/min 步速在城市中心因过街等待与支路绕行，有效直线半径仅约 <b>585~1150 m</b>；30 分钟档真机实测最远可达 1991 m。'
                      '直线圆会高估生活圈质量——这正是「等时圈」值得单独做一套引擎的原因。', 'warn'))
 
     st.append(P('3.2　算法总体流程', 'h2'))
@@ -511,9 +511,9 @@ def build_story():
         ['实测项', '结果'],
         [['点位', '郴州 113.014, 25.57（GCJ-02）'],
          ['引擎', 'routematrix-batch（rounds 3/3 收敛）'],
-         ['耗时', '秒级 / 次体检（批矩阵 3 轮收敛）'],
-         ['辐射半径', '~1000 ~ 1991 m（明显非圆，真机实测）'],
-         ['等时圈面积', '5.59 km²（30 分钟档真机实测）'],
+         ['耗时', '1.34 s / 次体检（15 分钟档实测）'],
+         ['辐射半径', '585 ~ 1150 m（明显非圆）'],
+         ['等时圈面积', '1.83 km²（15 分钟档）'],
          ['盲区复核', '候选格 100% 经矩阵实测复核，插值偏乐观格自动剔除'],
          ['30 分钟档（真机）', '面积 5.59 km² · 最远可达 1.991 km · 盲区格 14/14']],
         widths=[4.2 * cm, 12.8 * cm]))
@@ -655,7 +655,7 @@ def build_story():
         widths=[3.0 * cm, 14.0 * cm]))
     st.append(Spacer(1, 10))
     st.append(CALLOF('一句话总结',
-                     '鲤慧把「30 分钟生活圈」拆成了三件可验证的事：<b>用真实路网算准可达范围</b>（−69% 高估修正）、'
+                     '鲤慧把「15 分钟生活圈」拆成了三件可验证的事：<b>用真实路网算准可达范围</b>（−59% 高估修正）、'
                      '<b>用可复现口径定位盲区</b>（网格加权 + 二次实测复核）、<b>用零依赖服务端把能力稳定送出去</b>'
                      '（135 倍配额压缩 + 三级降级 + 双端双仓）。'))
 
@@ -667,7 +667,7 @@ def main():
                           leftMargin=MARGIN_L, rightMargin=MARGIN_R,
                           topMargin=2.2 * cm, bottomMargin=2.0 * cm,
                           title='鲤慧 LiHui · 产品与技术方案',
-                          author='鲤慧 LiHui 团队', subject='30 分钟生活圈智能体检与规划助手')
+                          author='鲤慧 LiHui 团队', subject='15 分钟生活圈智能体检与规划助手')
     frame = Frame(MARGIN_L, 1.9 * cm, CONTENT_W, PAGE_H - 1.9 * cm - 2.5 * cm, id='body')
     doc.addPageTemplates([
         PageTemplate(id='cover', frames=[Frame(0, 0, PAGE_W, PAGE_H, id='cov')], onPage=draw_cover),

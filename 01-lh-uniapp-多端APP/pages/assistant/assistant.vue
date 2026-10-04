@@ -117,7 +117,7 @@ export default {
 			recording: false,
 			location: null,
 			scenes: [
-				{ icon: '🏥', name: '附近看病', text: '附近 30 分钟能看病吗？' },
+				{ icon: '🏥', name: '附近看病', text: '附近 15 分钟能看病吗？' },
 				{ icon: '🛒', name: '买菜', text: '附近哪里买菜最方便？' },
 				{ icon: '🌳', name: '遛弯', text: '附近适合遛弯的公园在哪？' },
 				{ icon: '💰', name: '省一笔', text: '帮我算下最省钱的出行方案' },
@@ -131,7 +131,7 @@ export default {
 		this.careMode = getCareMode()
 		this.messages.push({
 			role: 'assistant',
-			text: '我是鲤慧。\n可以问我：\n1. 附近哪里能看病？\n2. 30 分钟生活圈缺什么？\n3. 怎么走最省时间、最省钱？\n直接说，或按住麦克风讲。',
+			text: '我是鲤慧。\n可以问我：\n1. 附近哪里能看病？\n2. 15 分钟生活圈缺什么？\n3. 怎么走最省时间、最省钱？\n直接说，或按住麦克风讲。',
 			meta: '关怀模式已' + (this.careMode ? '开启' : '关闭')
 		})
 		getLocation().then((l) => (this.location = l))

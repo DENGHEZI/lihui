@@ -266,15 +266,15 @@ async function walkConcurrent(origin, dests, { concurrency = 8 } = {}) {
  * @param {object} p
  * @param {number} p.lng 家经度（GCJ-02）
  * @param {number} p.lat 家纬度（GCJ-02）
- * @param {number} [p.minutes=30] 等时圈分钟数（5~60）
+ * @param {number} [p.minutes=15] 等时圈分钟数（5~60）
  * @param {number} [p.grid=5] 盲区网格 N×N（3~9）
  */
-async function buildIsochrone({ lng, lat, minutes = 30, grid = 5 } = {}) {
+async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
   const center = { lng: Number(lng), lat: Number(lat) };
   if (!Number.isFinite(center.lng) || !Number.isFinite(center.lat)) {
     throw new Error('lng/lat invalid');
   }
-  const minutesN = Math.min(60, Math.max(5, Number(minutes) || 30));
+  const minutesN = Math.min(60, Math.max(5, Number(minutes) || 15));
   const gridN = Math.min(9, Math.max(3, Math.round(Number(grid) || 5)));
 
   const cacheKey = `iso:${center.lng.toFixed(4)},${center.lat.toFixed(4)}:${minutesN}:${gridN}`;

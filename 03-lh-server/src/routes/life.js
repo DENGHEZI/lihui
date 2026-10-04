@@ -120,7 +120,7 @@ module.exports = {
       const data = await buildIsochrone({
         lng,
         lat,
-        minutes: numOr(q.minutes, 30),
+        minutes: numOr(q.minutes, 15),
         grid: numOr(q.grid, 5),
       });
       return ok(res, data);
@@ -145,14 +145,14 @@ module.exports = {
       if (data) return ok(res, data);
       throw new Error('empty');
     } catch (e) {
-      // 兜底：先体检，再按偏好给方案（半径对齐 30 分钟口径，与端上默认一致）
-      const report = await localDiagnose({ lng, lat, radius: 3120 });
+      // 兜底：先体检，再按偏好给方案（半径对齐 15 分钟赛题口径，与端上默认一致）
+      const report = await localDiagnose({ lng, lat, radius: 1200 });
       const pref = (body && body.preference) || {};
       return ok(res, {
         ...report,
         plan: [
           `每日动线建议：${report.categories.find((c) => c.key === 'market' && c.nearest) ? '先到菜市场（' + report.categories.find((c) => c.key === 'market').nearest.name + '）' : '先解决买菜点'}，再顺路处理其他需求。`,
-          pref.withElderly ? '考虑到有老人：优先选择有电梯、有休息座椅的场所，单次步行不超过 30 分钟。' : '可根据体力选择共享单车扩展半径到 3 公里。',
+          pref.withElderly ? '考虑到有老人：优先选择有电梯、有休息座椅的场所，单次步行不超过 15 分钟。' : '可根据体力选择共享单车扩展半径到 3 公里。',
           `预算建议：单日生活出行成本控制在 ¥${pref.budget === 'low' ? 10 : 25} 以内。`,
         ],
       });
