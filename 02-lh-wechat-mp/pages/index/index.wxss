@@ -154,6 +154,43 @@
   border-radius: 20rpx;
   background: linear-gradient(120deg, #EAF2FF, #F4F8FF);
 }
+/* 地址补查常驻入口（折叠态首行） */
+.addr-fix-entry {
+  display: flex;
+  align-items: center;
+  margin: 4rpx 0 16rpx;
+  padding: 20rpx 24rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(120deg, #E7F7F4, #F2FBF9);
+}
+.af-ico {
+  font-size: 40rpx;
+  margin-right: 16rpx;
+}
+.af-mid {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.af-t1 {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+.af-t2 {
+  font-size: 22rpx;
+  color: var(--lh-text-sub, #8F959E);
+  margin-top: 2rpx;
+}
+.af-go {
+  font-size: 24rpx;
+  color: #0FA693;
+  flex-shrink: 0;
+}
+.af-hover {
+  opacity: 0.82;
+}
 .se-ico {
   font-size: 44rpx;
   margin-right: 16rpx;

@@ -77,6 +77,9 @@ Page({
       centerText: [loc.city, loc.district].filter(Boolean).join(' ') || '当前位置'
     })
     await this.loadReport()
+    // 自动把 30 分钟等时圈画出来：以前要点「分钟」选项才触发，进页面看不到圈，
+    // 客户以为「生活圈大小没有变化」——现在进来就算
+    if (!this.data.iso && !this.data.isoLoading) this.loadIsochrone()
   },
 
   async loadReport() {

@@ -52,6 +52,16 @@
 
       <!-- 折叠态 -->
       <block wx:if="{{!poiList.length}}">
+        <!-- 地址补查常驻入口：不用搜索也能进 -->
+        <view class="addr-fix-entry" bindtap="addPlace" hover-class="af-hover">
+          <text class="af-ico">📍</text>
+          <view class="af-mid">
+            <text class="af-t1">发现地址缺失或有误？</text>
+            <text class="af-t2">你来补充，云端同步，所有人地图立即更新</text>
+          </view>
+          <text class="af-go">去补充 ›</text>
+        </view>
+
         <view class="shop-entry" bindtap="goShop">
           <text class="se-ico">🛍️</text>
           <view class="se-mid">
