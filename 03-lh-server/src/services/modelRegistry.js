@@ -11,17 +11,43 @@ const tokenMeter = require('./tokenMeter');
 const col = store.collection('models', []);
 const PRESETS = [
   {
+    id: 'preset-qwen-free',
+    name: '通义千问（ModelScope 免费推理）',
+    provider: 'openai-compatible',
+    baseUrl: 'https://api-inference.modelscope.cn/v1',
+    apiKey: '',
+    model: 'Qwen/Qwen2.5-7B-Instruct',
+    enabled: true,
+    isDefault: true,
+    preset: true,
+    webSearch: false,
+    note: '阿里魔搭 ModelScope 官方免费 API 推理（每天 2000 次，0 元），OpenAI 兼容；仍是 Qwen 系列云端。Token 在 modelscope.cn → 控制台 → 访问令牌 免费获取，配 MODELSCOPE_TOKEN 环境变量或在此粘贴'
+  },
+  {
+    id: 'preset-sf-qwen-free',
+    name: 'Qwen 7B（硅基流动 免费档）',
+    provider: 'openai-compatible',
+    baseUrl: 'https://api.siliconflow.cn/v1',
+    apiKey: '',
+    model: 'Qwen/Qwen2.5-7B-Instruct',
+    enabled: false,
+    isDefault: false,
+    preset: true,
+    webSearch: false,
+    note: '硅基流动免费档（Qwen2.5-7B 永久免费）；备选渠道，Token 在 siliconflow.cn 免费获取，配 SILICONFLOW_API_KEY'
+  },
+  {
     id: 'preset-qwen18b',
-    name: '通义千问 Flash（云端 · 赛题 Qwen 系列）',
+    name: '通义千问 Flash（DashScope · 付费）',
     provider: 'openai-compatible',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     apiKey: '',
     model: 'qwen-flash',
-    enabled: true,
-    isDefault: true,
+    enabled: false,
+    isDefault: false,
     preset: true,
     webSearch: true,
-    note: '赛题指定 Qwen 系列云端推理（阿里云百炼 DashScope）；qwen-1.8b-chat 已下线，升级为 qwen-flash；联网搜索已开启（enable_search）'
+    note: '阿里云百炼 DashScope（消耗个人付费额度，仅手动开启时使用）；qwen-1.8b-chat 已下线，升级为 qwen-flash；联网搜索已开启（enable_search）'
   },
   { id: 'preset-deepseek', name: 'DeepSeek Chat', provider: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', apiKey: '', model: 'deepseek-chat', enabled: false, isDefault: false, preset: true, note: '支持 Function Calling，推荐用于 MCP 编排' },
   { id: 'preset-qwen-plus', name: '通义千问 Plus', provider: 'openai-compatible', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: '', model: 'qwen-plus', enabled: false, isDefault: false, preset: true, note: '中文强，支持工具调用' },
@@ -29,17 +55,47 @@ const PRESETS = [
   { id: 'preset-ollama', name: '本地 Ollama（备用）', provider: 'ollama', baseUrl: 'http://127.0.0.1:11434', apiKey: 'ollama', model: 'qwen2.5:7b-instruct', enabled: false, isDefault: false, preset: true, note: '完全本地、零成本；仅在云端模型未配 Key 时作为演示备用' },
 ];
 
+/** 免费渠道的密钥环境变量（配了就自动填进对应预置，云端部署只需设环境变量） */
+const PRESET_ENV_KEY = {
+  'preset-qwen-free': 'MODELSCOPE_TOKEN',
+  'preset-sf-qwen-free': 'SILICONFLOW_API_KEY',
+};
+
 function seed() {
   const list = col.all();
   if (!list.length) {
-    col.save(PRESETS.map((p) => ({ ...p })));
-  } else {
-    // 补齐新增预置
-    const ids = new Set(list.map((x) => x.id));
-    let changed = false;
-    for (const p of PRESETS) if (!ids.has(p.id)) { list.push({ ...p }); changed = true; }
-    if (changed) col.save(list);
+    col.save(PRESETS.map((p) => ({
+      ...p,
+      apiKey: p.apiKey || process.env[PRESET_ENV_KEY[p.id]] || '',
+    })));
+    return;
   }
+  // 补齐新增预置 + 用环境变量填充免费渠道密钥 + 预置项开关以代码为准
+  // （预置的 enabled/isDefault 改动要能落库生效，否则云上永远跑旧开关）
+  const ids = new Set(list.map((x) => x.id));
+  let changed = false;
+  for (const p of PRESETS) {
+    if (!ids.has(p.id)) {
+      list.push({ ...p, apiKey: p.apiKey || process.env[PRESET_ENV_KEY[p.id]] || '' });
+      changed = true;
+      continue;
+    }
+    const it = list.find((x) => x.id === p.id);
+    // 免费渠道：库里有 key 就尊重库里的；没 key 而环境变量有 → 自动填
+    if (!it.apiKey && process.env[PRESET_ENV_KEY[p.id]]) {
+      it.apiKey = process.env[PRESET_ENV_KEY[p.id]];
+      changed = true;
+    }
+    // 开关/默认以代码里的预置为准（防止旧的「付费 preset 是默认」状态残留）
+    if (it.enabled !== p.enabled || it.isDefault !== p.isDefault || it.model !== p.model || it.baseUrl !== p.baseUrl) {
+      it.enabled = p.enabled;
+      it.isDefault = p.isDefault;
+      it.model = p.model;
+      it.baseUrl = p.baseUrl;
+      changed = true;
+    }
+  }
+  if (changed) col.save(list);
 }
 seed();
 
@@ -59,7 +115,11 @@ function get(id) {
 
 function active() {
   const all = listFull();
-  return all.find((x) => x.enabled && x.isDefault) || all.find((x) => x.enabled) || null;
+  // 可用 = 已启用 且（有密钥 或 是本地 Ollama 这种免密渠道）。
+  // ⚠️ 不再回退到「没配 key 的云端模型」——那样每次对话只会白报错；
+  //    也不默认回退到付费渠道——客户明确要求不消耗个人付费 API。
+  const usable = (x) => x.enabled && (x.apiKey || x.provider === 'ollama');
+  return all.find((x) => usable(x) && x.isDefault) || all.find(usable) || null;
 }
 
 function save(input) {
