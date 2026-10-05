@@ -1,4 +1,4 @@
-<view class="lh-page od" wx:if="{{order}} {{theme === 'dark' ? 'theme-dark' : ''}}">
+<view class="lh-page od {{theme === 'dark' ? 'theme-dark' : ''}}" wx:if="{{order}}">
   <scroll-view class="scroll" scroll-y>
     <view class="hero st-{{order.status}}">
       <text class="h-ico">{{order.itemIcon}}</text>

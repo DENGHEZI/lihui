@@ -1,8 +1,4 @@
 <view class="lh-page {{theme === 'dark' ? 'theme-dark' : ''}}">
-  <!-- 玻璃光斑氛围层（纯装饰，不参与布局） -->
-  <view class="lh-glow lh-glow-a"></view>
-  <view class="lh-glow lh-glow-b"></view>
-
   <!-- 模型 -->
   <view class="lh-card">
     <view class="head">

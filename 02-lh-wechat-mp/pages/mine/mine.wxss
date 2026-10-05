@@ -1,8 +1,22 @@
+/* 我的页 · 玻璃拟态（玻璃基座/光斑在 app.wxss 全局定义） */
+
 .profile {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  padding: 40rpx 32rpx;
-  background: linear-gradient(135deg, var(--lh-primary-soft), var(--lh-bg));
+  margin: 24rpx 32rpx 0;
+  padding: 32rpx;
+  background: var(--lh-glass);
+  border: 1rpx solid var(--lh-glass-line);
+  border-radius: 32rpx;
+  backdrop-filter: blur(30rpx);
+  -webkit-backdrop-filter: blur(30rpx);
+  box-shadow: 0 8rpx 32rpx rgba(15, 23, 42, .07), inset 0 1rpx 0 var(--lh-glass-hi);
+  box-sizing: border-box;
+}
+.theme-dark .profile {
+  box-shadow: 0 12rpx 44rpx rgba(0, 0, 0, .42), inset 0 1rpx 0 var(--lh-glass-hi);
 }
 .avatar {
   width: 112rpx;
@@ -16,24 +30,31 @@
   align-items: center;
   justify-content: center;
   margin-right: 28rpx;
+  box-shadow: 0 6rpx 20rpx rgba(22, 119, 255, .35);
+}
+.theme-dark .avatar {
+  background: linear-gradient(135deg, #4C9AFF, #2F7FE0);
 }
 .p-mid {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 .p-name {
   font-size: 36rpx;
   font-weight: 600;
-  color: #1A1A1A;
+  color: var(--lh-text);
   margin-bottom: 8rpx;
 }
 .p-loc {
   font-size: 24rpx;
-  color: #646A73;
-  background: var(--lh-card);
+  color: var(--lh-text-sub);
+  background: var(--lh-glass-hi);
+  border: 1rpx solid var(--lh-glass-line);
   border-radius: 999rpx;
   padding: 8rpx 20rpx;
+  align-self: flex-start;
 }
 .lh-card {
   margin: 24rpx 32rpx 0;
@@ -45,7 +66,11 @@
 }
 .link {
   font-size: 26rpx;
-  color: #1677FF;
+  color: var(--lh-primary);
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid var(--lh-glass-line);
+  background: var(--lh-glass-hi);
 }
 .tk-grid {
   display: flex;
@@ -60,11 +85,12 @@
 .tk-num {
   font-size: 38rpx;
   font-weight: 600;
-  color: #1677FF;
+  color: var(--lh-primary);
+  font-variant-numeric: tabular-nums;
 }
 .tk-lb {
   font-size: 24rpx;
-  color: #8F959E;
+  color: var(--lh-text-weak);
   margin-top: 8rpx;
 }
 .quota {
@@ -72,13 +98,14 @@
 }
 .q-bar {
   height: 12rpx;
-  background: #EDEFF2;
+  background: var(--lh-glass-hi);
+  border: 1rpx solid var(--lh-glass-line);
   border-radius: 6rpx;
   overflow: hidden;
 }
 .q-fill {
   height: 12rpx;
-  background: #1677FF;
+  background: linear-gradient(90deg, var(--lh-primary), #3A8BFF);
   border-radius: 6rpx;
 }
 .quota .lh-mini {
@@ -86,7 +113,7 @@
 }
 .by-model {
   margin-top: 24rpx;
-  border-top: 1rpx solid #EDEFF2;
+  border-top: 1rpx solid var(--lh-line);
   padding-top: 16rpx;
 }
 .bm-row {
@@ -96,32 +123,42 @@
 }
 .bm-name {
   font-size: 26rpx;
-  color: #1A1A1A;
+  color: var(--lh-text);
 }
 .bm-val {
   font-size: 24rpx;
-  color: #646A73;
+  color: var(--lh-text-sub);
 }
+
+/* ---------------- 功能菜单：玻璃行 + 图标底座 ---------------- */
 .menu {
-  padding: 8rpx 32rpx;
+  padding: 8rpx 28rpx;
 }
 .menu-row {
   display: flex;
   align-items: center;
-  padding: 30rpx 0;
-  border-bottom: 1rpx solid #EDEFF2;
+  padding: 28rpx 8rpx;
+  border-bottom: 1rpx solid var(--lh-line);
 }
 .menu-row:last-child {
   border-bottom: none;
 }
 .m-ico {
-  font-size: 34rpx;
+  width: 64rpx;
+  height: 64rpx;
   margin-right: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  border-radius: 18rpx;
+  background: var(--lh-glass-hi);
+  border: 1rpx solid var(--lh-glass-line);
 }
 .m-txt {
   flex: 1;
   font-size: 30rpx;
-  color: #1A1A1A;
+  color: var(--lh-text);
 }
 .m-badge {
   margin-left: auto;
@@ -136,11 +173,12 @@
   font-size: 20rpx;
   margin-right: 12rpx;
 }
-
 .m-arrow {
   font-size: 36rpx;
-  color: #C8CDD4;
+  color: var(--lh-text-weak);
+  opacity: .6;
 }
+
 .row {
   display: flex;
   align-items: center;
@@ -156,7 +194,7 @@
 }
 .kv-v {
   font-size: 26rpx;
-  color: #1A1A1A;
+  color: var(--lh-text);
   max-width: 60%;
   text-align: right;
   overflow: hidden;
