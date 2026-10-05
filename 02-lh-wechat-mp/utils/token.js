@@ -37,9 +37,10 @@ function getDeviceId() {
 
 function getPlan() {
   try {
-    return wx.getStorageSync(KEY_PLAN) || 'pro'
+    // 默认免费基础版：不调用任何付费 API（客户要求）
+    return wx.getStorageSync(KEY_PLAN) || 'free'
   } catch (e) {
-    return 'pro'
+    return 'free'
   }
 }
 

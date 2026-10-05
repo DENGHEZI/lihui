@@ -5,6 +5,7 @@ const { getDeviceId, getPlan, getCareMode, setCareMode } = require('../../utils/
 const { clearBizCache, getCacheSizeKB } = require('../../utils/request.js')
 const { parseCity, parseDistrict } = require('../../utils/city.js')
 
+const theme = require('../../utils/theme.js')
 const EMPTY_STATS = {
   total: { total: 0, calls: 0, costCny: 0 },
   quota: { daily: 200000, usedToday: 0, remainToday: 200000 },
@@ -28,6 +29,7 @@ Page({
   },
 
   onShow() {
+    theme.apply(this)
     const plan = getPlan()
     this.setData({
       deviceShort: 'ID ' + getDeviceId().slice(-8),

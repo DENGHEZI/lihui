@@ -24,7 +24,7 @@
   border-bottom: none;
 }
 .model-row.on {
-  background: #F5F9FF;
+  background: var(--lh-primary-soft);
   margin: 0 -32rpx;
   padding: 28rpx 32rpx;
   border-radius: 24rpx;
@@ -52,7 +52,12 @@
 }
 .m-badge.off {
   color: #8F959E;
-  background: #F4F5F7;
+  background: var(--lh-bg);
+}
+.m-badge.free {
+  color: var(--lh-success);
+  background: var(--lh-success-soft);
+  font-weight: 600;
 }
 .m-meta {
   display: block;
@@ -122,7 +127,7 @@
 }
 .editor {
   width: 100%;
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-radius: 40rpx 40rpx 0 0;
   padding: 40rpx 32rpx calc(40rpx + env(safe-area-inset-bottom));
   max-height: 86vh;
@@ -135,7 +140,7 @@
 }
 .e-inp {
   height: 80rpx;
-  background: #F4F5F7;
+  background: var(--lh-bg);
   border-radius: 20rpx;
   padding: 0 24rpx;
   font-size: 30rpx;
@@ -146,7 +151,7 @@
   margin-top: 12rpx;
   height: 80rpx;
   line-height: 80rpx;
-  background: #F4F5F7;
+  background: var(--lh-bg);
   border-radius: 20rpx;
   padding: 0 24rpx;
   color: #1A1A1A;

@@ -1,4 +1,4 @@
-<view class="lh-page">
+<view class="lh-page {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="lh-card">
     <text class="lh-h1">反馈与建议</text>
     <text class="lh-cap">您的问题会被同步到管理端，我们会在 24 小时内处理并回复。</text>

@@ -7,7 +7,7 @@
 }
 .scene-bar {
   white-space: nowrap;
-  background: #FFFFFF;
+  background: var(--lh-card);
   padding: 16rpx 0 8rpx;
   border-bottom: 1rpx solid #EDEFF2;
 }
@@ -49,7 +49,7 @@
 }
 .bubble {
   max-width: 78%;
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-radius: 32rpx;
   padding: 24rpx 28rpx;
   box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, .05);
@@ -71,7 +71,7 @@
   margin-top: 20rpx;
 }
 .card {
-  background: #F8F9FB;
+  background: var(--lh-bg);
   border-radius: 24rpx;
   padding: 20rpx 24rpx;
   margin-bottom: 16rpx;
@@ -148,14 +148,14 @@
   flex-shrink: 0;
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-top: 1rpx solid #EDEFF2;
 }
 .care-toggle {
   width: 96rpx;
   height: 68rpx;
   border-radius: 999rpx;
-  background: #F4F5F7;
+  background: var(--lh-bg);
   color: #646A73;
   font-size: 24rpx;
   display: flex;
@@ -172,7 +172,7 @@
 .chat-input {
   flex: 1;
   height: 80rpx;
-  background: #F4F5F7;
+  background: var(--lh-bg);
   border-radius: 40rpx;
   padding: 0 28rpx;
   font-size: 30rpx;
@@ -218,8 +218,8 @@
   align-items: center;
   gap: 14rpx;
   padding: 16rpx 32rpx;
-  background: #FFF7E6;
-  border-top: 1rpx solid #FFE7BA;
+  background: var(--lh-warning-soft);
+  border-top: 1rpx solid var(--lh-warn-border);
 }
 .rec-dot {
   width: 16rpx;

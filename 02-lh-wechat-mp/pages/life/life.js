@@ -1,6 +1,7 @@
 const app = getApp()
 const api = require('../../utils/api.js')
 const { getCareMode, setCareMode } = require('../../utils/token.js')
+const theme = require('../../utils/theme.js')
 const voice = require('../../utils/voice.js')
 
 function colorOf(s) {
@@ -45,6 +46,10 @@ Page({
   },
 
   onShow() {
+    const prevTheme = theme.get()
+    theme.apply(this)
+    // 从设置页切了主题回来 → 雷达图按新配色重绘
+    if (prevTheme !== this.data.theme && this.data.report) this.drawRadar()
     this.setData({ careMode: getCareMode() })
     // 定位与上次展示差异 >200m 时静默重算（客户反馈「位置和地点没有变化」）
     const loc = app.globalData.location
@@ -101,11 +106,97 @@ Page({
         report: r,
         ringColor: colorOf(r.score),
         ringDeg: Math.round((r.score || 0) * 3.6)
-      })
+      }, () => this.drawRadar())
     } catch (e) {
       this.setData({ report: null })
       wx.showToast({ title: (e && e.msg) || '体检失败，下拉重试', icon: 'none' })
     }
+  },
+
+  /* ---------------- 六类设施覆盖 · 雷达图 ---------------- */
+  /** canvas 2d 雷达图：外层网格 + 轴标签 + 各类得分多边形（主题感知配色） */
+  drawRadar() {
+    const r = this.data.report
+    if (!r || !r.categories || !r.categories.length) return
+    const cats = r.categories.filter((c) => Number.isFinite(Number(c.score)))
+    const n = cats.length
+    if (n < 3) return
+    wx.createSelectorQuery().in(this)
+      .select('#radar').fields({ node: true, size: true })
+      .exec((res) => {
+        if (!res || !res[0] || !res[0].node) return
+        const canvas = res[0].node
+        let dpr = 2
+        try { dpr = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio || 2 } catch (e) {}
+        const W = res[0].width
+        const H = res[0].height
+        canvas.width = W * dpr
+        canvas.height = H * dpr
+        const ctx = canvas.getContext('2d')
+        ctx.scale(dpr, dpr)
+
+        const dark = theme.get() === 'dark'
+        const gridColor = dark ? 'rgba(255,255,255,.14)' : '#EDEFF2'
+        const labelColor = dark ? '#A9B0B8' : '#646A73'
+        const fill = dark ? 'rgba(76,154,255,.22)' : 'rgba(22,119,255,.16)'
+        const stroke = dark ? '#4C9AFF' : '#1677FF'
+
+        const cx = W / 2
+        const cy = H / 2 + 4
+        const R = Math.min(W, H) / 2 - 36
+        const ang = (i) => (Math.PI * 2 * i) / n - Math.PI / 2
+        const pt = (i, radius) => [cx + radius * Math.cos(ang(i)), cy + radius * Math.sin(ang(i))]
+
+        // 网格（4 层多边形）
+        ctx.strokeStyle = gridColor
+        ctx.lineWidth = 1
+        for (let k = 1; k <= 4; k++) {
+          ctx.beginPath()
+          for (let i = 0; i < n; i++) {
+            const [x, y] = pt(i, (R * k) / 4)
+            i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)
+          }
+          ctx.closePath()
+          ctx.stroke()
+        }
+        // 轴线 + 标签 + 分值
+        ctx.font = '11px sans-serif'
+        ctx.textAlign = 'center'
+        for (let i = 0; i < n; i++) {
+          const [x, y] = pt(i, R)
+          ctx.beginPath()
+          ctx.moveTo(cx, cy)
+          ctx.lineTo(x, y)
+          ctx.stroke()
+          const [lx, ly] = pt(i, R + 20)
+          ctx.fillStyle = labelColor
+          ctx.fillText(cats[i].name, lx, ly + 4)
+          ctx.fillStyle = cats[i].color
+          ctx.fillText(String(cats[i].score), lx, ly - 10)
+        }
+        // 得分多边形
+        ctx.beginPath()
+        for (let i = 0; i < n; i++) {
+          const s = Math.max(0, Math.min(100, Number(cats[i].score))) / 100
+          const [x, y] = pt(i, R * s)
+          i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)
+        }
+        ctx.closePath()
+        ctx.fillStyle = fill
+        ctx.strokeStyle = stroke
+        ctx.lineWidth = 2
+        ctx.fill()
+        ctx.stroke()
+        // 顶点圆点
+        for (let i = 0; i < n; i++) {
+          const s = Math.max(0, Math.min(100, Number(cats[i].score))) / 100
+          const [x, y] = pt(i, R * s)
+          ctx.beginPath()
+          ctx.arc(x, y, 3, 0, Math.PI * 2)
+          ctx.fillStyle = cats[i].color
+          ctx.fill()
+        }
+      })
   },
 
   /* ---------------- 步行等时圈 + 服务盲区 ---------------- */

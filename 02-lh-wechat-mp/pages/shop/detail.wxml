@@ -1,4 +1,4 @@
-<view class="lh-page detail" wx:if="{{item}}">
+<view class="lh-page detail" wx:if="{{item}} {{theme === 'dark' ? 'theme-dark' : ''}}">
   <scroll-view class="scroll" scroll-y>
     <!-- 商品头 -->
     <view class="hero">

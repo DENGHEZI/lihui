@@ -9,7 +9,7 @@
 /* ---------- 顶部 ---------- */
 .top {
   flex-shrink: 0;
-  background: #FFFFFF;
+  background: var(--lh-card);
   padding: 24rpx 24rpx 16rpx;
   box-sizing: border-box;
   border-bottom: 1rpx solid var(--lh-line);
@@ -19,7 +19,7 @@
   display: flex;
   align-items: center;
   height: 76rpx;
-  background: #F4F5F7;
+  background: var(--lh-bg);
   border-radius: 999rpx;
   padding: 0 24rpx;
 }
@@ -61,7 +61,7 @@
   padding: 12rpx 0;
   border-radius: 20rpx;
   margin-right: 12rpx;
-  background: #F4F5F7;
+  background: var(--lh-bg);
 }
 
 .cat--on {
@@ -100,7 +100,7 @@
 
 .card {
   display: flex;
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-radius: 24rpx;
   padding: 24rpx;
   box-sizing: border-box;
@@ -218,7 +218,7 @@
 .src {
   flex: 1;
   border: 1rpx solid var(--lh-line);
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-radius: 18rpx;
   padding: 14rpx 16rpx;
   box-sizing: border-box;
@@ -256,8 +256,8 @@
 .quota {
   display: flex;
   gap: 12rpx;
-  background: #FFF7E6;
-  border: 1rpx solid #FFE0A3;
+  background: var(--lh-warning-soft);
+  border: 1rpx solid var(--lh-warn-border);
   border-radius: 18rpx;
   padding: 16rpx 18rpx;
   margin-bottom: 16rpx;

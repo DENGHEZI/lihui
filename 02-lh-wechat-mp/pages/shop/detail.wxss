@@ -4,7 +4,7 @@
   height: 100vh;
   box-sizing: border-box;
   overflow: hidden;
-  background: #F4F5F7;
+  background: var(--lh-bg);
 }
 
 .scroll {
@@ -21,7 +21,7 @@
 /* ---------- 商品头 ---------- */
 .hero {
   display: flex;
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-radius: 28rpx;
   padding: 32rpx;
   margin-bottom: 20rpx;
@@ -106,8 +106,8 @@
   font-size: 20rpx;
   font-weight: 600;
   color: #8A5A00;
-  background: #FFF3E0;
-  border: 1rpx solid #FFD591;
+  background: var(--lh-warning-soft);
+  border: 1rpx solid var(--lh-warn-border);
   border-radius: 8rpx;
   padding: 2rpx 10rpx;
 }
@@ -183,7 +183,7 @@
   color: var(--lh-text-sub);
   font-size: 26rpx;
   margin: 0 16rpx 16rpx 0;
-  background: #FFFFFF;
+  background: var(--lh-card);
 }
 
 .sp--on {
@@ -244,7 +244,7 @@
   width: 60rpx;
   height: 60rpx;
   border-radius: 12rpx;
-  background: #F4F5F7;
+  background: var(--lh-bg);
   color: var(--lh-primary);
   font-size: 34rpx;
   line-height: 60rpx;
@@ -276,7 +276,7 @@
   align-items: center;
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-top: 1rpx solid var(--lh-line);
 }
 

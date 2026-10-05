@@ -18,12 +18,32 @@ page {
   --lh-line: #EDEFF2;
   --lh-bg: #F4F5F7;
   --lh-card: #FFFFFF;
+  --lh-warn-border: #FFE7BA;
 
   background-color: #F4F5F7;
   color: #1A1A1A;
   font-size: 30rpx;
   line-height: 1.5;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+}
+
+/* 夜间模式：页面根节点加 .theme-dark 即整体换肤（utils/theme.js 统一接入） */
+.theme-dark {
+  --lh-primary: #4C9AFF;
+  --lh-primary-dark: #2F7FE0;
+  --lh-primary-soft: rgba(76, 154, 255, .16);
+  --lh-success: #2EDB9B;
+  --lh-success-soft: rgba(46, 219, 155, .14);
+  --lh-warning: #FFA940;
+  --lh-warning-soft: rgba(255, 169, 64, .14);
+  --lh-danger: #FF6B6B;
+  --lh-text: #E8EAED;
+  --lh-text-sub: #A9B0B8;
+  --lh-text-weak: #7A828B;
+  --lh-line: #2B3038;
+  --lh-bg: #111318;
+  --lh-card: #1C2027;
+  --lh-warn-border: rgba(255, 169, 64, .35);
 }
 
 /* 关怀模式 */
@@ -39,19 +59,23 @@ page {
   line-height: 1.6;
 }
 
-/* 公共原子类 */
+/* 公共原子类（背景全部走变量，暗色自动适配） */
 .lh-page {
   min-height: 100vh;
-  background: #F4F5F7;
+  background: var(--lh-bg);
   box-sizing: border-box;
 }
 
 .lh-card {
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-radius: 32rpx;
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, .06);
   padding: 32rpx;
   box-sizing: border-box;
+}
+
+.theme-dark .lh-card {
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, .35);
 }
 
 .lh-h1 {
@@ -100,7 +124,7 @@ page {
   border: 1rpx solid var(--lh-line);
   color: var(--lh-text-sub);
   font-size: 26rpx;
-  background: #FFFFFF;
+  background: var(--lh-card);
 }
 
 .lh-pill--on {
@@ -128,7 +152,7 @@ page {
 }
 
 .lh-btn--ghost {
-  background: #FFFFFF;
+  background: var(--lh-card);
   color: var(--lh-primary);
   border: 1rpx solid var(--lh-primary);
 }
@@ -149,7 +173,7 @@ page {
   width: 112rpx;
   height: 112rpx;
   border-radius: 50%;
-  background: #FFFFFF;
+  background: var(--lh-card);
   box-shadow: 0 8rpx 32rpx rgba(22, 119, 255, .25);
   display: flex;
   align-items: center;

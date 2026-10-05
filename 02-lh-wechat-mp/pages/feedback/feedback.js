@@ -1,6 +1,7 @@
 const api = require('../../utils/api.js')
 const { getDeviceId } = require('../../utils/token.js')
 
+const theme = require('../../utils/theme.js')
 const TYPES = [
   { key: 'bug', name: '问题反馈', icon: '🐞' },
   { key: 'feature', name: '功能建议', icon: '💡' },
@@ -11,6 +12,10 @@ const STATUS_NAME = { pending: '待处理', processing: '处理中', resolved: '
 const STATUS_COLOR = { pending: '#FF8A00', processing: '#1677FF', resolved: '#00B96B', rejected: '#8F959E' }
 
 Page({
+  onShow() {
+    theme.apply(this)
+  },
+
   data: {
     form: { type: 'bug', content: '', contact: '', screenshots: [] },
     types: TYPES,

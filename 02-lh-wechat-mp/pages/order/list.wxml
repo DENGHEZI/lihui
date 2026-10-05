@@ -1,4 +1,4 @@
-<view class="lh-page ol">
+<view class="lh-page ol {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="tabs">
     <text class="tab {{cur === '' ? 'tab--on' : ''}}" bindtap="onTab" data-k="">全部</text>
     <text class="tab {{cur === 'pending' ? 'tab--on' : ''}}" bindtap="onTab" data-k="pending">待支付</text>

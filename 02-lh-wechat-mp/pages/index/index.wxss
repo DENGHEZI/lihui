@@ -27,7 +27,7 @@
 
 .search-bar {
   height: 96rpx;
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-radius: 48rpx;
   display: flex;
   align-items: center;
@@ -83,7 +83,7 @@
 /* 输入联想 */
 .suggest {
   margin-top: 12rpx;
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-radius: 32rpx;
   box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, .12);
   overflow: hidden;
@@ -132,7 +132,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-radius: 40rpx 40rpx 0 0;
   box-shadow: 0 -8rpx 40rpx rgba(0, 0, 0, .08);
   z-index: 25;
@@ -268,7 +268,7 @@
 }
 .scenic-item {
   width: 48%;
-  background: #F8F9FB;
+  background: var(--lh-bg);
   border-radius: 24rpx;
   padding: 20rpx;
   margin: 0 2% 16rpx 0;
@@ -337,7 +337,7 @@
   color: var(--lh-text-sub);
   margin-top: 16rpx;
   display: block;
-  background: #F8F9FB;
+  background: var(--lh-bg);
   padding: 16rpx 20rpx;
   border-radius: 20rpx;
 }
@@ -476,7 +476,7 @@
 }
 .voice-card {
   width: 560rpx;
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-radius: 40rpx;
   padding: 48rpx 40rpx;
   display: flex;
@@ -510,7 +510,7 @@
 .bar {
   width: 8rpx;
   height: 32rpx;
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-radius: 4rpx;
   margin: 0 4rpx;
   animation: wave 1s infinite ease-in-out;

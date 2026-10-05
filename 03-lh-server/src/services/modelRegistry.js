@@ -12,7 +12,7 @@ const col = store.collection('models', []);
 const PRESETS = [
   {
     id: 'preset-qwen-free',
-    name: '通义千问（ModelScope 免费推理）',
+    name: '通义千问 · 免费基础版',
     provider: 'openai-compatible',
     baseUrl: 'https://api-inference.modelscope.cn/v1',
     apiKey: '',

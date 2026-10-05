@@ -3,6 +3,7 @@ const api = require('../../utils/api.js')
 const bmap = require('../../utils/bmap.js')
 const action = require('../../utils/action.js')
 
+const theme = require('../../utils/theme.js')
 /** 百度指令清洗：<b>冲口路</b> → rich-text 节点（蓝色加粗），不再显示原始标签 */
 function instrNodes(s) {
   const str = String(s || '').replace(/<\/?font[^>]*>/gi, '')
@@ -38,6 +39,10 @@ function normalizeRoute(r) {
 }
 
 Page({
+  onShow() {
+    theme.apply(this)
+  },
+
   data: {
     origin: null,
     originName: '我的位置',

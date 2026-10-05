@@ -3,6 +3,7 @@ const { getPlan, setPlan, getCareMode, setCareMode } = require('../../utils/toke
 const voice = require('../../utils/voice.js')
 const action = require('../../utils/action.js')
 
+const theme = require('../../utils/theme.js')
 Page({
   data: {
     models: [],
@@ -46,6 +47,10 @@ Page({
     ]
   },
 
+  onShow() {
+    theme.apply(this)
+  },
+
   onLoad() {
     this.setData({
       engineNames: this.data.engines.map((e) => e.name),
@@ -77,10 +82,28 @@ Page({
   async loadModels() {
     try {
       const d = await api.listModels(false)
-      this.setData({ models: d.items || [] })
+      const items = (d.items || []).map((m) =>
+        Object.assign({}, m, {
+          // 免费渠道标注：ModelScope 免费推理 / 硅基流动免费档
+          isFree: /modelscope|siliconflow/i.test(m.baseUrl || '')
+        })
+      )
+      this.setData({ models: items })
     } catch (e) {
       this.setData({ models: [] })
     }
+  },
+
+  /* 外观模式（白天 / 夜间，storage 持久，各页 onShow 自动跟随） */
+  setThemeLight() {
+    theme.set('light')
+    theme.apply(this)
+    wx.showToast({ title: '已切换到白天模式', icon: 'none' })
+  },
+  setThemeDark() {
+    theme.set('dark')
+    theme.apply(this)
+    wx.showToast({ title: '已切换到夜间模式', icon: 'none' })
   },
 
   async loadVoice() {

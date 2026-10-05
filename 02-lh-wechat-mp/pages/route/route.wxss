@@ -86,7 +86,7 @@
   margin-top: 4rpx;
 }
 .congestion {
-  background: #FFF4E6;
+  background: var(--lh-warning-soft);
   border-radius: 20rpx;
   padding: 16rpx 24rpx;
   margin-bottom: 24rpx;
@@ -138,8 +138,8 @@
 .fallback-tip {
   display: flex;
   align-items: flex-start;
-  background: #FFF7E0;
-  border: 1rpx solid #FFE3A3;
+  background: var(--lh-warning-soft);
+  border: 1rpx solid var(--lh-warn-border);
   border-radius: 20rpx;
   padding: 20rpx 24rpx;
   margin: 16rpx 0 8rpx;
@@ -157,7 +157,7 @@
 }
 
 .ghost {
-  background: #FFFFFF;
+  background: var(--lh-card);
   color: #1677FF;
   border: 1rpx solid #1677FF;
 }

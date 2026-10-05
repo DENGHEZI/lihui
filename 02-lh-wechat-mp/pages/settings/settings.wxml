@@ -1,4 +1,4 @@
-<view class="lh-page">
+<view class="lh-page {{theme === 'dark' ? 'theme-dark' : ''}}">
   <!-- 模型 -->
   <view class="lh-card">
     <view class="head">
@@ -12,6 +12,7 @@
         <view class="m-name-row">
           <text class="m-name">{{item.name}}</text>
           <text class="m-badge" wx:if="{{item.isDefault}}">使用中</text>
+          <text class="m-badge free" wx:if="{{item.isFree}}">免费</text>
           <text class="m-badge off" wx:elif="{{!item.enabled}}">已停用</text>
         </view>
         <text class="m-meta">{{item.provider}} · {{item.model}}</text>
@@ -81,6 +82,13 @@
   <!-- 高级 -->
   <view class="lh-card">
     <text class="lh-h2">高级</text>
+    <view class="row">
+      <text class="lh-body">外观模式</text>
+      <view class="plans">
+        <text class="lh-pill {{theme !== 'dark' ? 'lh-pill--on' : ''}}" bindtap="setThemeLight">☀️ 白天</text>
+        <text class="lh-pill {{theme === 'dark' ? 'lh-pill--on' : ''}}" bindtap="setThemeDark">🌙 夜间</text>
+      </view>
+    </view>
     <view class="row">
       <text class="lh-body">当前套餐</text>
       <view class="plans">

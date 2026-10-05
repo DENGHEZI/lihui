@@ -6,6 +6,7 @@ const { getCareMode, setCareMode } = require('../../utils/token.js')
 const { parseCity } = require('../../utils/city.js')
 const voice = require('../../utils/voice.js')
 
+const theme = require('../../utils/theme.js')
 Page({
   data: {
     safeTop: 20,
@@ -58,6 +59,7 @@ Page({
   },
 
   onShow() {
+    theme.apply(this)
     const care = getCareMode()
     this.setData({
       careMode: care,

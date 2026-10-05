@@ -1,4 +1,4 @@
-<view class="lh-page {{careMode ? 'care-mode' : ''}}">
+<view class="lh-page {{careMode ? 'care-mode' : ''}} {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="hero">
     <view class="hero-top">
       <view>
@@ -9,7 +9,7 @@
     </view>
 
     <view class="score-box" wx:if="{{report}}">
-      <view class="ring" style="background: conic-gradient({{ringColor}} {{ringDeg}}deg, #EDEFF2 0deg)">
+      <view class="ring" style="background: conic-gradient({{ringColor}} {{ringDeg}}deg, var(--lh-line) 0deg)">
         <view class="ring-inner">
           <text class="ring-score" style="color:{{ringColor}}">{{report.score}}</text>
           <text class="ring-unit">分</text>
@@ -27,7 +27,11 @@
   </view>
 
   <view class="lh-card cat-card" wx:if="{{report}}">
-    <text class="lh-h2">六类设施覆盖</text>
+    <view class="radar-head">
+      <text class="lh-h2">六类设施覆盖</text>
+      <text class="lh-mini">雷达图 · 各维度 0-100 分</text>
+    </view>
+    <canvas type="2d" id="radar" class="radar-canvas"></canvas>
     <view class="cat-row" wx:for="{{report.categories}}" wx:key="key">
       <view class="cat-head">
         <text class="cat-name">{{item.name}}</text>

@@ -2,7 +2,7 @@
   display: flex;
   align-items: center;
   padding: 40rpx 32rpx;
-  background: linear-gradient(135deg, #EAF2FF, #F4F5F7);
+  background: linear-gradient(135deg, var(--lh-primary-soft), var(--lh-bg));
 }
 .avatar {
   width: 112rpx;
@@ -31,7 +31,7 @@
 .p-loc {
   font-size: 24rpx;
   color: #646A73;
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-radius: 999rpx;
   padding: 8rpx 20rpx;
 }

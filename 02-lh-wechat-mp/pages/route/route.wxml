@@ -1,4 +1,4 @@
-<view class="lh-page">
+<view class="lh-page {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="lh-card">
     <text class="lh-h2">路线规划</text>
     <view class="from-to">

@@ -6,6 +6,7 @@
  */
 const api = require('../../utils/api.js')
 const { getDeviceId } = require('../../utils/token.js')
+const theme = require('../../utils/theme.js')
 const app = getApp()
 
 /** 本地订单缓存 key（离线也能看「我的订单」） */
@@ -18,6 +19,10 @@ function todayStr(offset = 0) {
 }
 
 Page({
+  onShow() {
+    theme.apply(this)
+  },
+
   data: {
     item: null,
     specs: [],

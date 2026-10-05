@@ -4,6 +4,7 @@ const { getCareMode, setCareMode } = require('../../utils/token.js')
 const voice = require('../../utils/voice.js')
 const action = require('../../utils/action.js')
 
+const theme = require('../../utils/theme.js')
 let seq = 0
 const nid = () => 'msg_' + Date.now().toString(36) + '_' + seq++
 
@@ -46,6 +47,7 @@ Page({
   },
 
   onShow() {
+    theme.apply(this)
     this.setData({ careMode: getCareMode() })
   },
 

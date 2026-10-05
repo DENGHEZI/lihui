@@ -1,4 +1,4 @@
-<view class="lh-page {{careMode ? 'care-mode' : ''}}">
+<view class="lh-page {{careMode ? 'care-mode' : ''}} {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="profile">
     <view class="avatar">鲤</view>
     <view class="p-mid">

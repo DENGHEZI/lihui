@@ -3,6 +3,7 @@
  */
 const api = require('../../utils/api.js')
 const { getDeviceId } = require('../../utils/token.js')
+const theme = require('../../utils/theme.js')
 const LOCAL_ORDERS = 'lh_orders'
 
 const STATUS_TEXT = { pending: '待支付', paid: '已下单', done: '已完成', cancelled: '已取消' }
@@ -12,6 +13,7 @@ Page({
   STATUS_TEXT,
 
   onShow() {
+    theme.apply(this)
     this.load()
   },
 

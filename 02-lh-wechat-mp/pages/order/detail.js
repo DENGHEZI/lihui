@@ -3,9 +3,14 @@
  */
 const api = require('../../utils/api.js')
 
+const theme = require('../../utils/theme.js')
 const STATUS_TEXT = { pending: '待支付', paid: '已下单', done: '已完成', cancelled: '已取消' }
 
 Page({
+  onShow() {
+    theme.apply(this)
+  },
+
   data: { order: null },
 
   async onLoad(q) {

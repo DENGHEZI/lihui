@@ -16,7 +16,7 @@
 .hero {
   display: flex;
   align-items: center;
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-radius: 28rpx;
   padding: 36rpx 32rpx;
   margin-bottom: 20rpx;
@@ -24,16 +24,16 @@
 }
 
 .hero.pending {
-  background: linear-gradient(120deg, #FFF4E6, #FFFFFF);
+  background: linear-gradient(120deg, var(--lh-warning-soft), var(--lh-card));
 }
 .hero.paid {
-  background: linear-gradient(120deg, #EAF2FF, #FFFFFF);
+  background: linear-gradient(120deg, var(--lh-primary-soft), var(--lh-card));
 }
 .hero.done {
-  background: linear-gradient(120deg, #E6F8F0, #FFFFFF);
+  background: linear-gradient(120deg, var(--lh-success-soft), var(--lh-card));
 }
 .hero.cancelled {
-  background: #F0F1F3;
+  background: var(--lh-bg);
 }
 
 .h-ico {
@@ -129,7 +129,7 @@
   justify-content: center;
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
-  background: #FFFFFF;
+  background: var(--lh-card);
   border-top: 1rpx solid var(--lh-line);
 }
 

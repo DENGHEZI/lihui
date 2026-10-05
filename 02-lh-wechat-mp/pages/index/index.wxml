@@ -1,4 +1,4 @@
-<view class="page {{careMode ? 'care-mode' : ''}}">
+<view class="page {{careMode ? 'care-mode' : ''}} {{theme === 'dark' ? 'theme-dark' : ''}}">
   <!-- 地图底图 -->
   <map
     id="lhmap"

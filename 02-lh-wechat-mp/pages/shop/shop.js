@@ -3,6 +3,7 @@
  * 这里只负责选品；下单在 detail 页，支付在第三方平台完成。
  */
 const api = require('../../utils/api.js')
+const theme = require('../../utils/theme.js')
 const app = getApp()
 
 Page({
@@ -48,6 +49,7 @@ Page({
   },
 
   onShow() {
+    theme.apply(this)
     // 切回页面时若定位已更新，重新算一次距离（只在「附近」tab，热门 tab 与定位无关）
     if (this.data.curSource === 'near' && this.data.list.length && app.globalData.location) this.load()
   },

@@ -1,4 +1,4 @@
-<view class="lh-page shop">
+<view class="lh-page shop {{theme === 'dark' ? 'theme-dark' : ''}}">
   <!-- 顶部：搜索 + 类目 -->
   <view class="top">
     <view class="search-bar">
