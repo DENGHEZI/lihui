@@ -26,7 +26,7 @@
     </view>
     <view class="std-ref" wx:if="{{standardName}}" bindtap="toggleStdDetail">
       <text class="std-ref-badge">依据</text>
-      <text class="std-ref-text">{{standardName}}{{standardCoverage ? ' · 15分钟步行覆盖率目标 ' + standardCoverage + '%'}} · {{standardIssuer}}</text>
+      <text class="std-ref-text">{{standardRefText}}</text>
     </view>
     <view class="std-detail" wx:if="{{showStdDetail && standardQuote}}">
       <text class="lh-mini">{{standardQuote}}</text>

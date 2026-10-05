@@ -100,11 +100,14 @@ Page({
       const d = await api.lifeStandards(city)
       const s = d && d.standard
       if (!s) return
+      const cov = s.metrics && s.metrics.walkCoverageTarget
+      // WXML 不放复杂表达式（三元+中文拼接在某些基础库编译失败），在 JS 拼好
       this.setData({
         standardName: s.name,
         standardIssuer: s.issuer,
         standardQuote: s.quote,
-        standardCoverage: s.metrics && s.metrics.walkCoverageTarget
+        standardCoverage: cov,
+        standardRefText: s.name + (cov ? ' · 15分钟步行覆盖率目标 ' + cov + '%' : '') + ' · ' + s.issuer
       })
     } catch (e) { /* 规范拉取失败不影响体检主链路 */ }
   },
