@@ -33,16 +33,45 @@ function noteQuotaError(e) {
   return false;
 }
 
+/* ------------------------------------------------------------------ */
+/* POI 共享缓存：同（类目前缀 + 量化坐标 + 半径）5 分钟内直接复用结果    */
+/* —— /life/report 与 isochrone 六类检索口径相近，重复请求不再重烧配额与延迟 */
+/* 调用方对 items 只读（filter/map 生成新数组），缓存存引用即可          */
+/* ------------------------------------------------------------------ */
+const POI_CACHE_TTL = 5 * 60 * 1000;
+const poiCache = new Map(); // key → { at, val }
+function poiCacheGet(key) {
+  const hit = poiCache.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.at > POI_CACHE_TTL) {
+    poiCache.delete(key);
+    return null;
+  }
+  return hit.val;
+}
+function poiCacheSet(key, val) {
+  if (poiCache.size >= 128) poiCache.delete(poiCache.keys().next().value); // 简单防膨胀：清最旧
+  poiCache.set(key, { at: Date.now(), val });
+}
+
 /**
  * 单类设施检索：RRF 融合一轮 → 全部关键词逐路二次确认 → 仍失败标记 failed 供降权处理
  * （原先在 life.js 内，等时圈引擎也要按同一口径取六类设施，故上移共享）
+ * 成功结果写入 5min 共享缓存；失败/熔断不写（下次重试真实检索）
  */
 async function fetchCategory(c, lng, lat, radius, stagger = 0) {
+  const ck = `full:${c.key}:${Number(lng).toFixed(4)},${Number(lat).toFixed(4)}:${Math.round(radius)}`;
+  const cached = poiCacheGet(ck);
+  if (cached) return cached;
   if (isQuotaBlocked()) return { items: [], failed: true, quota: true };
   if (stagger) await new Promise((r) => setTimeout(r, stagger)); // 类间错峰，防百度 QPS 瞬时超限
   try {
     const r = await baiduMap.poiSearch({ query: c.keywords.join('|'), lng, lat, radius, pageSize: 20 });
-    if ((r.items || []).length) return { items: r.items, failed: false };
+    if ((r.items || []).length) {
+      const ret = { items: r.items, failed: false };
+      poiCacheSet(ck, ret);
+      return ret;
+    }
   } catch (e) {
     noteQuotaError(e);
   }
@@ -56,9 +85,13 @@ async function fetchCategory(c, lng, lat, radius, stagger = 0) {
     )
   );
   for (const p of parts) {
-    if (p && (p.items || []).length) return { items: p.items, failed: false };
+    if (p && (p.items || []).length) {
+      const ret = { items: p.items, failed: false };
+      poiCacheSet(ck, ret);
+      return ret;
+    }
   }
   return { items: [], failed: true, quota: isQuotaBlocked() };
 }
 
-module.exports = { CATEGORIES, isQuotaBlocked, noteQuotaError, fetchCategory };
+module.exports = { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, fetchCategory };

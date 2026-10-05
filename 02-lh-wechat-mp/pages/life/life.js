@@ -33,6 +33,7 @@ Page({
     /* 步行等时圈：默认 15 分钟（赛题口径）；30/45/60 为扩展档，客户可自行切换 */
     iso: null,
     isoLoading: false,
+    isoEstimated: false,
     isoMinutes: 15,
     baiduBase: false,
     gapRows: [],
@@ -89,10 +90,13 @@ Page({
       centerText: [loc.city, loc.district].filter(Boolean).join(' ') || '当前位置'
     })
     this.loadStandards(loc.city)
-    await this.loadReport()
-    // 自动把 30 分钟等时圈画出来：以前要点「分钟」选项才触发，进页面看不到圈，
-    // 客户以为「生活圈大小没有变化」——现在进来就算
-    if (!this.data.iso && !this.data.isoLoading) this.loadIsochrone()
+    // 体检与等时圈并行发起、各自动态渲染：以前串行等待（体检完才算圈），
+    // 首屏到等时圈出图 ≈ 两者耗时之和，现在 ≈ 两者中较慢的一个。
+    // init 本身仍等两者都结束，保证下拉刷新动画覆盖完整数据周期。
+    await Promise.all([
+      this.loadReport(),
+      !this.data.iso && !this.data.isoLoading ? this.loadIsochrone() : null
+    ])
   },
 
   /** 各地管理规范（评分依据）：本地缓存 + 云端存储，按定位城市匹配适用标准 */
@@ -225,9 +229,40 @@ Page({
   },
 
   /* ---------------- 步行等时圈 + 服务盲区 ---------------- */
+  /** 渐进呈现：等时圈计算期间先画理论理想圆（分钟 × 步速 × 弯曲系数，与服务端口径一致），
+   *  真实路网圈到达后自动替换 —— 首屏即刻有图，不再干等 5~8s 白屏 */
+  previewIso() {
+    const c = this.data.center
+    const R = this.data.isoMinutes * 80 * 1.3
+    const pts = []
+    for (let i = 0; i <= 36; i++) {
+      const th = (Math.PI * 2 * i) / 36
+      const lat = c.lat + ((R * Math.cos(th)) / 6371000) * (180 / Math.PI)
+      const lng = c.lng + ((R * Math.sin(th)) / (6371000 * Math.cos((c.lat * Math.PI) / 180))) * (180 / Math.PI)
+      pts.push({ latitude: lat, longitude: lng })
+    }
+    const reachKm = (R * 2) / 1000
+    const isoScale = reachKm < 0.6 ? 17 : reachKm < 1.2 ? 16 : reachKm < 2.5 ? 15 : reachKm < 5 ? 14 : 13
+    this.setData({
+      isoEstimated: true,
+      isoCenter: c,
+      isoScale,
+      isoPolygons: [{
+        points: pts,
+        strokeWidth: 1,
+        strokeColor: '#1677FF88',
+        fillColor: '#1677FF12',
+        zIndex: 1
+      }],
+      isoMarkers: []
+    })
+  },
+
   async loadIsochrone() {
     if (this.data.isoLoading) return
     this.setData({ isoLoading: true })
+    // 没有旧圈时先画理论估算圆占位（有旧圈则保留旧圈，别闪掉）
+    if (!this.data.iso) this.previewIso()
     try {
       const d = await api.lifeIsochrone(
         this.data.center.lng,
@@ -250,6 +285,7 @@ Page({
         isoMarkers: markers,
         isoScale,
         isoCenter: this.data.center,
+        isoEstimated: false,
         isoLoading: false
       })
     } catch (e) {

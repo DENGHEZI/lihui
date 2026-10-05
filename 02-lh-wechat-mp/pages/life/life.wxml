@@ -70,6 +70,23 @@
       <text class="lh-cap">正在沿真实路网计算 {{isoMinutes}} 分钟步行等时圈…</text>
     </view>
 
+    <!-- 渐进呈现：计算期间先展示理论估算圆，真实路网圈到达后自动替换 -->
+    <block wx:if="{{isoLoading && !baiduBase && isoPolygons.length}}">
+      <map
+        class="iso-map"
+        longitude="{{isoCenter.lng}}"
+        latitude="{{isoCenter.lat}}"
+        scale="{{isoScale}}"
+        polygons="{{isoPolygons}}"
+        markers="{{isoMarkers}}"
+        show-location
+        enable-rotate="{{false}}"
+      ></map>
+      <view class="iso-est-tip">
+        <text class="lh-mini">淡色圆为理论估算范围 · 真实路网圈计算完成后自动替换</text>
+      </view>
+    </block>
+
     <block wx:if="{{iso && !isoLoading}}">
       <!-- 底图切换：微信 <map> 组件固定腾讯渲染，百度底图用静态图 API 渲染同一份等时圈 -->
       <view class="iso-tools">

@@ -29,7 +29,7 @@ const logger = require('../utils/logger');
 const { Cache } = require('../utils/cache');
 const { gcj02ToBd09 } = require('../utils/coord');
 const config = require('../config');
-const { CATEGORIES, isQuotaBlocked, noteQuotaError } = require('./lifeShared');
+const { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet } = require('./lifeShared');
 
 /* ---------------- 常量（官方口径） ---------------- */
 const SPEED_M_PER_MIN = 80;            // 步行速度 80 m/min
@@ -295,6 +295,36 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
   let matrixRounds = 0;
   let matrixOkRounds = 0;
 
+  /* —— 阶段 2 提前并行：六类设施检索不依赖真实 radii，用保守半径 idealR×2
+   *    （理论 maxR ≤ 1.575×idealR，×1.25 = 1.97×idealR < 2×idealR 必然覆盖），
+   *    与批量矩阵同时发起 —— 省掉原先串行等待的整个阶段 2（约 1.5~2s）。
+   *    检索半径略大只会让「每类最近设施」找得更准，盲区判定无副作用。 —— */
+  const preRadius = Math.ceil(idealR * 2);
+  const catsPromise = Promise.all(
+    CATEGORIES.map(async (c, i) => {
+      if (isQuotaBlocked()) return { ...c, items: [], failed: true, quota: true };
+      await new Promise((r) => setTimeout(r, i * 150)); // 类间错峰，防百度 QPS 瞬时超限
+      const ck = `lite:${c.key}:${center.lng.toFixed(4)},${center.lat.toFixed(4)}:${preRadius}`;
+      const cached = poiCacheGet(ck);
+      if (cached) return { ...c, items: cached, failed: false };
+      try {
+        const r = await baiduMap.poiSearch({
+          query: c.keywords.join('|'),
+          lng: center.lng,
+          lat: center.lat,
+          radius: preRadius,
+          pageSize: 20,
+        });
+        const items = (r.items || []).filter((x) => Number.isFinite(x.lng) && Number.isFinite(x.lat));
+        if (items.length) poiCacheSet(ck, items); // 只缓存有效结果，失败留白下次重试
+        return { ...c, items, failed: false };
+      } catch (e) {
+        noteQuotaError(e);
+        return { ...c, items: [], failed: true };
+      }
+    })
+  );
+
   /* —— 阶段 1：批量矩阵二分收敛（只看算路池熔断，不受检索配额影响） —— */
   if (!isMatrixBlocked()) {
     for (let round = 0; round < BISECT_ROUNDS; round++) {
@@ -382,28 +412,9 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
     8
   );
 
-  /* —— 阶段 2：六类设施检索（口径与 /life/report 完全一致） —— */
+  /* —— 阶段 2：六类设施检索（已在阶段 1 前并行发起，此处仅收割结果） —— */
   const maxR = Math.max(...radii);
-  const cats = await Promise.all(
-    CATEGORIES.map(async (c, i) => {
-      if (isQuotaBlocked()) return { ...c, items: [], failed: true, quota: true };
-      await new Promise((r) => setTimeout(r, i * 150)); // 类间错峰
-      try {
-        const r = await baiduMap.poiSearch({
-          query: c.keywords.join('|'),
-          lng: center.lng,
-          lat: center.lat,
-          radius: Math.ceil(maxR * 1.25),
-          pageSize: 20,
-        });
-        const items = (r.items || []).filter((x) => Number.isFinite(x.lng) && Number.isFinite(x.lat));
-        return { ...c, items, failed: false };
-      } catch (e) {
-        noteQuotaError(e);
-        return { ...c, items: [], failed: true };
-      }
-    })
-  );
+  const cats = await catsPromise;
 
   /* —— 阶段 3：N×N 网格盲区判定 —— */
   /**

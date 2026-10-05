@@ -253,6 +253,11 @@
   padding: 40rpx 0;
   text-align: center;
 }
+.iso-est-tip {
+  text-align: center;
+  padding: 8rpx 0 4rpx;
+  color: var(--lh-text-weak, #8F959E);
+}
 .iso-map {
   width: 100%;
   height: 460rpx;
