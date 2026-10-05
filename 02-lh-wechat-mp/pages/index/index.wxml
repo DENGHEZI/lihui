@@ -9,6 +9,10 @@
     markers="{{markers}}"
     circles="{{circles}}"
     show-location
+    enable-3D
+    skew="12"
+    enable-overlooking
+    show-compass
     enable-rotate="{{false}}"
     bindmarkertap="onMarkerTap"
   ></map>

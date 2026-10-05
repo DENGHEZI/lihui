@@ -80,7 +80,11 @@
         polygons="{{isoPolygons}}"
         markers="{{isoMarkers}}"
         show-location
-        enable-rotate="{{false}}"
+        enable-3D
+        skew="15"
+        enable-rotate
+        enable-overlooking
+        show-compass
       ></map>
       <view class="iso-est-tip">
         <text class="lh-mini">淡色圆为理论估算范围 · 真实路网圈计算完成后自动替换</text>
@@ -104,7 +108,11 @@
         polygons="{{isoPolygons}}"
         markers="{{isoMarkers}}"
         show-location
-        enable-rotate="{{false}}"
+        enable-3D
+        skew="15"
+        enable-rotate
+        enable-overlooking
+        show-compass
       ></map>
       <view wx:else class="iso-baidu-wrap">
         <image
