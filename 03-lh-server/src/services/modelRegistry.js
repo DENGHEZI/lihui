@@ -17,7 +17,8 @@ const PRESETS = [
     baseUrl: 'https://api-inference.modelscope.cn/v1',
     apiKey: '',
     model: 'Qwen/Qwen2.5-7B-Instruct',
-    enabled: true,
+    // ⚠️ 默认关：没填有效 token 时开着只会 401。seed() 检测到 key（环境变量或库内）会自动启用并设为默认
+    enabled: false,
     isDefault: true,
     preset: true,
     webSearch: false,
@@ -49,7 +50,7 @@ const PRESETS = [
     webSearch: true,
     note: '阿里云百炼 DashScope（消耗个人付费额度，仅手动开启时使用）；qwen-1.8b-chat 已下线，升级为 qwen-flash；联网搜索已开启（enable_search）'
   },
-  { id: 'preset-deepseek', name: 'DeepSeek Chat', provider: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', apiKey: '', model: 'deepseek-chat', enabled: false, isDefault: false, preset: true, note: '支持 Function Calling，推荐用于 MCP 编排' },
+  { id: 'preset-deepseek', name: 'DeepSeek Chat', provider: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', apiKey: '', model: 'deepseek-chat', enabled: true, isDefault: false, preset: true, note: '支持 Function Calling，推荐用于 MCP 编排；账户需有余额（欠费时 API 返回 402）' },
   { id: 'preset-qwen-plus', name: '通义千问 Plus', provider: 'openai-compatible', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: '', model: 'qwen-plus', enabled: false, isDefault: false, preset: true, note: '中文强，支持工具调用' },
   { id: 'preset-glm4flash', name: '智谱 GLM-4-Flash', provider: 'openai-compatible', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', apiKey: '', model: 'glm-4-flash', enabled: false, isDefault: false, preset: true, note: '免费额度大，适合大批量对话' },
   { id: 'preset-ollama', name: '本地 Ollama（备用）', provider: 'ollama', baseUrl: 'http://127.0.0.1:11434', apiKey: 'ollama', model: 'qwen2.5:7b-instruct', enabled: false, isDefault: false, preset: true, note: '完全本地、零成本；仅在云端模型未配 Key 时作为演示备用' },
@@ -81,11 +82,24 @@ function seed() {
       continue;
     }
     const it = list.find((x) => x.id === p.id);
-    // 免费渠道：库里有 key 就尊重库里的；没 key 而环境变量有 → 自动填
-    if (!it.apiKey && process.env[PRESET_ENV_KEY[p.id]]) {
-      it.apiKey = process.env[PRESET_ENV_KEY[p.id]];
-      changed = true;
+    // 免费渠道：库里有 key 就尊重库里的；没 key 而环境变量有 → 自动填；
+    // 且拿到有效 key 后自动启用为默认（没 key 时保持关闭，避免 401 挡住整条链）
+    if (p.id === 'preset-qwen-free') {
+      if (!it.apiKey && process.env[PRESET_ENV_KEY[p.id]]) it.apiKey = process.env[PRESET_ENV_KEY[p.id]];
+      const shouldOn = !!it.apiKey;
+      if (it.enabled !== shouldOn || it.isDefault !== shouldOn) {
+        it.enabled = shouldOn;
+        it.isDefault = shouldOn;
+        changed = true;
+      }
+      if (it.model !== p.model || it.baseUrl !== p.baseUrl) {
+        it.model = p.model;
+        it.baseUrl = p.baseUrl;
+        changed = true;
+      }
+      continue;
     }
+    if (it.apiKey && process.env[PRESET_ENV_KEY[p.id]] && !it.apiKey) it.apiKey = process.env[PRESET_ENV_KEY[p.id]];
     // 开关/默认以代码里的预置为准（防止旧的「付费 preset 是默认」状态残留）
     if (it.enabled !== p.enabled || it.isDefault !== p.isDefault || it.model !== p.model || it.baseUrl !== p.baseUrl) {
       it.enabled = p.enabled;
