@@ -31,13 +31,13 @@ COPY 03-lh-server/src ./src
 COPY 03-lh-server/.env.example ./.env.example
 
 # ★ 运行密钥随镜像构建时注入，云端部署后开箱即用，免去在云控制台逐个填环境变量。
-#   ⚠️ 关键：云托管是【从 Gitee 代码仓库拉代码构建】的，
-#      所以这里 COPY 的文件必须真的存在于仓库里 —— 被 .gitignore 忽略的文件会直接构建失败！
-#     · .env.cloud      → 部署专用（已提交入库），COPY 为 /app/.env，config 用 loadEnvFile 读它
-#     · data/models.json→ 云端模型 Key（已放行入库），modelRegistry 读它
-#     （本地开发的 .env 仍被 gitignore 忽略，不入库）
-#   ⚠️ 安全权衡：镜像内含密钥，仅适用于私有云托管镜像仓库；
-#      若需更严格，删掉下面两行、改回在云控制台配环境变量（config 运行时 env 优先于文件）。
+#   ⚠️ models.json（模型 Key）【不入库】——含明文密钥，进公开仓库即泄露
+#      （2026-10-05 曾因它在 git 历史泄露过一把 key，被迫 git-filter-repo 重写历史）。
+#      云端首次启动由 seed() 自动生成：预置链来自代码，
+#      免费渠道 Key 通过云托管控制台「环境变量」注入：
+#        MODELSCOPE_TOKEN=<ms token>       → 自动启用「通义千问（免费推理）」为默认
+#        SILICONFLOW_API_KEY=<sf key>      → 备选免费档
+#      （本地开发的 models.json 被 03-lh-server/.gitignore 挡住，不入库）
 COPY 03-lh-server/.env.cloud ./.env
 
 # ★ 静态数据目录必须逐个显式 COPY —— 云托管是「从 Gitee 拉仓库 build」的，
@@ -45,9 +45,8 @@ COPY 03-lh-server/.env.cloud ./.env
 #   store.read() 直接返回 null，接口静默返回空数组（表现为「商品打不开 / 列表空白」）。
 #   ⚠️ 以后新增这类静态数据文件（如 data/xxx.json）时，必须在这里同步加一行 COPY，
 #      否则本地跑得好好的，一上云就空。
-#   （运行时才写入的文件 feedback/sessions/tokens/quota/voice/mcp 反而【不能】COPY，
-#     否则会把某个人的历史数据烤进镜像，所有新用户一进去就看到别人的记录。）
-COPY 03-lh-server/data/models.json ./data/models.json
+# 运行时才生成的文件 feedback/sessions/tokens/quota/voice/mcp/models 反而【不能】COPY，
+#   否则会把某个人的历史数据/密钥烤进镜像，所有新用户一进去就看到别人的记录。
 COPY 03-lh-server/data/shop.json ./data/shop.json
 
 # ★ 必须随镜像一起拷贝：MCP Server 是 stdio 子进程，由 config.mcp.dir 解析路径。

@@ -8,9 +8,9 @@ node_modules/
 !*.env.example
 
 # ---------- 服务端运行时数据（日志 / Token 账本 / 反馈） ----------
-# 注意：不能整目录忽略 03-lh-server/data/，否则 data/models.json（云端模型 Key）
-#      会被一起挡掉，云托管构建时 COPY 不到就部署失败。这里逐一排除运行时文件，
-#      放行 models.json 入库。
+# 注意：models.json（模型 Key）由 03-lh-server/.gitignore 挡住，【永不入库】——
+#      云端由 seed() 首次启动自动生成，Key 走云托管控制台环境变量注入
+#      （MODELSCOPE_TOKEN / SILICONFLOW_API_KEY）。这里逐一排除其余运行时文件。
 03-lh-server/data/feedback.json
 03-lh-server/data/logs/
 03-lh-server/data/mcp.json
