@@ -60,7 +60,7 @@
   },
   "permission": {
     "scope.userLocation": {
-      "desc": "用于定位并生成15分钟生活圈体检报告与便民推荐（等时圈支持 15/30/45/60 档）"
+      "desc": "用于定位生成15分钟生活圈体检与便民推荐"
     }
   },
   "navigateToMiniProgramAppIdList": [
