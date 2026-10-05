@@ -34,6 +34,7 @@ Page({
     iso: null,
     isoLoading: false,
     isoMinutes: 15,
+    baiduBase: false,
     gapRows: [],
     standardName: '',
     standardIssuer: '',
@@ -313,6 +314,29 @@ Page({
   onIsoMinutes(e) {
     this.setData({ isoMinutes: Number(e.currentTarget.dataset.m) || 15 })
     this.loadIsochrone()
+  },
+
+  /* 底图切换：微信 map 组件固定腾讯渲染；百度底图走静态图 API */
+  setBaseTencent() {
+    this.setData({ baiduBase: false })
+  },
+  setBaseBaidu() {
+    if (!this.data.iso || !this.data.iso.baiduStatic || !this.data.iso.baiduStatic.url) {
+      wx.showToast({ title: '百度底图生成中，稍后再试', icon: 'none' })
+      return
+    }
+    this.setData({ baiduBase: true })
+  },
+  /** 百度底图点击 → 系统地图页（可切换百度地图 App 发起导航） */
+  openIsoInBaidu() {
+    const c = this.data.isoCenter
+    wx.openLocation({
+      latitude: Number(c.lat),
+      longitude: Number(c.lng),
+      name: '我的 ' + this.data.isoMinutes + ' 分钟生活圈',
+      address: '步行等时圈中心 · 数据源：百度地图开放平台',
+      scale: this.data.iso.baiduStatic ? this.data.iso.baiduStatic.zoom : 14
+    })
   },
 
   /** 优先改造地块 → 拉起地图查看该地块中心（可继续发起导航） */

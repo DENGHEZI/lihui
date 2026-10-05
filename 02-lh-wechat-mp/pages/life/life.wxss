@@ -488,3 +488,48 @@
   font-size: 20rpx;
   color: var(--lh-text-weak);
 }
+
+/* ================= 底图切换（交互地图 / 百度底图） ================= */
+.iso-tools {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14rpx;
+}
+.iso-tool {
+  font-size: 22rpx;
+  color: var(--lh-text-sub);
+  border: 1rpx solid var(--lh-line);
+  border-radius: 999rpx;
+  padding: 6rpx 20rpx;
+  margin-right: 12rpx;
+}
+.iso-tool.on {
+  color: var(--lh-primary);
+  border-color: var(--lh-primary);
+  background: var(--lh-primary-soft);
+  font-weight: 600;
+}
+.iso-tool-hint {
+  flex: 1;
+  font-size: 18rpx;
+  color: var(--lh-text-weak);
+  text-align: right;
+}
+.iso-baidu-wrap {
+  position: relative;
+}
+.iso-baidu {
+  width: 100%;
+  border-radius: 16rpx;
+  display: block;
+}
+.iso-baidu-tip {
+  position: absolute;
+  right: 12rpx;
+  bottom: 12rpx;
+  font-size: 18rpx;
+  color: #FFFFFF;
+  background: rgba(0, 0, 0, .45);
+  border-radius: 8rpx;
+  padding: 4rpx 12rpx;
+}

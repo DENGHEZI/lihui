@@ -71,7 +71,15 @@
     </view>
 
     <block wx:if="{{iso && !isoLoading}}">
+      <!-- 底图切换：微信 <map> 组件固定腾讯渲染，百度底图用静态图 API 渲染同一份等时圈 -->
+      <view class="iso-tools">
+        <text class="iso-tool {{!baiduBase ? 'on' : ''}}" bindtap="setBaseTencent">交互地图</text>
+        <text class="iso-tool {{baiduBase ? 'on' : ''}}" bindtap="setBaseBaidu">百度底图</text>
+        <text class="iso-tool-hint">算路/检索/底图数据源均为百度地图开放平台</text>
+      </view>
+
       <map
+        wx:if="{{!baiduBase}}"
         class="iso-map"
         longitude="{{isoCenter.lng}}"
         latitude="{{isoCenter.lat}}"
@@ -81,6 +89,15 @@
         show-location
         enable-rotate="{{false}}"
       ></map>
+      <view wx:else class="iso-baidu-wrap">
+        <image
+          class="iso-baidu"
+          src="{{iso.baiduStatic.url}}"
+          mode="widthFix"
+          bindtap="openIsoInBaidu"
+        ></image>
+        <text class="iso-baidu-tip">百度地图底图 · 点击跳转导航</text>
+      </view>
 
       <view class="iso-stats">
         <view class="iso-stat">

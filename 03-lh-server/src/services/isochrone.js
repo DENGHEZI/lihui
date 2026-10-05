@@ -27,6 +27,8 @@
 const baiduMap = require('./baiduMap');
 const logger = require('../utils/logger');
 const { Cache } = require('../utils/cache');
+const { gcj02ToBd09 } = require('../utils/coord');
+const config = require('../config');
 const { CATEGORIES, isQuotaBlocked, noteQuotaError } = require('./lifeShared');
 
 /* ---------------- 常量（官方口径） ---------------- */
@@ -608,6 +610,39 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
     method: `栅格 ${gridCellM}m · 判定阈值 覆盖分<${BLIND_SCORE_THRESHOLD} · 36 方向真实路网标定`,
   };
 
+  /* ===== 百度底图静态图 =====
+   * 微信小程序 <map> 组件的底图由微信平台固定用腾讯地图渲染，代码层无法更换。
+   * 这里用百度【静态图 API】把同一份等时圈多边形画在真正的百度底图上，
+   * 端上「百度底图」开关切换查看 —— 数据引擎（算路/POI/静态图）全栈百度。 */
+  let baiduStatic = null;
+  if (config.baidu && config.baidu.ak && polygon.length > 2) {
+    try {
+      const bdPoly = polygon.map((p) => gcj02ToBd09(p.lng, p.lat));
+      // 降采样到 ≤72 点：静态图 URL 过长会被服务端截断
+      const step = Math.max(1, Math.ceil(bdPoly.length / 72));
+      const pathsStr = bdPoly
+        .filter((_, i) => i % step === 0)
+        .map((p) => p.lng.toFixed(6) + ',' + p.lat.toFixed(6))
+        .join(';');
+      const cBd = gcj02ToBd09(center.lng, center.lat);
+      // 图宽 640px 需覆盖 ≥2.6× 最远可达，按墨卡托分辨率反推 zoom
+      const cosLat = Math.cos(rad(center.lat));
+      const needRes = (2.6 * Math.max(maxR, 400)) / 640;
+      const zoom = Math.max(11, Math.min(17, Math.round(Math.log2((156543 * cosLat) / needRes))));
+      const f6 = (n) => Number(n).toFixed(6);
+      const url =
+        'https://api.map.baidu.com/staticimage/v2?ak=' + config.baidu.ak +
+        '&center=' + f6(cBd.lng) + ',' + f6(cBd.lat) +
+        '&zoom=' + zoom + '&width=640&height=480' +
+        '&markers=' + f6(cBd.lng) + ',' + f6(cBd.lat) +
+        '&paths=' + pathsStr +
+        '&pathStyles=0x1677FF,3,0.25';
+      baiduStatic = { url, zoom };
+    } catch (e) {
+      logger.warn('isochrone', `baidu static map build failed: ${e.message}`);
+    }
+  }
+
   // 两个配额池独立（实测）：算路池挂 → 等时圈退化；检索池挂 → 覆盖率降级
   const poiQuotaExhausted = isQuotaBlocked() && cats.every((c) => c.failed);
   const isoDegraded = engine === 'ideal-circle-degraded';
@@ -647,6 +682,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
     engine,
     degraded: isoDegraded,
     analysis: blindAnalysis,
+    baiduStatic,
     quotaExhausted: poiQuotaExhausted,
     hint: hints.join(' ') || undefined,
     generatedAt: new Date().toISOString(),
