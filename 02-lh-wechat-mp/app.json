@@ -63,10 +63,6 @@
       "desc": "用于定位生成15分钟生活圈体检与便民推荐"
     }
   },
-  "navigateToMiniProgramAppIdList": [
-    "wx0e6ed4f51db9d078",
-    "wx2c348cf579062e56"
-  ],
   "requiredPrivateInfos": ["getLocation", "chooseLocation"],
   "networkTimeout": {
     "request": 20000,
