@@ -1,4 +1,8 @@
 <view class="lh-page {{theme === 'dark' ? 'theme-dark' : ''}}">
+  <!-- 玻璃光斑氛围层（纯装饰，不参与布局） -->
+  <view class="lh-glow lh-glow-a"></view>
+  <view class="lh-glow lh-glow-b"></view>
+
   <!-- 模型 -->
   <view class="lh-card">
     <view class="head">
@@ -7,7 +11,7 @@
     </view>
     <text class="lh-cap">支持 OpenAI 兼容 / DeepSeek / Anthropic / Gemini / Ollama，Key 只存在你自己的服务端。</text>
 
-    <view class="model-row {{item.isDefault ? 'on' : ''}}" wx:for="{{models}}" wx:key="id">
+    <view class="model-row {{item.isDefault ? 'on' : ''}} {{!item.enabled ? 'dim' : ''}}" wx:for="{{models}}" wx:key="id">
       <view class="m-mid" bindtap="setDefault" data-id="{{item.id}}">
         <view class="m-name-row">
           <text class="m-name">{{item.name}}</text>

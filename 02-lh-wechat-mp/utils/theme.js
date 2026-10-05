@@ -45,7 +45,7 @@ function apply(page) {
         fail: () => {}
       })
     } else {
-      wx.setNavigationBarColor({ frontColor: '#000000', backgroundColor: '#F4F5F7', fail: () => {} })
+      wx.setNavigationBarColor({ frontColor: '#000000', backgroundColor: '#EAF0FA', fail: () => {} })
       wx.setTabBarStyle({
         color: '#8F959E',
         selectedColor: '#1677FF',

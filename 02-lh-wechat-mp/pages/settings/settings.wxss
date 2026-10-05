@@ -1,5 +1,11 @@
+/* ============================================================
+ * 模型与语音设置 · 玻璃拟态（glassmorphism）
+ * 玻璃基座（--lh-glass / 渐变底 / 光斑）在 app.wxss 全局定义
+ * ============================================================ */
+
 .lh-card {
   margin: 24rpx 32rpx 0;
+  overflow: hidden;
 }
 .head {
   display: flex;
@@ -8,26 +14,42 @@
 }
 .add {
   font-size: 28rpx;
-  color: #1677FF;
+  color: var(--lh-primary);
   font-weight: 600;
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid var(--lh-glass-line);
+  background: var(--lh-glass-hi);
 }
 .lh-card > .lh-cap {
   margin-top: 12rpx;
 }
+
+/* ---------------- 模型行：内嵌玻璃子卡 ---------------- */
 .model-row {
   display: flex;
   align-items: center;
-  padding: 28rpx 0;
-  border-bottom: 1rpx solid #EDEFF2;
-}
-.model-row:last-child {
-  border-bottom: none;
-}
-.model-row.on {
-  background: var(--lh-primary-soft);
-  margin: 0 -32rpx;
-  padding: 28rpx 32rpx;
+  padding: 24rpx;
+  margin-top: 20rpx;
   border-radius: 24rpx;
+  background: var(--lh-glass-hi);
+  border: 1rpx solid var(--lh-glass-line);
+  transition: opacity .2s ease;
+}
+/* 停用的模型：压暗但保持可读（原版几乎看不见） */
+.model-row.dim {
+  opacity: .55;
+}
+/* 使用中：主色光晕玻璃 + 微光边框 */
+.model-row.on {
+  background: linear-gradient(135deg, rgba(22, 119, 255, .16), rgba(22, 119, 255, .05));
+  border-color: rgba(22, 119, 255, .45);
+  box-shadow: 0 4rpx 24rpx rgba(22, 119, 255, .18), inset 0 1rpx 0 rgba(255, 255, 255, .25);
+}
+.theme-dark .model-row.on {
+  background: linear-gradient(135deg, rgba(76, 154, 255, .20), rgba(76, 154, 255, .06));
+  border-color: rgba(76, 154, 255, .55);
+  box-shadow: 0 6rpx 28rpx rgba(76, 154, 255, .22), inset 0 1rpx 0 rgba(255, 255, 255, .12);
 }
 .m-mid {
   flex: 1;
@@ -36,68 +58,101 @@
 .m-name-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
 }
 .m-name {
   font-size: 30rpx;
   font-weight: 600;
-  color: #1A1A1A;
+  color: var(--lh-text);
 }
+
+/* 徽标：玻璃胶囊 */
 .m-badge {
-  margin-left: 16rpx;
+  margin-left: 14rpx;
   font-size: 22rpx;
-  color: #1677FF;
-  background: #EAF2FF;
-  border-radius: 12rpx;
-  padding: 4rpx 12rpx;
+  color: var(--lh-primary);
+  background: var(--lh-primary-soft);
+  border: 1rpx solid rgba(22, 119, 255, .35);
+  border-radius: 999rpx;
+  padding: 4rpx 16rpx;
+  font-weight: 600;
+}
+.theme-dark .m-badge {
+  border-color: rgba(76, 154, 255, .45);
 }
 .m-badge.off {
-  color: #8F959E;
-  background: var(--lh-bg);
+  color: var(--lh-text-weak);
+  background: var(--lh-glass-hi);
+  border: 1rpx solid var(--lh-glass-line);
+  font-weight: 400;
 }
 .m-badge.free {
   color: var(--lh-success);
   background: var(--lh-success-soft);
+  border: 1rpx solid rgba(0, 185, 107, .35);
   font-weight: 600;
+}
+.theme-dark .m-badge.free {
+  border-color: rgba(46, 219, 155, .45);
 }
 .m-meta {
   display: block;
   font-size: 24rpx;
-  color: #646A73;
-  margin-top: 6rpx;
+  color: var(--lh-text-sub);
+  margin-top: 8rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* 操作按钮：玻璃小胶囊 */
 .m-ops {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  margin-left: 20rpx;
+  margin-left: 16rpx;
 }
 .op {
   font-size: 26rpx;
-  color: #1677FF;
-  margin-bottom: 16rpx;
+  color: var(--lh-primary);
+  margin-bottom: 12rpx;
+  padding: 6rpx 22rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid var(--lh-glass-line);
+  background: var(--lh-glass);
+  font-weight: 500;
+  min-width: 88rpx;
+  box-sizing: border-box;
+  text-align: center;
 }
+.op:last-child {
+  margin-bottom: 0;
+}
+
+/* ---------------- 语音 / 高级行 ---------------- */
 .row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 24rpx 0;
-  border-bottom: 1rpx solid #EDEFF2;
+  border-bottom: 1rpx solid var(--lh-line);
+}
+.row:last-child {
+  border-bottom: none;
 }
 .row-inp {
   font-size: 30rpx;
-  color: #1A1A1A;
+  color: var(--lh-text);
   text-align: right;
   flex: 1;
 }
 .ph {
-  color: #8F959E;
+  color: var(--lh-text-weak);
 }
 .pick {
   font-size: 30rpx;
-  color: #1677FF;
+  color: var(--lh-primary);
+  font-weight: 500;
 }
 .slider-row {
   padding: 12rpx 0;
@@ -107,44 +162,67 @@
 }
 .plans {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .plans .lh-pill {
   margin-left: 16rpx;
+  margin-top: 8rpx;
 }
 .lh-card .lh-btn {
   margin-top: 32rpx;
 }
+/* 试听按钮：玻璃幽灵态 */
+.lh-card .lh-btn--ghost {
+  background: var(--lh-glass-hi);
+  border: 1rpx solid var(--lh-glass-line);
+  backdrop-filter: blur(20rpx);
+  -webkit-backdrop-filter: blur(20rpx);
+}
+
+/* ---------------- 编辑弹层：深模糊玻璃 ---------------- */
 .mask {
   position: fixed;
   left: 0;
   right: 0;
   top: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, .45);
+  background: rgba(8, 12, 22, .45);
+  backdrop-filter: blur(10rpx);
+  -webkit-backdrop-filter: blur(10rpx);
   z-index: 60;
   display: flex;
   align-items: flex-end;
 }
 .editor {
   width: 100%;
-  background: var(--lh-card);
+  /* 弹层可读性优先：实底玻璃 */
+  background: var(--lh-card-solid);
+  backdrop-filter: blur(60rpx);
+  -webkit-backdrop-filter: blur(60rpx);
+  border: 1rpx solid var(--lh-glass-line);
+  border-bottom: none;
   border-radius: 40rpx 40rpx 0 0;
   padding: 40rpx 32rpx calc(40rpx + env(safe-area-inset-bottom));
   max-height: 86vh;
   overflow-y: auto;
   box-sizing: border-box;
+  box-shadow: 0 -12rpx 48rpx rgba(0, 0, 0, .18), inset 0 1rpx 0 var(--lh-glass-hi);
 }
 .e-row {
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #EDEFF2;
+  border-bottom: 1rpx solid var(--lh-line);
 }
 .e-inp {
   height: 80rpx;
   background: var(--lh-bg);
+  border: 1rpx solid var(--lh-glass-line);
   border-radius: 20rpx;
   padding: 0 24rpx;
   font-size: 30rpx;
   margin-top: 12rpx;
+  color: var(--lh-text);
+  box-sizing: border-box;
 }
 .e-row .pick {
   display: block;
@@ -152,9 +230,11 @@
   height: 80rpx;
   line-height: 80rpx;
   background: var(--lh-bg);
+  border: 1rpx solid var(--lh-glass-line);
   border-radius: 20rpx;
   padding: 0 24rpx;
-  color: #1A1A1A;
+  color: var(--lh-text);
+  box-sizing: border-box;
 }
 .e-ops {
   display: flex;

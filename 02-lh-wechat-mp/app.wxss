@@ -20,6 +20,13 @@ page {
   --lh-card: #FFFFFF;
   --lh-warn-border: #FFE7BA;
 
+  /* 玻璃拟态令牌（glassmorphism） */
+  --lh-glass: rgba(255, 255, 255, 0.72);
+  --lh-glass-line: rgba(255, 255, 255, 0.85);
+  --lh-glass-hi: rgba(255, 255, 255, 0.55);
+  --lh-card-solid: rgba(255, 255, 255, 0.94);
+  --lh-bg-grad: linear-gradient(175deg, #EAF0FA 0%, #F4F3EE 55%, #F4F5F7 100%);
+
   background-color: #F4F5F7;
   color: #1A1A1A;
   font-size: 30rpx;
@@ -44,6 +51,13 @@ page {
   --lh-bg: #111318;
   --lh-card: #1C2027;
   --lh-warn-border: rgba(255, 169, 64, .35);
+
+  /* 玻璃拟态令牌（暗色）：不全黑，深蓝夜色 + 半透明玻璃 */
+  --lh-glass: rgba(255, 255, 255, 0.065);
+  --lh-glass-line: rgba(255, 255, 255, 0.14);
+  --lh-glass-hi: rgba(255, 255, 255, 0.10);
+  --lh-card-solid: rgba(26, 33, 47, 0.94);
+  --lh-bg-grad: linear-gradient(175deg, #111318 0%, #152033 46%, #111826 78%, #12161F 100%);
 }
 
 /* 关怀模式 */
@@ -59,23 +73,50 @@ page {
   line-height: 1.6;
 }
 
-/* 公共原子类（背景全部走变量，暗色自动适配） */
+/* 公共原子类（背景走渐变玻璃底，暗色自动适配） */
 .lh-page {
   min-height: 100vh;
-  background: var(--lh-bg);
+  background: var(--lh-bg-grad, var(--lh-bg));
   box-sizing: border-box;
 }
 
+/* 玻璃光斑装饰层：页面根节点内放 <view class="lh-glow lh-glow-a/b" /> 即可获得
+   「玻璃后面有光」的氛围（fixed 定位不影响布局，pointer-events 穿透） */
+.lh-glow {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(90rpx);
+  z-index: 0;
+  pointer-events: none;
+}
+.lh-glow-a {
+  width: 560rpx; height: 560rpx;
+  top: -180rpx; right: -160rpx;
+  background: radial-gradient(circle, rgba(22, 119, 255, .30), transparent 68%);
+}
+.lh-glow-b {
+  width: 520rpx; height: 520rpx;
+  top: 46vh; left: -200rpx;
+  background: radial-gradient(circle, rgba(0, 185, 107, .20), transparent 68%);
+}
+.theme-dark .lh-glow-a { background: radial-gradient(circle, rgba(76, 154, 255, .26), transparent 68%); }
+.theme-dark .lh-glow-b { background: radial-gradient(circle, rgba(46, 219, 155, .13), transparent 68%); }
+
 .lh-card {
-  background: var(--lh-card);
+  position: relative;
+  z-index: 1;
+  background: var(--lh-glass);
+  border: 1rpx solid var(--lh-glass-line);
   border-radius: 32rpx;
-  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, .06);
+  backdrop-filter: blur(30rpx);
+  -webkit-backdrop-filter: blur(30rpx);
+  box-shadow: 0 8rpx 32rpx rgba(15, 23, 42, .07), inset 0 1rpx 0 var(--lh-glass-hi);
   padding: 32rpx;
   box-sizing: border-box;
 }
 
 .theme-dark .lh-card {
-  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, .35);
+  box-shadow: 0 12rpx 44rpx rgba(0, 0, 0, .42), inset 0 1rpx 0 var(--lh-glass-hi);
 }
 
 .lh-h1 {
