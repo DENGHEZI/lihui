@@ -12,17 +12,19 @@ const col = store.collection('models', []);
 const PRESETS = [
   {
     id: 'preset-qwen-free',
-    name: '通义千问 · 免费基础版',
+    name: '通义千问 3.8 Flash · 免费基础版',
     provider: 'openai-compatible',
     baseUrl: 'https://api-inference.modelscope.cn/v1',
     apiKey: '',
-    model: 'Qwen/Qwen2.5-7B-Instruct',
+    // ModelScope 免费推理档 2026-10 实测：Qwen2.5-7B-Instruct / Qwen-1.8B 系已下架，
+    // 官方列表内最轻的 Qwen 文本模型为 Qwen3.8-Flash-Next（/v1/models 实测在列）
+    model: 'Qwen/Qwen3.8-Flash-Next',
     // ⚠️ 默认关：没填有效 token 时开着只会 401。seed() 检测到 key（环境变量或库内）会自动启用并设为默认
     enabled: false,
     isDefault: true,
     preset: true,
     webSearch: false,
-    note: '阿里魔搭 ModelScope 官方免费 API 推理（每天 2000 次，0 元），OpenAI 兼容；仍是 Qwen 系列云端。Token 在 modelscope.cn → 控制台 → 访问令牌 免费获取，配 MODELSCOPE_TOKEN 环境变量或在此粘贴'
+    note: '阿里魔搭 ModelScope 官方免费 API 推理（每天 2000 次，0 元），OpenAI 兼容；仍是 Qwen 系列云端。原 Qwen2.5-7B/1.8B 免费档已被魔搭下架，现默认 Qwen3.8-Flash-Next。Token 在 modelscope.cn → 控制台 → 访问令牌 免费获取，配 MODELSCOPE_TOKEN 环境变量或在此粘贴'
   },
   {
     id: 'preset-sf-qwen-free',
