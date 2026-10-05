@@ -10,7 +10,7 @@
     circles="{{circles}}"
     show-location
     enable-3D
-    skew="12"
+    skew="18"
     enable-overlooking
     show-compass
     enable-rotate="{{false}}"

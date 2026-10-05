@@ -81,7 +81,7 @@
         markers="{{isoMarkers}}"
         show-location
         enable-3D
-        skew="15"
+        skew="26"
         enable-rotate
         enable-overlooking
         show-compass
@@ -109,7 +109,7 @@
         markers="{{isoMarkers}}"
         show-location
         enable-3D
-        skew="15"
+        skew="26"
         enable-rotate
         enable-overlooking
         show-compass
