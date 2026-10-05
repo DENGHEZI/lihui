@@ -44,3 +44,6 @@ Thumbs.db
 
 # ---------- WorkBuddy 会话数据（本地工具，不入库） ----------
 .workbuddy/
+
+# 地址补查运行时数据（用户提交的地址，云端自行生成，不入库）
+03-lh-server/data/addr-fixes.json
