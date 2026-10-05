@@ -24,6 +24,13 @@
     <view class="score-box loading-box" wx:else>
       <text class="lh-cap">正在体检…</text>
     </view>
+    <view class="std-ref" wx:if="{{standardName}}" bindtap="toggleStdDetail">
+      <text class="std-ref-badge">依据</text>
+      <text class="std-ref-text">{{standardName}}{{standardCoverage ? ' · 15分钟步行覆盖率目标 ' + standardCoverage + '%'}} · {{standardIssuer}}</text>
+    </view>
+    <view class="std-detail" wx:if="{{showStdDetail && standardQuote}}">
+      <text class="lh-mini">{{standardQuote}}</text>
+    </view>
   </view>
 
   <view class="lh-card cat-card" wx:if="{{report}}">
@@ -98,6 +105,49 @@
         <view class="lg-row"><view class="lg-sw lg-iso"></view><text class="lh-mini">步行等时圈（步速 {{iso.walkSpeed}}m/min × 路网弯曲 {{iso.detourFactor}}）</text></view>
         <view class="lg-row"><view class="lg-sw lg-blind"></view><text class="lh-mini">服务盲区格（覆盖分 &lt; 40，矩阵实测复核）</text></view>
         <view class="lg-row"><view class="lg-sw lg-eng {{iso.degraded ? 'warn' : ''}}"></view><text class="lh-mini">引擎：{{iso.engine}}{{iso.hint ? ' · ' + iso.hint : ''}}</text></view>
+      </view>
+
+      <!-- 服务盲区识别 · 分析面板（工业级指标） -->
+      <view class="blind-panel" wx:if="{{iso.analysis}}">
+        <view class="bp-cards">
+          <view class="bp-card">
+            <text class="bp-num {{iso.summary.blindRatio >= 30 ? 'bad' : iso.summary.blindRatio >= 15 ? 'warn' : 'good'}}">{{iso.summary.blindRatio}}<text class="bp-unit">%</text></text>
+            <text class="bp-lab">盲区点位占比</text>
+          </view>
+          <view class="bp-card">
+            <text class="bp-num">{{iso.analysis.blindAreaHa}}<text class="bp-unit">ha</text></text>
+            <text class="bp-lab">盲区面积</text>
+          </view>
+          <view class="bp-card">
+            <text class="bp-num">{{iso.analysis.detourIndex}}</text>
+            <text class="bp-lab">绕行系数</text>
+          </view>
+        </view>
+
+        <view class="bp-sect" wx:if="{{gapRows.length}}">
+          <text class="bp-sect-t">分类缺口 · 盲区格里该类步行超时的比例</text>
+        </view>
+        <view class="bp-gap" wx:for="{{gapRows}}" wx:key="key">
+          <text class="bp-gap-name">{{item.name}}</text>
+          <view class="bp-gap-bar"><view class="bp-gap-fg {{item.level}}" style="width:{{item.gapPct}}%"></view></view>
+          <text class="bp-gap-pct">{{item.gapPct}}%</text>
+        </view>
+
+        <block wx:if="{{iso.analysis.hotspots.length}}">
+          <view class="bp-sect">
+            <text class="bp-sect-t">优先改造地块 · 按面积 × 缺口强度排序</text>
+          </view>
+          <view class="bp-hot" wx:for="{{iso.analysis.hotspots}}" wx:key="index">
+            <view class="bp-hot-rank {{index === 0 ? 'top' : ''}}">{{index + 1}}</view>
+            <view class="bp-hot-mid">
+              <text class="bp-hot-l1">{{item.areaHa}} 公顷 · {{item.cells}} 格 · 均分 {{item.avgScore}}</text>
+              <text class="bp-hot-l2">最近设施步行约 {{item.avgNearestWalkMin}} 分钟</text>
+            </view>
+            <text class="bp-hot-go" catchtap="navToHotspot" data-i="{{index}}">导航</text>
+          </view>
+        </block>
+
+        <text class="bp-method">{{iso.analysis.method}}</text>
       </view>
     </block>
 

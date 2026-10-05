@@ -521,6 +521,93 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
   const covW = covValid.reduce((a, b) => a + b.weight, 0) || 1;
   const coverageScore = Math.round(covValid.reduce((a, b) => a + b.ratio * (b.weight / covW), 0));
 
+  /* ===== 服务盲区分析（工业级指标，纯后处理，不动引擎主链路） =====
+   *  - blindAreaHa   盲区面积（公顷）= 盲区格数 × 单格面积
+   *  - detourIndex   绕行系数 = 真实最远可达 ÷ 理想直线半径（路网弯曲的实际体现）
+   *  - categoryGaps  分类缺口率 = 盲区格中该类「步行超时/缺失」的比例
+   *  - hotspots      优先改造地块 = 盲区格 4-邻接连通聚类，按 面积 × 缺口强度 排序 Top3
+   */
+  const latRad = (center.lat * Math.PI) / 180;
+  const cellWM = ((bbox.maxLng - bbox.minLng) / gridN) * 111320 * Math.cos(latRad);
+  const cellHM = ((bbox.maxLat - bbox.minLat) / gridN) * 110540;
+  const cellHa = (cellWM * cellHM) / 10000;
+  const blindAreaHa = Math.round(blindCells.length * cellHa * 100) / 100;
+  const idealRadius = minutesN * SPEED_M_PER_MIN;
+  const detourIndex = idealR > 0 ? Math.round((maxR / idealRadius) * 100) / 100 : null;
+
+  const categoryGaps = coverage
+    .filter((c) => !c.failed)
+    .map((c) => {
+      let miss = 0;
+      for (const cell of blindCells) {
+        const w = cell.walkMinByCategory[c.key];
+        if (w === null || w === undefined || w >= minutesN) miss++;
+      }
+      return {
+        key: c.key,
+        name: c.name,
+        gapPct: blindCells.length ? Math.round((miss / blindCells.length) * 100) : 0,
+      };
+    })
+    .sort((a, b) => b.gapPct - a.gapPct);
+
+  const cellKey = (c) => c.i + ',' + c.j;
+  const blindSet = new Set(blindCells.map(cellKey));
+  const seen = new Set();
+  const clusters = [];
+  for (const c0 of blindCells) {
+    if (seen.has(cellKey(c0))) continue;
+    const stack = [c0];
+    seen.add(cellKey(c0));
+    const comp = [];
+    while (stack.length) {
+      const cur = stack.pop();
+      comp.push(cur);
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const ni = cur.i + di;
+        const nj = cur.j + dj;
+        const nk = ni + ',' + nj;
+        if (blindSet.has(nk) && !seen.has(nk)) {
+          seen.add(nk);
+          const nb = blindCells.find((x) => x.i === ni && x.j === nj);
+          if (nb) stack.push(nb);
+        }
+      }
+    }
+    clusters.push(comp);
+  }
+  const hotspots = clusters
+    .map((comp) => {
+      const avgScore = Math.round(comp.reduce((a, b) => a + (b.score || 0), 0) / comp.length);
+      const walkMins = comp.map((x) => x.nearestWalkMin).filter((x) => x !== null && x !== undefined);
+      const avgNearest = walkMins.length
+        ? Math.round((walkMins.reduce((a, b) => a + b, 0) / walkMins.length) * 10) / 10
+        : null;
+      return {
+        cells: comp.length,
+        areaHa: Math.round(comp.length * cellHa * 100) / 100,
+        avgScore,
+        avgNearestWalkMin: avgNearest,
+        center: {
+          lng: Math.round((comp.reduce((a, b) => a + b.lng, 0) / comp.length) * 1e6) / 1e6,
+          lat: Math.round((comp.reduce((a, b) => a + b.lat, 0) / comp.length) * 1e6) / 1e6,
+        },
+        priority: Math.round(comp.length * cellHa * (100 - avgScore) * 100) / 100,
+      };
+    })
+    .sort((a, b) => b.priority - a.priority)
+    .slice(0, 3);
+  const gridCellM = Math.round((cellWM + cellHM) / 2);
+  const blindAnalysis = {
+    blindAreaHa,
+    detourIndex,
+    categoryGaps,
+    hotspots,
+    gridCellM,
+    blindScoreThreshold: BLIND_SCORE_THRESHOLD,
+    method: `栅格 ${gridCellM}m · 判定阈值 覆盖分<${BLIND_SCORE_THRESHOLD} · 36 方向真实路网标定`,
+  };
+
   // 两个配额池独立（实测）：算路池挂 → 等时圈退化；检索池挂 → 覆盖率降级
   const poiQuotaExhausted = isQuotaBlocked() && cats.every((c) => c.failed);
   const isoDegraded = engine === 'ideal-circle-degraded';
@@ -559,6 +646,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
     },
     engine,
     degraded: isoDegraded,
+    analysis: blindAnalysis,
     quotaExhausted: poiQuotaExhausted,
     hint: hints.join(' ') || undefined,
     generatedAt: new Date().toISOString(),

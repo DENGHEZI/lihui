@@ -8,6 +8,7 @@ const hub = require('../mcp/hub');
 const logger = require('../utils/logger');
 const { CATEGORIES, isQuotaBlocked, noteQuotaError, fetchCategory } = require('../services/lifeShared');
 const { buildIsochrone } = require('../services/isochrone');
+const standards = require('../services/standards');
 
 function numOr(v, d) {
   const n = Number(v);
@@ -128,6 +129,13 @@ module.exports = {
       logger.error('life', `isochrone failed: ${e.message}`);
       return fail(res, 5004, '等时圈计算失败，请稍后再试');
     }
+  },
+
+  /** GET /api/v1/life/standards?city=长沙
+   *  各地生活圈管理规范（评分依据）：按城市匹配适用标准，未命中回退国家指南。
+   *  端上 GET 缓存 7 天；本地缓存 + 云端存储双通道。 */
+  'GET /life/standards': async (req, res, q) => {
+    return ok(res, standards.resolve(q && q.city));
   },
 
   /** POST /api/v1/life/customize */

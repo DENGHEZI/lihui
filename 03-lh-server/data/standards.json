@@ -1,0 +1,91 @@
+{
+  "updatedAt": "2026-10-05",
+  "defaultId": "national-2021",
+  "items": [
+    {
+      "id": "national-2021",
+      "match": ["全国", "default"],
+      "name": "《社区生活圈规划技术指南》（TD/T 1062—2021）",
+      "issuer": "自然资源部",
+      "effective": "2021-07-01",
+      "quote": "以 15 分钟步行范围为空间尺度配置居民基本生活所需功能；城镇社区构建 15 分钟、5-10 分钟两级生活圈；服务要素分为基础保障型、品质提升型与特色引导型三类；15 分钟圈不宜跨越城市主干路、大型河流山体、铁路等空间屏障。",
+      "metrics": {
+        "walkMinutes": 15,
+        "radiusM": [800, 1000],
+        "areaKm2": [2, 4],
+        "populationWan": [5, 10],
+        "walkCoverageTarget": 85,
+        "blindScoreThreshold": 40
+      },
+      "source": "mnr.gov.cn"
+    },
+    {
+      "id": "shanghai-2016",
+      "match": ["上海"],
+      "name": "《上海市 15 分钟社区生活圈规划导则》",
+      "issuer": "上海市规划和国土资源管理局",
+      "effective": "2016-08",
+      "quote": "全国首个 15 分钟社区生活圈导则；生活圈范围一般约 3 平方公里、常住人口约 5-10 万人；2019 年起选取试点街道全面推动「社区生活圈行动」，强调「宜业、宜居、宜游、宜养、宜学」五宜社区。",
+      "metrics": {
+        "walkMinutes": 15,
+        "radiusM": [800, 1000],
+        "areaKm2": [2, 3],
+        "populationWan": [5, 10],
+        "walkCoverageTarget": 85,
+        "blindScoreThreshold": 40
+      },
+      "source": "shanghai.gov.cn"
+    },
+    {
+      "id": "changsha-2021",
+      "match": ["长沙"],
+      "name": "《长沙市居住公共服务设施配置规定》（长政办发〔2021〕2 号）与「一圈两场三道」行动计划",
+      "issuer": "长沙市人民政府办公厅",
+      "effective": "2021-02 / 2018-05",
+      "quote": "力争公服设施 15 分钟步行覆盖率 ≥85%；以街道为基础规划 400+ 个 15 分钟步行生活圈；居住区商业按不超过计容建筑 3% 且不少于 300㎡ 集中配建；居家养老服务中心每百户 ≥30㎡。长沙已建成 150+ 个高质量一刻钟便民生活圈，入选全国一刻钟便民生活圈全域推进先行区。",
+      "metrics": {
+        "walkMinutes": 15,
+        "radiusM": [800, 1000],
+        "areaKm2": [2, 4],
+        "populationWan": [5, 10],
+        "walkCoverageTarget": 85,
+        "blindScoreThreshold": 40
+      },
+      "source": "changsha.gov.cn"
+    },
+    {
+      "id": "shenzhen-2035",
+      "match": ["深圳"],
+      "name": "《深圳市国土空间总体规划（2020-2035 年）》社区生活圈专项",
+      "issuer": "深圳市规划和自然资源局",
+      "effective": "2020",
+      "quote": "到 2035 年，卫生、养老、教育、文化、体育等社区公共服务设施 15 分钟步行无障碍可达覆盖率达到 90% 左右；标准单元平均规模 1-2 平方公里，以 15 分钟生活圈、10 分钟就业圈为基础空间单元。",
+      "metrics": {
+        "walkMinutes": 15,
+        "radiusM": [800, 1000],
+        "areaKm2": [1, 2],
+        "populationWan": [2, 6],
+        "walkCoverageTarget": 90,
+        "blindScoreThreshold": 40
+      },
+      "source": "sz.gov.cn"
+    },
+    {
+      "id": "suzhou-2021",
+      "match": ["苏州"],
+      "name": "《苏州社区品质提升专项规划（2021-2025 年）》（苏府办〔2021〕164 号）",
+      "issuer": "苏州市人民政府办公厅",
+      "effective": "2021-10",
+      "quote": "依据 GB50180-2018 与《社区生活圈规划技术指南》划定圈层：5 分钟圈步行 200-300m/服务 0.5 万人，10 分钟圈 500m/1.5 万人，15 分钟圈 800-1000m/5 万人；以服务人群设施的最低步行可达距离为标准，合理划定覆盖范围，寻找服务盲区。",
+      "metrics": {
+        "walkMinutes": 15,
+        "radiusM": [800, 1000],
+        "areaKm2": [2, 4],
+        "populationWan": [5, 10],
+        "walkCoverageTarget": 85,
+        "blindScoreThreshold": 40
+      },
+      "source": "suzhou.gov.cn"
+    }
+  ]
+}

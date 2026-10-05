@@ -34,6 +34,11 @@ Page({
     iso: null,
     isoLoading: false,
     isoMinutes: 15,
+    gapRows: [],
+    standardName: '',
+    standardIssuer: '',
+    standardQuote: '',
+    standardCoverage: null,
     isoPolygons: [],
     isoMarkers: [],
     isoScale: 15,
@@ -82,10 +87,26 @@ Page({
       center: { lng: Number(loc.lng), lat: Number(loc.lat) },
       centerText: [loc.city, loc.district].filter(Boolean).join(' ') || '当前位置'
     })
+    this.loadStandards(loc.city)
     await this.loadReport()
     // 自动把 30 分钟等时圈画出来：以前要点「分钟」选项才触发，进页面看不到圈，
     // 客户以为「生活圈大小没有变化」——现在进来就算
     if (!this.data.iso && !this.data.isoLoading) this.loadIsochrone()
+  },
+
+  /** 各地管理规范（评分依据）：本地缓存 + 云端存储，按定位城市匹配适用标准 */
+  async loadStandards(city) {
+    try {
+      const d = await api.lifeStandards(city)
+      const s = d && d.standard
+      if (!s) return
+      this.setData({
+        standardName: s.name,
+        standardIssuer: s.issuer,
+        standardQuote: s.quote,
+        standardCoverage: s.metrics && s.metrics.walkCoverageTarget
+      })
+    } catch (e) { /* 规范拉取失败不影响体检主链路 */ }
   },
 
   async loadReport() {
@@ -213,8 +234,14 @@ Page({
       const { polygons, markers } = this.buildIsoShapes(d)
       const reachKm = (d.summary && d.summary.maxReachM ? d.summary.maxReachM : 1500) * 2 / 1000
       const isoScale = reachKm < 0.6 ? 17 : reachKm < 1.2 ? 16 : reachKm < 2.5 ? 15 : reachKm < 5 ? 14 : 13
+      // 分类缺口条形：gap≥50% 红 / ≥30% 橙 / 其余绿
+      const a = d.analysis || {}
+      const gapRows = (a.categoryGaps || []).map((g) => Object.assign({}, g, {
+        level: g.gapPct >= 50 ? 'bad' : g.gapPct >= 30 ? 'warn' : 'ok'
+      }))
       this.setData({
         iso: d,
+        gapRows,
         isoPolygons: polygons,
         isoMarkers: markers,
         isoScale,
@@ -285,6 +312,20 @@ Page({
     this.loadIsochrone()
   },
 
+  /** 优先改造地块 → 拉起地图查看该地块中心（可继续发起导航） */
+  navToHotspot(e) {
+    const hs = this.data.iso && this.data.iso.analysis && this.data.iso.analysis.hotspots
+    const h = hs && hs[Number(e.currentTarget.dataset.i)]
+    if (!h || !h.center) return
+    wx.openLocation({
+      latitude: Number(h.center.lat),
+      longitude: Number(h.center.lng),
+      name: '优先改造地块 · ' + h.areaHa + ' 公顷',
+      address: '覆盖分 ' + h.avgScore + ' · 最近设施步行约 ' + h.avgNearestWalkMin + ' 分钟',
+      scale: 15
+    })
+  },
+
   async customize() {
     wx.showLoading({ title: '生成方案中' })
     try {
@@ -352,6 +393,11 @@ Page({
 
   jumpMap() {
     wx.switchTab({ url: '/pages/index/index' })
+  },
+
+  /** 展开/收起规范原文摘录 */
+  toggleStdDetail() {
+    this.setData({ showStdDetail: !this.data.showStdDetail })
   },
 
   fmtDist(d) {

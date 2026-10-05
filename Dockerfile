@@ -48,6 +48,8 @@ COPY 03-lh-server/.env.cloud ./.env
 # 运行时才生成的文件 feedback/sessions/tokens/quota/voice/mcp/models 反而【不能】COPY，
 #   否则会把某个人的历史数据/密钥烤进镜像，所有新用户一进去就看到别人的记录。
 COPY 03-lh-server/data/shop.json ./data/shop.json
+# 各地生活圈管理规范（体检评分依据）：静态数据，必须 COPY，漏了 → /life/standards 降级内置兜底
+COPY 03-lh-server/data/standards.json ./data/standards.json
 
 # ★ 必须随镜像一起拷贝：MCP Server 是 stdio 子进程，由 config.mcp.dir 解析路径。
 #   MCP_BASE = path.resolve('/app', '..', '..') + '/04-lh-mcp-servers' = /04-lh-mcp-servers
