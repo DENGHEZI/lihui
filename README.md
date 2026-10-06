@@ -44,7 +44,11 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 
 **网页版真机渲染**（自动定位 → IP 兜底 → 天气 → 生活圈体检 → 真实店源）：
 
-![鲤慧网页版真机渲染：自动定位 → IP 兜底 → 天气 → 生活圈体检 → 真实店源](docs/screenshots/11-web-preview.png)
+<div align="center">
+
+<img src="docs/screenshots/11-web-preview.png" width="820" alt="鲤慧网页版真机渲染：自动定位 → IP 兜底 → 天气 → 生活圈体检 → 真实店源" />
+
+</div>
 
 ---
 
@@ -66,31 +70,27 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 
 ## 📱 真机一览
 
-| 地图主页 · 便民服务 | 15 分钟生活圈 | 生活圈体检报告 |
+| 地图主页 · 便民服务 | 生活圈体检报告 | 个性化生活圈方案 |
 | :---------: | :------: | :-----: |
-| ![地图主页：便民服务与定位](docs/screenshots/01-home-map.jpg) | ![30 分钟生活圈半径](docs/screenshots/02-home-circle.jpg) | ![生活圈体检报告：医疗 / 教育 / 交通短板](docs/screenshots/03-life-report.jpg) |
+| ![地图主页：便民服务与定位](docs/screenshots/01-home-map.jpg) | ![生活圈体检报告：医疗 / 教育 / 交通短板](docs/screenshots/03-life-report.jpg) | ![个性化生活圈方案](docs/screenshots/04-life-plan.jpg) |
 
-| 个性化生活圈方案 | AI 助手 | Token 用量 · 平台信息 |
-| :------: | :---: | :-------------: |
-| ![个性化生活圈方案](docs/screenshots/04-life-plan.jpg) | ![AI 助手：MCP 工具编排回答](docs/screenshots/05-assistant.jpg) | ![Token 用量与平台信息](docs/screenshots/06-mine.jpg) |
+| AI 助手 · MCP 编排 | AI 助手 · 情绪关怀 | AI 助手 · 周边问答 |
+| :---: | :---------: | :-----------: |
+| ![AI 助手：MCP 工具编排回答](docs/screenshots/05-assistant.jpg) | ![AI 助手情绪关怀：「今天有点累想找人聊聊」→ 温和陪伴 + 周边买菜问答](docs/screenshots/13-assistant-care.jpg) | ![AI 助手生活问答：遛弯公园 / 美食推荐（按评分排序 + 距离标注）](docs/screenshots/14-assistant-life.jpg) |
 
-| 鲤慧商城 · 郴州热门 | 鲤慧商城 · 附近真实 | 我的订单（可跳第三方支付） |
-| :---------: | :---------: | :-----------: |
-| ![鲤慧商城郴州热门：百度实时店源与配额提示条](docs/screenshots/07-mall-hot.jpg) | ![鲤慧商城附近真实：按我的位置 3km 检索](docs/screenshots/08-mall-near.jpg) | ![我的订单：待支付与已取消，跳转第三方支付](docs/screenshots/09-orders.jpg) |
-
-| 模型与语音设置（6 类供应商） | 关怀模式 · 适老化 | 步行等时圈 · 服务盲区 |
+| 体检 · 六类雷达图 | 等时圈 · 15 分钟档 | 等时圈 · 服务盲区 |
 | :-------------: | :--------: | :-----: |
-| ![模型与语音设置：OpenAI 兼容 / DeepSeek / Ollama 多供应商](docs/screenshots/10-models-voice.jpg) | ![关怀模式：适老化与慢速语音](docs/screenshots/03-life-report.jpg) | ![步行等时圈与服务盲区：真实路网批量算路 + 覆盖分盲区识别（30 分钟档真机实测）](docs/screenshots/12-isochrone.jpg) |
+| ![生活圈体检 95 分：六类设施雷达图 + 国家规范依据徽章](docs/screenshots/19-life-report-radar.jpg) | ![步行等时圈 15 分钟档：1.75km²、910m 最远可达、0 盲区（引擎 routematrix-batch）](docs/screenshots/20-isochrone-15min.jpg) | ![步行等时圈 30 分钟档：真实路网批量算路 + 覆盖分盲区识别](docs/screenshots/12-isochrone.jpg) |
 
-| 体检报告 · 雷达图 | 等时圈 · 15 分钟档 | 出行休闲 · 天气 |
-| :-------------: | :--------: | :-----: |
-| ![生活圈体检 95 分：六类设施雷达图 + 国家规范依据徽章](docs/screenshots/19-life-report-radar.jpg) | ![步行等时圈 15 分钟档：1.75km²、910m 最远可达、0 盲区（引擎 routematrix-batch）](docs/screenshots/20-isochrone-15min.jpg) | ![地图主页：出行休闲推荐 + 今日天气 24° 晴 AQI 38](docs/screenshots/16-home-weather.jpg) |
+| 鲤慧商城 · 定位 3km 热门 | 我的订单 · 第三方支付 | 出行休闲 · 今日天气 |
+| :---------: | :-----------: | :-----: |
+| ![鲤慧商城定位热门：按当前位置 3km 实时检索百度真实店源（名称 / 地址 / 电话 / 参考价）](docs/screenshots/08-mall-near.jpg) | ![我的订单：待支付与已取消，跳转第三方支付](docs/screenshots/09-orders.jpg) | ![地图主页：出行休闲推荐 + 今日天气 24° 晴 AQI 38](docs/screenshots/16-home-weather.jpg) |
 
-| AI 助手 · 情绪关怀 | AI 助手 · 周边问答 | 模型设置 · 双主题玻璃拟态 |
-| :---------: | :---------: | :-----------: |
-| ![AI 助手情绪关怀：「今天有点累想找人聊聊」→ 温和陪伴 + 周边买菜问答](docs/screenshots/13-assistant-care.jpg) | ![AI 助手生活问答：遛弯公园 / 美食推荐（按评分排序 + 距离标注）](docs/screenshots/14-assistant-life.jpg) | ![模型与语音设置：亮暗双主题玻璃拟态，Key 只存在自己的服务端](docs/screenshots/22-settings-dark.jpg) |
+| 模型与语音 · 6 类供应商 | 设置 · 夜间玻璃拟态 | Token 用量 · 平台信息 |
+| :-------------: | :--------: | :-------------: |
+| ![模型与语音设置：OpenAI 兼容 / DeepSeek / Ollama 多供应商](docs/screenshots/10-models-voice.jpg) | ![模型与语音设置：夜间玻璃拟态，Key 只存在自己的服务端](docs/screenshots/22-settings-dark.jpg) | ![Token 用量与平台信息](docs/screenshots/06-mine.jpg) |
 
-> 商城页全部店名 / 地址 / 电话来自**百度地图 place 实时检索**（非内置假数据）；  
+> 商城页全部店名 / 地址 / 电话来自**百度地图 place 实时检索**（按当前定位 3km 拉取，非内置假数据）；  
 > 配额耗尽时前端弹提示条并回落到最近一次可用结果，**不白板**。
 
 ---
@@ -99,6 +99,8 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 
 | 更新 | 说明 |
 |---|---|
+| 🧠 **用户画像自动学习 + 个性化推荐** | 端上静默埋点（搜索 / 对话话题 / 点店 / 导航，5s 节流、失败零打扰）→ 服务端**增量聚合 + 每日 ×0.98 衰减**（30 天不来的习惯自然淡化）；搜索结果**同距离带内重排**（常去店 +25 / 常搜词 +8 / 常搜类目 +4，距离仍是第一权重）；AI 助手注入画像摘要，主动给「顺路组合」建议；设置页新增「个性化推荐」开关，关闭即停报，只存地点与类目、**不采集任何身份信息** |
+| 🚨 **危险自动响应分级（蜜罐后补丁）** | L1 单次踩蜜罐封 IP 10min → L2 同 IP ≥3 次封 24h → L3 1h 内 ≥3 个不同 IP 命中同一渠道判定**渠道泄露**，自动轮换该渠道蜜罐密钥（旧假钥匙即刻作废）；新增 `GET /security/events` 安全事件面板（最近事件 + 封禁名单 + 蜜罐状态） |
 | 🛡 **API 密钥安全升级（蜜罐 + 全链路收敛）** | 排查出 **3 个真实泄露渠道**并全部封堵：`/map-home` 页面不再注入服务端真 AK（改浏览器端 AK / 蜜罐）、等时圈静态图改**服务端代理回传**（端上只见代理地址不见 ak）、`/bmap/proxy` 收紧为**百度域白名单**（堵 SSRF：裸 IP / 内网地址一律 403）；新增 `utils/security.js` 安全层——**4 把蜜罐假密钥**散布在页面与模板中，谁拿蜜罐来请求 → `security.log` 记录 IP / 渠道 / UA + 封禁 10 分钟；配置篡改自检告警。**密钥只存 `.env`（本地）与云托管环境变量（云端），源码零密钥** |
 | 🚦 **高并发防护** | 百度出站**令牌桶限流**（`BAIDU_QPS` 可配，默认 30）——高并发排队而非瞬间打爆配额；相同参数请求 **in-flight 去重合并**（实测 3 并发只算 1 次，多端同页不雪崩）；JSON 存储**原子写**（tmp+rename，防半截文件静默丢数据） |
 | 🗺 **地图 3D 视角** | 全部 3 张交互地图开启 `enable-3D` 楼块立体 + 26° 初始倾角（生活圈）/ 18°（首页）+ 双指俯仰 / 旋转手势 + 指南针回正，百度地图 App 同款 3D 观感 |
@@ -590,7 +592,9 @@ curl https://.../api/v1/mcp/list         # baidu-map / life-circle 必须 runnin
 - [x] **订单金额口径统一**（确认单价落库 + 金额落分 + 参考价说明）
 - [x] **默认模型切换免费 Qwen**（ModelScope 免费推理，付费渠道默认停用）
 - [x] **API 密钥安全升级**（蜜罐密钥 + AK 全链路收敛 + SSRF 白名单 + security.log 审计）
+- [x] **危险自动响应分级**（L1/L2/L3 封禁 + 渠道泄露判定 + 蜜罐自动轮换 + 安全事件面板）
 - [x] **高并发防护**（百度出站令牌桶 + in-flight 去重 + JSON 原子写）
+- [x] **用户画像自动学习 + 个性化推荐**（6 类行为事件 + 每日衰减 + 同距离带重排 + 助手画像注入 + 可关闭开关）
 - [x] **地图 3D 视角 + 全页夜间玻璃拟态**（enable-3D 楼块 / 26° 倾角 / 双指俯仰；伪元素光斑 9 页全局生效）
 - [ ] `lihui-tech.online` 自定义域名 + HTTPS（绑定 DNSPod CNAME）
 - [ ] ModelScope 一键安装 MCP Server
