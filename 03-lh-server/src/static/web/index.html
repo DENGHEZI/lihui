@@ -30,7 +30,8 @@
   html { -webkit-text-size-adjust: 100%; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "MiSans", "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
-    background: var(--bg); color: var(--text); line-height: 1.6;
+    background: linear-gradient(180deg, #EDF2FA 0%, #F6F7FA 380px) fixed, var(--bg);
+    color: var(--text); line-height: 1.6;
     min-height: 100vh; font-size: 15px;
     -webkit-font-smoothing: antialiased;
   }
@@ -100,19 +101,37 @@
   .banner::before { content: '⚠️ '; }
 
   /* ---------- 定位 / 天气 ---------- */
-  .hero { display: flex; gap: 16px; align-items: stretch; }
+  .card.hero {
+    background: linear-gradient(135deg, #1677FF 0%, #3E97FF 52%, #74BEFF 100%);
+    border-color: transparent; color: #fff;
+    box-shadow: 0 14px 34px -12px rgba(22,119,255,.55), inset 0 1px 0 rgba(255,255,255,.28);
+    position: relative; overflow: hidden;
+  }
+  .card.hero::before { content: ''; position: absolute; right: -60px; top: -80px;
+    width: 220px; height: 220px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,.16) 0%, rgba(255,255,255,0) 70%); }
+  .card.hero::after { content: ''; position: absolute; right: 70px; bottom: -90px;
+    width: 170px; height: 170px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 70%); }
+  .hero { display: flex; gap: 16px; align-items: stretch; position: relative; z-index: 1; }
   .hero .left { flex: 1; min-width: 0; }
-  .hero .city { font-size: 22px; font-weight: 700; letter-spacing: .3px; line-height: 1.35; }
-  .hero .meta { font-size: 12.5px; color: var(--text-3); margin-top: 3px; }
-  .hero .meta b { color: var(--text-2); font-weight: 550; }
+  .hero .city { font-size: 22px; font-weight: 700; letter-spacing: .3px; line-height: 1.35; color: #fff; }
+  .hero .meta { font-size: 12.5px; color: rgba(255,255,255,.78); margin-top: 3px; }
+  .hero .meta b { color: rgba(255,255,255,.95); font-weight: 550; }
   .weather {
-    flex: none; width: 136px; border-left: 1px dashed var(--line); padding-left: 16px;
+    flex: none; width: 136px; border-left: 1px dashed rgba(255,255,255,.30); padding-left: 16px;
     display: flex; flex-direction: column; justify-content: center;
   }
-  .weather .t { font-size: 30px; font-weight: 750; color: var(--primary); line-height: 1.2;
+  .weather .t { font-size: 30px; font-weight: 750; color: #fff; line-height: 1.2;
     font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
-  .weather .t small { font-size: 13px; font-weight: 450; color: var(--text-2); margin-left: 3px; letter-spacing: 0; }
-  .weather .d { font-size: 12px; color: var(--text-3); margin-top: 3px; }
+  .weather .t small { font-size: 13px; font-weight: 450; color: rgba(255,255,255,.88); margin-left: 3px; letter-spacing: 0; }
+  .weather .d { font-size: 12px; color: rgba(255,255,255,.72); margin-top: 3px; }
+  .hero .btn {
+    background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.38); color: #fff;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    box-shadow: none;
+  }
+  .hero .btn:hover { background: rgba(255,255,255,.26); border-color: rgba(255,255,255,.55); color: #fff; box-shadow: none; }
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     border: 1px solid var(--line); background: var(--card); color: var(--text-2); font-weight: 500;

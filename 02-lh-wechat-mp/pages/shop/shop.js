@@ -64,7 +64,18 @@ Page({
 
   async load() {
     this.setData({ loading: true })
-    const loc = app.globalData.location || {}
+    let loc = app.globalData.location || {}
+    // 定位为主：进商城默认「附近真实」，定位尚未就绪时最多等 4s；
+    // 仍拿不到坐标才自动切「郴州热门」兜底，并明确告知（下次定位更新 onShow 会切回）
+    if (this.data.curSource === 'near' && !isFinite(Number(loc.lng))) {
+      const ok = await this.waitLoc(4000)
+      if (!ok) {
+        this.setData({ curSource: 'hot', list: [], emptyHint: '', quotaHit: false })
+        wx.showToast({ title: '未获取到定位，已展示郴州热门', icon: 'none', duration: 2400 })
+        return this.load()
+      }
+      loc = app.globalData.location || {}
+    }
     const mode = this.data.curSource
     try {
       // 真实店源：服务端已用百度 POI 建过目录，这里只取列表（省百度配额）
@@ -106,6 +117,20 @@ Page({
         })
       }
     }
+  },
+
+  /** 轮询等待 app 全局定位就绪（50ms 间隔，最多 ms 毫秒） */
+  waitLoc(ms) {
+    return new Promise((resolve) => {
+      const t0 = Date.now()
+      const tick = () => {
+        const l = app.globalData.location
+        if (l && isFinite(Number(l.lng))) return resolve(true)
+        if (Date.now() - t0 >= ms) return resolve(false)
+        setTimeout(tick, 50)
+      }
+      tick()
+    })
   },
 
   fmtTime(ts) {
