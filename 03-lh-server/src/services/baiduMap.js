@@ -11,6 +11,7 @@ const { fetchJSON } = require('../utils/http');
 const { Cache } = require('../utils/cache');
 const logger = require('../utils/logger');
 const { safeBd09ToGcj02 } = require('../utils/coord');
+const security = require('../utils/security');
 
 const cache = new Cache(800);
 const BASE = () => config.baidu.base;
@@ -26,6 +27,12 @@ async function call(pathname, params, { ttl = 0, cacheKey = '' } = {}) {
     if (hit !== undefined) return hit;
   }
   const qs = new URLSearchParams({ ...params, ak: AK(), output: 'json' }).toString();
+  // 蜜罐自检:出站 key 若被污染成蜜罐值,说明配置被篡改,立即告警
+  if (security.HONEYPOTS.includes(AK())) {
+    security.securityLog('honeypot-outbound', { detail: 'BAIDU_AK 疑似被替换为蜜罐值,请检查 .env' });
+  }
+  // 出站令牌桶:高并发时在此排队(保护百度配额,防瞬间打爆)
+  await security.baiduBucket.take();
   const url = `${BASE()}${pathname}?${qs}`;
   const raw = await fetchJSON(url, { timeout: 9000, retry: 1 });
   // 百度统一状态码：0 成功

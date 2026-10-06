@@ -22,6 +22,12 @@ const numOr = (v, d) => {
  * 写入同时进内存 + 落盘；内存优先读，避免并发时 read-modify-write 互相覆盖。
  */
 const store = require('../services/store');
+let bmapSite = null;
+try {
+  bmapSite = require('../services/bmapSite');
+} catch (_) {}
+const config = require('../config');
+const security = require('../utils/security');
 const POI_MEM = new Map();
 const POI_FILE = 'poi';
 const POI_MAX_AGE = 6 * 60 * 60 * 1000; // 6 小时
@@ -68,6 +74,55 @@ function poiCacheGet(key) {
 }
 
 module.exports = {
+  /* ---------------- 百度静态图代理(安全升级 2026-10-06) ----------------
+   * 旧版 isochrone 直接把带 ak 的静态图 URL 下发端上 → AK 被扒(被盗主渠道之一)。
+   * 现在端上只拿到本端点路径,AK 由这里在服务端注入后拉图回传二进制,密钥永不出门。
+   * 参数全部走白名单校验(数值/受限字符),防止参数注入拼出非预期请求。 */
+  'GET /map/staticimg': async (req, res, q) => {
+    if (!config.baidu.ak) return fail(res, 5002, '百度 AK 未配置');
+    const geoRe = /^-?\d{1,3}(\.\d+)?,-?\d{1,3}(\.\d+)?$/;
+    const center = String(q.center || '').match(geoRe);
+    if (!center) return fail(res, 1001, 'center 必填,格式 lng,lat');
+    const markers = String(q.markers || '').match(geoRe);
+    const paths = String(q.paths || '');
+    // paths 只允许 数字/逗号/分号/负号/小数点(静态图路径参数),长度 ≤1800(百度 URL 上限)
+    if (!paths || paths.length > 1800 || !/^[-0-9.,;]+$/.test(paths)) {
+      return fail(res, 1001, 'paths 非法');
+    }
+    const zoom = Math.max(3, Math.min(18, numOr(q.zoom, 15)));
+    const w = Math.max(80, Math.min(1024, numOr(q.width, 640)));
+    const h = Math.max(80, Math.min(1024, numOr(q.height, 480)));
+    const pathStyles = /^0x[0-9A-Fa-f]{6},\d{1,2},(0(\.\d{1,2})?|1(\.0{1,2})?)$/.test(String(q.pathStyles || ''))
+      ? String(q.pathStyles)
+      : '0x1677FF,3,0.25';
+    const url =
+      'https://api.map.baidu.com/staticimage/v2?ak=' + encodeURIComponent(config.baidu.ak) +
+      '&center=' + encodeURIComponent(center[0]) +
+      '&zoom=' + zoom + '&width=' + w + '&height=' + h +
+      (markers ? '&markers=' + encodeURIComponent(markers[0]) : '') +
+      '&paths=' + encodeURIComponent(paths) +
+      '&pathStyles=' + encodeURIComponent(pathStyles);
+    if (!bmapSite || !bmapSite.fetchUrl) return fail(res, 5002, '静态图代理不可用');
+    try {
+      await security.baiduBucket.take(); // 与其他百度出站共享 QPS 令牌桶
+      const r = await bmapSite.fetchUrl(url, null, 9000);
+      const ct = r.headers['content-type'] || '';
+      if (r.statusCode !== 200 || !/image/i.test(ct)) {
+        logger.warn('map', `staticimg 上游异常 ${r.statusCode} ${ct}`);
+        return fail(res, 5021, '静态图生成失败', 502);
+      }
+      res.writeHead(200, {
+        'Content-Type': ct,
+        'Cache-Control': 'public, max-age=86400',
+        'Access-Control-Allow-Origin': config.server.corsOrigin,
+      });
+      return res.end(r.body);
+    } catch (e) {
+      logger.warn('map', `staticimg 异常 ${e.message}`);
+      return fail(res, 5021, '静态图服务异常', 502);
+    }
+  },
+
   /** GET /api/v1/map/geocode?address=&city= */
   'GET /map/geocode': async (req, res, q) => {
     if (!q.address) return fail(res, 1001, 'address 必填');

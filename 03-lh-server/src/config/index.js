@@ -60,9 +60,13 @@ const config = {
   },
 
   baidu: {
-    ak: env('BAIDU_AK', ''), // AK 只从 .env / 环境变量读取，不落源码默认值
+    ak: env('BAIDU_AK', ''), // 服务端 AK:只从 .env / 环境变量读取,不落源码默认值;只用于服务端↔百度出站,永不下发端上
     sk: env('BAIDU_SK', ''),
     base: env('BAIDU_MAP_BASE', 'https://api.map.baidu.com'),
+    // 浏览器端 AK:百度控制台单独创建的「浏览器端」类型 AK,Referer 白名单锁定自己的域名。
+    // H5 底图页面(/map-home)专用 —— 即使被扒走,白名单外调不通,且可与主 AK 独立重置。
+    // 未配置时页面注入蜜罐 AK(见 utils/security.js),扒到的是废钥匙。
+    akBrowser: env('BAIDU_AK_BROWSER', ''),
   },
 
   llm: {
@@ -97,6 +101,14 @@ const config = {
     route: 60 * 1000,
     weather: 30 * 60 * 1000,
     geocode: 24 * 60 * 60 * 1000,
+  },
+
+  // 安全与高并发防护(详见 utils/security.js)
+  security: {
+    // 百度出站 QPS 上限(令牌桶):高并发时排队而非瞬间打爆配额
+    baiduQps: num('BAIDU_QPS', 30),
+    // 蜜罐命中后的 IP 封禁时长(毫秒)
+    banMs: num('HONEYPOT_BAN_MS', 10 * 60 * 1000),
   },
 };
 

@@ -124,6 +124,18 @@ module.exports = {
         minutes: numOr(q.minutes, 15),
         grid: numOr(q.grid, 5),
       });
+      // 安全升级(2026-10-06):百度静态图改为本服务代理,这里把代理路径拼成完整 URL
+      // (协议/域名取请求头,兼容本地 IP、局域网与云托管域名;端上 <image> 用法不变)
+      if (data && data.baiduStatic && data.baiduStatic.staticPath && !data.baiduStatic.url) {
+        const host = req.headers['x-forwarded-host'] || req.headers.host || '';
+        if (host) {
+          const xf = String(req.headers['x-forwarded-proto'] || '');
+          const proto =
+            xf.split(',')[0].trim() ||
+            (/^(localhost|127\.|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host) ? 'http' : 'https');
+          data.baiduStatic.url = `${proto}://${host}${data.baiduStatic.staticPath}`;
+        }
+      }
       return ok(res, data);
     } catch (e) {
       logger.error('life', `isochrone failed: ${e.message}`);

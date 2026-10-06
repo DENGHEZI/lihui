@@ -624,7 +624,11 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
   /* ===== 百度底图静态图 =====
    * 微信小程序 <map> 组件的底图由微信平台固定用腾讯地图渲染，代码层无法更换。
    * 这里用百度【静态图 API】把同一份等时圈多边形画在真正的百度底图上，
-   * 端上「百度底图」开关切换查看 —— 数据引擎（算路/POI/静态图）全栈百度。 */
+   * 端上「百度底图」开关切换查看 —— 数据引擎（算路/POI/静态图）全栈百度。
+   * 安全(2026-10-06 升级)：旧版直接返回带 ak 的百度静态图 URL → 端上抓包/开发者
+   * 工具面板即可扒走 AK（本次 API 被盗渠道之一）。现在改为返回本服务代理路径
+   * staticPath（不含任何密钥），由 GET /api/v1/map/staticimg 服务端拉图回传二进制；
+   * routes/life.js 负责把 staticPath 拼成完整 URL。 */
   let baiduStatic = null;
   if (config.baidu && config.baidu.ak && polygon.length > 2) {
     try {
@@ -641,14 +645,15 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
       const needRes = (2.6 * Math.max(maxR, 400)) / 640;
       const zoom = Math.max(11, Math.min(17, Math.round(Math.log2((156543 * cosLat) / needRes))));
       const f6 = (n) => Number(n).toFixed(6);
-      const url =
-        'https://api.map.baidu.com/staticimage/v2?ak=' + config.baidu.ak +
-        '&center=' + f6(cBd.lng) + ',' + f6(cBd.lat) +
+      // 代理路径只携带绘图参数,AK 由 /map/staticimg 服务端注入,永不下发
+      const staticPath =
+        '/api/v1/map/staticimg' +
+        '?center=' + encodeURIComponent(f6(cBd.lng) + ',' + f6(cBd.lat)) +
         '&zoom=' + zoom + '&width=640&height=480' +
-        '&markers=' + f6(cBd.lng) + ',' + f6(cBd.lat) +
-        '&paths=' + pathsStr +
+        '&markers=' + encodeURIComponent(f6(cBd.lng) + ',' + f6(cBd.lat)) +
+        '&paths=' + encodeURIComponent(pathsStr) +
         '&pathStyles=0x1677FF,3,0.25';
-      baiduStatic = { url, zoom };
+      baiduStatic = { staticPath, zoom, proxied: true };
     } catch (e) {
       logger.warn('isochrone', `baidu static map build failed: ${e.message}`);
     }
@@ -706,8 +711,17 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
   return result;
 }
 
+// in-flight 去重(2026-10-06 高并发升级):相同参数的并发请求合并为一次计算,
+// 多端同时进页 / 恶意并发只打一次百度,结果共享(配合 TTL 缓存防雪崩)。
+const security = require('../utils/security');
+const _buildIsochroneRaw = buildIsochrone;
+function buildIsochroneDedup(opts) {
+  const key = `iso:${Number(opts.lng).toFixed(4)}:${Number(opts.lat).toFixed(4)}:${opts.minutes || 15}:${opts.grid || 5}`;
+  return security.dedup(key, () => _buildIsochroneRaw(opts));
+}
+
 module.exports = {
-  buildIsochrone,
+  buildIsochrone: buildIsochroneDedup,
   // 纯函数导出：供 CI 自检与单元测试
   haversine,
   destination,

@@ -34,7 +34,12 @@ function read(name, fallback) {
 function write(name, data) {
   const f = fileOf(name);
   try {
-    fs.writeFileSync(f, JSON.stringify(data, null, 2), 'utf8');
+    // 原子写(2026-10-06 升级):先写临时文件再 rename 覆盖。
+    // 直接 writeFileSync 时,进程被杀/并发写/磁盘抖动都可能留下半个 JSON,
+    // 下次 read 直接 JSON.parse 失败 → 静默回退 fallback,数据「凭空消失」。
+    const tmp = f + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
+    fs.renameSync(tmp, f);
     return true;
   } catch (e) {
     logger.error('store', `write ${name} failed: ${e.message}`);

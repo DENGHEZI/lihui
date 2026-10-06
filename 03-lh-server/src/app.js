@@ -10,6 +10,7 @@ const path = require('path');
 const config = require('./config');
 const logger = require('./utils/logger');
 const { json, fail, readBody, clientIp, TRACE } = require('./utils/http');
+const security = require('./utils/security');
 const hub = require('./mcp/hub');
 
 // ★ 可选模块：百度底图站点（/map-home、瓦片代理、JS API 代理）。
@@ -136,6 +137,22 @@ const server = http.createServer(async (req, res) => {
   // 必须在下面 API_PREFIX 检查之前放行，否则会被直接 404 拦掉。
   const isPlainHealth = pathname === '/health' || pathname === '/ping';
 
+  // ===== 安全防护(2026-10-06 升级) =====
+  // 1) IP 封禁检查:命中蜜罐的来源在封禁期内直接 403
+  const clientIP = clientIp(req).ip || 'unknown';
+  if (security.isBanned(clientIP)) {
+    return fail(res, 4031, '访问被临时限制', 403, { traceId });
+  }
+  // 2) 蜜罐检测:入站任何参数/头携带蜜罐密钥 → 判定密钥已从某渠道泄露,
+  //    记 security.log + 封禁。覆盖所有路由(含 /map-home 等无前缀路由)。
+  const q = {};
+  for (const [k, v] of u.searchParams.entries()) q[k] = v;
+  const honey = security.checkRequest(req, q, null);
+  if (honey.hit) {
+    security.recordHit({ ip: clientIP, req, key: honey.key, where: honey.where });
+    return fail(res, 4031, 'invalid credential', 403, { traceId });
+  }
+
   // 百度底图站点（web-view 首页 / 瓦片代理 / JS API 代理），不走 /api/v1 前缀
   if (bmapSite && (pathname === '/map-home' || pathname === '/map_home' || pathname.startsWith('/bmap/'))) {
     return await bmapSite.handle(req, res, u);
@@ -163,13 +180,18 @@ const server = http.createServer(async (req, res) => {
     return fail(res, 1003, '请求过于频繁（60 次/分钟），请稍后再试', 429, { traceId });
   }
 
-  const q = {};
-  for (const [k, v] of u.searchParams.entries()) q[k] = v;
+  // (q 已在上方安全防护段解析)
 
   try {
     let body = {};
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       body = await readBody(req);
+    }
+    // 3) body 蜜罐检测(POST/PUT 携带的 key 字段)
+    const honeyBody = security.checkRequest(req, {}, body);
+    if (honeyBody.hit) {
+      security.recordHit({ ip: clientIP, req, key: honeyBody.key, where: honeyBody.where });
+      return fail(res, 4031, 'invalid credential', 403, { traceId });
     }
     const result = await handler(req, res, q, body);
     if (result === undefined && !res.writableEnded) {

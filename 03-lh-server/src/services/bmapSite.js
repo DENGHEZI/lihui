@@ -21,6 +21,7 @@ const https = require('https');
 const http = require('http');
 const config = require('../config');
 const logger = require('../utils/logger');
+const security = require('../utils/security');
 
 const STATIC_DIR = path.resolve(__dirname, '..', 'static');
 const PAGE_FILE = path.join(STATIC_DIR, 'bmap-home.html');
@@ -134,6 +135,12 @@ async function fetchUrl(url, extraHeaders, timeout = 8000) {
 }
 
 /* ---------------- 页面 ---------------- */
+/* 安全(2026-10-06 升级):
+ *  ⚠️ 旧版这里 `query.ak || config.baidu.ak` 把【服务端真 AK】明文注入 HTML,
+ *     任何访问 /map-home 的人 curl 一下源码就能拿到 AK —— 即本次「API 被盗」的主渠道。
+ *  现在改为只注入「浏览器端 AK」(百度控制台单独创建,Referer 白名单锁定本站域名,
+ *  泄露无害、可独立重置);未配置时注入蜜罐 AK —— 扒页面的人拿到的是废钥匙,
+ *  谁拿着蜜罐回来打接口,security.log 会立刻记下来源。query.ak 注入通道一并封死。 */
 function serveHome(res, query) {
   let html;
   try {
@@ -142,7 +149,7 @@ function serveHome(res, query) {
     res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
     return res.end('底图页面缺失：' + e.message);
   }
-  const ak = query.ak || config.baidu.ak || '';
+  const ak = config.baidu.akBrowser || security.HONEYPOT_AK_WEB;
   const lat = Number(query.lat);
   const lng = Number(query.lng);
   const seed =
@@ -211,14 +218,40 @@ function hash(s) {
 }
 
 /* ---------------- 通用代理（JS API 脚本 / JSONP） ---------------- */
+/* 安全(2026-10-06 升级):旧版是【无白名单开放代理】——任意 URL 都能借用本服务转发
+ * (还自带百度 Referer 头),存在 SSRF 风险:可探测内网、白嫖带宽、伪造来源刷百度。
+ * 现在收紧为「百度域名白名单」:仅允许 api.map.baidu.com / map.baidu.com 及其子域,
+ * 裸 IP / localhost / 内网域一律拒绝。 */
+const PROXY_ALLOW_HOSTS = ['api.map.baidu.com', 'map.baidu.com', 'baidu.com', 'bdimg.com'];
+function proxyTargetAllowed(rawUrl) {
+  let u;
+  try {
+    u = new URL(rawUrl);
+  } catch (_) {
+    return false;
+  }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+  const h = (u.hostname || '').toLowerCase();
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(h)) return false; // 裸 IP(SSRF 打内网的典型形态)
+  if (h === 'localhost' || h.endsWith('.local') || h.endsWith('.internal')) return false;
+  if (h.includes(':')) return false; // IPv6 字面量
+  return PROXY_ALLOW_HOSTS.some((d) => h === d || h.endsWith('.' + d));
+}
+
 async function serveProxy(res, query) {
   const target = query.u;
   if (!target) {
     res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
     return res.end('u 必填');
   }
+  const decoded = decodeURIComponent(target);
+  if (!proxyTargetAllowed(decoded)) {
+    logger.warn('bmap', `代理目标被拒绝(白名单外): ${decoded.slice(0, 120)}`);
+    res.writeHead(403, { 'Content-Type': 'application/javascript; charset=utf-8' });
+    return res.end('/* proxy target not allowed */');
+  }
   try {
-    const r = await fetchUrl(decodeURIComponent(target));
+    const r = await fetchUrl(decoded);
     const ct = r.headers['content-type'] || 'application/javascript; charset=utf-8';
     res.writeHead(r.statusCode || 200, {
       'Content-Type': ct,
