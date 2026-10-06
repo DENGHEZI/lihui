@@ -45,7 +45,7 @@ module.exports = {
   USE_CLOUD_CONTAINER,
 
   // 百度地图 · 微信小程序端 AK
-  BAIDU_AK: 'FbLtBDL1RuIxCR7iIrjHwkcJSZyrqQ9R',
+  BAIDU_AK: 'ugH9sMlJFevz0riGsL8Q9wIoc3AD050L',
   BAIDU_BASE: 'https://api.map.baidu.com',
 
   // 微信 AppID（与 project.config.json 一致）
