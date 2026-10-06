@@ -103,6 +103,20 @@ const config = {
     dbPath: env('LH_DB_PATH', path.join(ROOT, 'data', 'lihui.db')),
   },
 
+  // Memory · 人机协同安全运维(2026-10-06)
+  // adminToken:写操作(analyze/verify/decide)需要 X-Admin-Token;未配置时仅本机回环可写
+  // llm:分析引擎,DeepSeek OpenAI 兼容协议;不配 key 自动降级本地规则引擎(功能不空转)
+  memory: {
+    adminToken: env('MEMORY_ADMIN_TOKEN', ''),
+    dir: env('MEMORY_DIR', ''),
+    llm: {
+      baseUrl: env('MEMORY_LLM_BASE_URL', ''),
+      apiKey: env('MEMORY_LLM_API_KEY', ''),
+      model: env('MEMORY_LLM_MODEL', 'deepseek-chat'),
+      timeout: num('MEMORY_LLM_TIMEOUT', 30000),
+    },
+  },
+
   // 缓存 TTL（毫秒）
   cache: {
     ip: 30 * 60 * 1000,

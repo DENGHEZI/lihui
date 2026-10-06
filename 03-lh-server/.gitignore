@@ -10,6 +10,8 @@ data/logs/
 data/sessions/
 data/tts/
 data/tmp/
+# 容器内 Memory 学习记忆(仓库根的 memory/ 才是正式记忆,入Git)
+data/memory/
 
 # 系统
 .DS_Store

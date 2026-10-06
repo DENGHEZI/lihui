@@ -270,6 +270,44 @@
   .cp-card input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(22,119,255,.12); background: #fff; }
   .cp-card .cp-row { display: flex; gap: 8px; margin-top: 14px; }
   .cp-card .cp-row .btn { flex: 1; }
+  /* ---------- Memory · 人机协同安全运维 ---------- */
+  .mem-top { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+  .mem-cap { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; color: var(--text-3); margin-bottom: 8px; }
+  .mem-events { flex: 1 1 320px; min-width: 0; }
+  .mem-ev { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+  .mem-ev .lv { flex: none; font-size: 11px; font-weight: 600; padding: 1px 9px; border-radius: 999px; }
+  .lv-info { color: var(--text-2); background: #F2F3F5; }
+  .lv-warn { color: #A96800; background: #FFF8EC; }
+  .lv-danger { color: #C1340B; background: #FFF0E8; }
+  .lv-critical { color: #fff; background: var(--red); }
+  .mem-ev .tx { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
+  .mem-ev .tm { flex: none; color: var(--text-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .mem-engine { flex: none; font-size: 12px; color: var(--primary); background: var(--primary-weak); border: 1px solid var(--primary-line); padding: 6px 12px; border-radius: 10px; }
+  .mem-actions { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; flex-wrap: wrap; }
+  .mem-diag { border: 1px solid var(--primary-line); background: linear-gradient(135deg, rgba(22,119,255,.06), rgba(20,201,201,.05)); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+  .mem-diag .lvl { font-size: 11px; font-weight: 700; padding: 1px 9px; border-radius: 999px; margin-left: 8px; }
+  .lvl-low { background: #E8FFEA; color: #008A20; } .lvl-medium { background: #FFF8EC; color: #A96800; }
+  .lvl-high { background: #FFF0E8; color: #C1340B; } .lvl-critical { background: var(--red); color: #fff; }
+  .mem-sug { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; background: #fff; box-shadow: 0 1px 2px rgba(27,33,41,.03); }
+  .mem-sug .st { font-weight: 600; font-size: 14px; }
+  .mem-sug .why { font-size: 12.5px; color: var(--text-3); margin-top: 3px; }
+  .badge { font-size: 10.5px; padding: 1px 8px; border-radius: 999px; font-weight: 600; margin-left: 6px; vertical-align: 1px; }
+  .badge-pending { background: #F2F3F5; color: var(--text-2); }
+  .badge-verified { background: #E8FFEA; color: #008A20; }
+  .badge-approved { background: var(--primary-weak); color: var(--primary); }
+  .badge-rejected { background: #FFECE8; color: #C1340B; }
+  .badge-type { background: rgba(20,201,201,.12); color: #0C8786; }
+  .mem-pre { background: #F7F9FC; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 11.5px; white-space: pre-wrap; word-break: break-all; max-height: 220px; overflow: auto; color: var(--text-2); margin-top: 8px; }
+  .mem-btns { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .mem-btns .btn { padding: 6px 14px; font-size: 12.5px; }
+  .mem-rep { font-size: 12.5px; border-radius: 10px; padding: 8px 12px; margin-top: 8px; }
+  .mem-rep.ok { background: #E8FFEA; color: #008A20; }
+  .mem-rep.bad { background: #FFF0E8; color: #C1340B; }
+  .mem-learn { font-size: 12.5px; color: var(--text-2); padding: 6px 0; border-bottom: 1px dashed var(--line); }
+  .mem-token { display: flex; gap: 8px; margin: 10px 0 4px; }
+  .mem-token input { flex: 1; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 13px; outline: none; background: #fff; }
+  .mem-token input:focus { border-color: var(--primary-line); box-shadow: 0 0 0 3px rgba(22,119,255,.10); }
+  details.mem-mask summary { cursor: pointer; font-size: 12px; color: var(--text-3); user-select: none; }
 </style>
 </head>
 <body>
@@ -339,6 +377,29 @@
     </div>
     <div class="list" id="shopList"><div class="spin"></div></div>
     <div class="muted" style="margin-top:12px">下单与支付在第三方平台完成（携程 / 美团），鲤慧负责选品与留痕；标「参考」的价格为估算，实际以平台为准。</div>
+  </div>
+
+  <!-- 🧠 Memory · 人机协同安全运维：AI 只建议不执行，批准产出工件由人合并 -->
+  <div class="card" id="memCard">
+    <h2>🧠 Memory · 安全运维记忆 <span class="sub">人机协同 · AI 只建议，绝不自动执行</span></h2>
+    <div class="mem-top">
+      <div class="mem-events">
+        <div class="mem-cap">实时安全事件（蜜罐 / 封禁）</div>
+        <div id="memEvents"><div class="spin"></div></div>
+      </div>
+      <div class="mem-engine" id="memEngine">—</div>
+    </div>
+    <div class="mem-token" id="memTokenRow" style="display:none">
+      <input id="memToken" placeholder="管理令牌（X-Admin-Token），仅运维人员" />
+      <button class="btn" id="memTokenGo">保存</button>
+    </div>
+    <div class="mem-actions">
+      <button class="btn primary" id="memAnalyze">🧠 AI 分析（先脱敏 → 再 DeepSeek）</button>
+      <span style="font-size:12px;color:var(--text-3)">真实 Key / 服务器 IP 出网前强制掩码</span>
+    </div>
+    <div id="memOut"></div>
+    <div class="mem-cap" style="margin-top:16px">历史建议与人工决定（学习记忆）</div>
+    <div id="memList"><div style="font-size:13px;color:var(--text-3)">暂无记录</div></div>
   </div>
 
   <footer>
@@ -579,11 +640,19 @@ function renderIsochrone(d) {
   const Y = (y) => (H / 2 - (y - oy) * scale).toFixed(1); // SVG y 向下
 
   let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
+  /* 渐变与投影（等时圈主视觉） */
+  svg += '<defs>' +
+    '<linearGradient id="isoGrad" x1="0" y1="0" x2="1" y2="1">' +
+    '<stop offset="0" stop-color="#1677FF" stop-opacity=".20"/><stop offset=".55" stop-color="#3E9BFF" stop-opacity=".13"/><stop offset="1" stop-color="#14C9C9" stop-opacity=".12"/>' +
+    '</linearGradient>' +
+    '<filter id="isoShadow" x="-20%" y="-20%" width="140%" height="140%">' +
+    '<feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#1677FF" flood-opacity=".16"/>' +
+    '</filter></defs>';
   /* 参考圈（500m 步进虚线 + 刻度） */
   const refMax = Math.ceil(Math.max(maxX - minX, maxY - minY) / 2 / 500) * 500;
   for (let r = 500; r <= refMax + 1; r += 500) {
     svg += '<circle cx="' + X(0) + '" cy="' + Y(0) + '" r="' + (r * scale).toFixed(1) +
-      '" fill="none" stroke="#C9D4E4" stroke-width="1" stroke-dasharray="4 5"/>' +
+      '" fill="none" stroke="#DCE4F0" stroke-width="1" stroke-dasharray="3 6"/>' +
       '<text x="' + X(0) + '" y="' + (Number(Y(0)) - r * scale - 4).toFixed(1) +
       '" font-size="10" fill="#8F959E" text-anchor="middle">' + r + 'm</text>';
   }
@@ -599,14 +668,26 @@ function renderIsochrone(d) {
       '" height="' + ((gy1 - gy0) * scale).toFixed(1) + '" fill="' + fill + '"' +
       (stroke ? ' stroke="' + stroke + '" stroke-width="1"' : '') + ' rx="2"/>';
   });
-  /* 等时圈多边形 */
+  /* 等时圈多边形（渐变填充 + 柔影） */
   const pts = d.polygon.map((p) => { const m = proj(p.lng, p.lat); return X(m.x) + ',' + Y(m.y); }).join(' ');
-  svg += '<polygon points="' + pts + '" fill="rgba(22,119,255,.14)" stroke="#1677FF" stroke-width="2" stroke-linejoin="round"/>';
+  svg += '<polygon points="' + pts + '" fill="url(#isoGrad)" stroke="#1677FF" stroke-width="2.5" stroke-linejoin="round" filter="url(#isoShadow)"/>';
   /* 36 方向采样点 */
-  d.bearings.forEach((b) => { const m = proj(b.lng, b.lat); svg += '<circle cx="' + X(m.x) + '" cy="' + Y(m.y) + '" r="2.4" fill="#1677FF"/>'; });
+  d.bearings.forEach((b) => { const m = proj(b.lng, b.lat); svg += '<circle cx="' + X(m.x) + '" cy="' + Y(m.y) + '" r="2.4" fill="#1677FF" stroke="#fff" stroke-width=".8"/>'; });
   /* 家 */
   svg += '<circle cx="' + X(0) + '" cy="' + Y(0) + '" r="6" fill="#F53F3F" stroke="#fff" stroke-width="2"/>' +
     '<text x="' + X(0) + '" y="' + (Number(Y(0)) + 20) + '" font-size="11" fill="#1F2329" text-anchor="middle" font-weight="600">🏠 家</text>';
+  /* 档位徽章（左上） */
+  svg += '<g filter="url(#isoShadow)"><rect x="12" y="12" rx="9" width="' + (34 + String(d.minutes).length * 9) + '" height="27" fill="rgba(255,255,255,.92)" stroke="rgba(22,119,255,.35)"/>' +
+    '<text x="26" y="30" font-size="13" fill="#1677FF" font-weight="700">⏱ ' + esc(String(d.minutes)) + ' min</text></g>';
+  /* 比例尺（左下：500m 实长） */
+  const barPx = 500 * scale;
+  if (barPx > 36 && barPx < W - 80) {
+    const bx = 16, by = H - 18;
+    svg += '<line x1="' + bx + '" y1="' + by + '" x2="' + (bx + barPx).toFixed(1) + '" y2="' + by + '" stroke="#5B6470" stroke-width="2"/>' +
+      '<line x1="' + bx + '" y1="' + (by - 4) + '" x2="' + bx + '" y2="' + (by + 4) + '" stroke="#5B6470" stroke-width="2"/>' +
+      '<line x1="' + (bx + barPx).toFixed(1) + '" y1="' + (by - 4) + '" x2="' + (bx + barPx).toFixed(1) + '" y2="' + (by + 4) + '" stroke="#5B6470" stroke-width="2"/>' +
+      '<text x="' + (bx + barPx / 2).toFixed(1) + '" y="' + (by - 7) + '" font-size="10" fill="#5B6470" text-anchor="middle">500m</text>';
+  }
   /* 指北针 */
   svg += '<g transform="translate(' + (W - 26) + ',30)"><path d="M0,-11 L5,7 L0,3 L-5,7 Z" fill="#646A73"/><text x="0" y="19" font-size="9" fill="#8F959E" text-anchor="middle">N</text></g>';
   svg += '</svg>';
@@ -628,6 +709,7 @@ function renderIsochrone(d) {
   });
   const rp = (v, ang) => (RC + Math.cos(ang) * RADAR_R * (v / 100)).toFixed(1) + ',' + (RC + Math.sin(ang) * RADAR_R * (v / 100)).toFixed(1);
   let radar = '<svg viewBox="0 0 216 216" xmlns="http://www.w3.org/2000/svg">';
+  radar += '<defs><linearGradient id="radG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1677FF" stop-opacity=".32"/><stop offset="1" stop-color="#14C9C9" stop-opacity=".16"/></linearGradient></defs>';
   [33, 66, 100].forEach((lv) => {
     radar += '<polygon points="' + axes.map((a) => rp(lv, a.ang)).join(' ') + '" fill="none" stroke="#E5E9F0" stroke-width="1"/>';
   });
@@ -636,7 +718,12 @@ function renderIsochrone(d) {
   });
   const validAxes = axes.filter((a) => !a.cov.failed);
   if (validAxes.length === axes.length && axes.length) {
-    radar += '<polygon points="' + axes.map((a) => rp(a.cov.ratio || 0, a.ang)).join(' ') + '" fill="rgba(22,119,255,.25)" stroke="#1677FF" stroke-width="2"/>';
+    radar += '<polygon points="' + axes.map((a) => rp(a.cov.ratio || 0, a.ang)).join(' ') + '" fill="url(#radG)" stroke="#1677FF" stroke-width="2" stroke-linejoin="round"/>';
+    axes.forEach((a) => {
+      const vx = RC + Math.cos(a.ang) * RADAR_R * ((a.cov.ratio || 0) / 100);
+      const vy = RC + Math.sin(a.ang) * RADAR_R * ((a.cov.ratio || 0) / 100);
+      radar += '<circle cx="' + vx.toFixed(1) + '" cy="' + vy.toFixed(1) + '" r="3" fill="#1677FF" stroke="#fff" stroke-width="1.2"/>';
+    });
   }
   axes.forEach((a) => {
     const lx = RC + Math.cos(a.ang) * (RADAR_R + 22), ly = RC + Math.sin(a.ang) * (RADAR_R + 20);
@@ -718,6 +805,131 @@ async function loadShop() {
   }
 }
 
+/* ================= Memory · 人机协同安全运维 ================= */
+/* 铁律:AI 只建议不执行;批准产出工件文件由人合并(绝不全自动闭环) */
+function memToken() { try { return localStorage.getItem('lh_mem_token') || ''; } catch (e) { return ''; } }
+async function memPost(path, body) {
+  const r = await fetch(API + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Token': memToken(), 'X-Device-Id': deviceId() },
+    body: JSON.stringify(body || {}),
+  });
+  const j = await r.json();
+  if (j.code !== 0) throw Object.assign(new Error(j.msg || '请求失败'), j);
+  return j.data;
+}
+const LVL_CLS = { info: 'lv-info', warn: 'lv-warn', danger: 'lv-danger', critical: 'lv-critical' };
+const LVL_TXT = { warn: '预警', danger: '危险', critical: '严重', info: '信息' };
+const ST_BADGE = { pending: '<span class="badge badge-pending">待验证</span>', verified: '<span class="badge badge-verified">沙箱通过</span>', approved: '<span class="badge badge-approved">已批准</span>', rejected: '<span class="badge badge-rejected">已拒绝</span>' };
+
+function memRenderEvents(events) {
+  const rows = (events || []).slice(-8).reverse().map((e) =>
+    '<div class="mem-ev"><span class="lv ' + (LVL_CLS[e.level] || 'lv-info') + '">' + (LVL_TXT[e.level] || e.level || '信息') + '</span>' +
+    '<span class="tx">' + esc((e.event || '') + ' · ' + (e.ip || '') + (e.channel ? ' · 渠道 ' + e.channel : '')) + '</span>' +
+    '<span class="tm">' + esc(String(e.ts || '').slice(11, 16)) + '</span></div>').join('');
+  $('#memEvents').innerHTML = rows || '<div style="font-size:13px;color:var(--text-3)">暂无安全事件（系统干净）✅</div>';
+}
+
+async function memOverview() {
+  try {
+    const o = await api('/memory/overview');
+    memRenderEvents(o.events && o.events.events);
+    const eng = o.llm || {};
+    $('#memEngine').innerHTML = '引擎：' + (eng.engine === 'deepseek' ? 'DeepSeek（' + esc(eng.model || '') + '）' : '本地规则引擎（未配 Key 降级）') +
+      (o.admin ? '<br>管理员：已授权' : '<br>只读（写操作需令牌）');
+    $('#memTokenRow').style.display = o.admin ? 'none' : 'flex';
+    $('#memAnalyze').disabled = false;
+    const sug = (o.suggestions || []).map(memSugCard).join('');
+    const lrn = (o.learnings || []).map((l) =>
+      '<div class="mem-learn"><b>' + (l.action === '批准' ? '✅' : '✖️') + ' ' + esc(l.action) + '</b> · ' + esc(l.type) + ' · ' + esc(l.title) +
+      (l.note ? ' <span style="color:var(--text-3)">（' + esc(l.note) + '）</span>' : '') + '</div>').join('');
+    $('#memList').innerHTML = (sug || '<div style="font-size:13px;color:var(--text-3)">暂无建议，点上方「AI 分析」生成</div>') +
+      (lrn ? '<div class="mem-cap" style="margin-top:12px">处置记忆（注入下次分析 Prompt）</div>' + lrn : '');
+  } catch (e) {
+    $('#memEvents').innerHTML = '<div style="font-size:13px;color:var(--text-3)">面板加载失败：' + esc(e.message) + '</div>';
+  }
+}
+
+function memSugCard(s) {
+  return '<div class="mem-sug" data-id="' + esc(s.id) + '">' +
+    '<div class="st">' + esc(s.title) + '<span class="badge badge-type">' + esc(s.type) + '</span>' + (ST_BADGE[s.status] || '') + '</div>' +
+    '<div class="why">' + esc(s.rationale || '') + ' · 置信 ' + Math.round((s.confidence || 0) * 100) + '% · ' + esc(s.engine || '') + '</div>' +
+    '<details class="mem-mask"><summary>查看建议原文</summary><div class="mem-pre">' + esc(s.content || '') + '</div></details>' +
+    (s.verify ? (s.verify.ok
+      ? '<div class="mem-rep ok">🧪 沙箱通过' + (s.verify.replay ? '：样本回放 ' + s.verify.replay.total + ' 次命中，按 ' + esc(s.verify.replay.rate) + ' 会拦截 ' + s.verify.replay.blocked + ' 次' : '') + '</div>'
+      : '<div class="mem-rep bad">🧪 沙箱发现问题：' + esc((s.verify.issues || []).join('；')) + '</div>') : '') +
+    (s.status === 'approved' && s.artifact ? '<div class="mem-rep ok">📁 已产出工件 ' + esc(s.artifact) + '（请人工合并到服务器）</div>' : '') +
+    (s.status === 'pending' || s.status === 'verified'
+      ? '<div class="mem-btns">' +
+        (s.status === 'pending' ? '<button class="btn" data-act="verify">🧪 沙箱验证</button>' : '') +
+        '<button class="btn" data-act="approve" style="color:var(--ok)">✅ 批准（产出工件，人工合并）</button>' +
+        '<button class="btn" data-act="reject" style="color:var(--red)">✖ 拒绝</button></div>' : '') +
+    '</div>';
+}
+
+async function memAnalyze() {
+  const btn = $('#memAnalyze');
+  btn.disabled = true; btn.textContent = '🧠 分析中（收集 → 脱敏 → DeepSeek）…';
+  $('#memOut').innerHTML = '<div class="spin"></div>';
+  try {
+    const r = await memPost('/memory/analyze');
+    const rep = r.sanitizeReport || {};
+    $('#memMask').textContent = '本次已掩码：密钥×' + (rep.keys || 0) + ' · AK×' + (rep.akLike || 0) + ' · IP×' + (rep.ips || 0) + ' · 服务器IP×' + (rep.localIps || 0) + ' · 设备×' + (rep.devices || 0);
+    $('#memOut').innerHTML =
+      '<div class="mem-diag"><b>诊断</b><span class="lvl lvl-' + esc(r.threatLevel || 'low') + '">' + esc((r.threatLevel || 'low').toUpperCase()) + (r.degraded ? ' · 本地规则降级' : '') + '</span>' +
+      '<div style="margin-top:6px;font-size:14px">' + esc(r.diagnosis || '') + '</div>' +
+      '<details class="mem-mask" style="margin-top:8px"><summary>🔍 复核：DeepSeek 实际看到的脱敏内容</summary><div class="mem-pre">' + esc(r.sanitizedPreview || '') + '</div></details></div>' +
+      (r.suggestions || []).map(memSugCard).join('') ||
+      '<div style="font-size:13px;color:var(--text-3)">本次没有新建议（可能已被 24h 去重）</div>';
+    memOverview();
+  } catch (e) {
+    $('#memOut').innerHTML = '<div class="mem-rep bad">分析失败：' + esc(e.message) + '</div>';
+    if (/令牌|403/.test(e.message || '')) $('#memTokenRow').style.display = 'flex';
+  } finally {
+    btn.disabled = false; btn.textContent = '🧠 AI 分析（先脱敏 → 再 DeepSeek）';
+  }
+}
+
+$('#memCard').addEventListener('click', async (ev) => {
+  const btn = ev.target.closest('button[data-act]');
+  if (!btn) return;
+  const card = btn.closest('.mem-sug');
+  const id = card && card.dataset.id;
+  const act = btn.dataset.act;
+  if (!id) return;
+  if (act === 'verify') {
+    btn.disabled = true; btn.textContent = '🧪 验证中…';
+    try {
+      const r = await memPost('/memory/verify', { id });
+      card.querySelector('.mem-rep') && card.querySelector('.mem-rep').remove();
+      btn.insertAdjacentHTML('afterend', r.ok
+        ? '<div class="mem-rep ok">🧪 沙箱通过' + (r.replay ? '：样本回放 ' + r.replay.total + ' 次命中，按 ' + esc(r.replay.rate) + ' 会拦截 ' + r.replay.blocked + ' 次' : '') + '</div>'
+        : '<div class="mem-rep bad">🧪 沙箱发现问题：' + esc((r.issues || []).join('；')) + '</div>');
+      btn.remove();
+    } catch (e) { btn.disabled = false; btn.textContent = '🧪 沙箱验证'; banner('验证失败：' + e.message); }
+    return;
+  }
+  if (act === 'approve') {
+    const note = prompt('批准理由/备注（将写入学习记忆）：') || '';
+    try {
+      const r = await memPost('/memory/decide', { id, action: 'approve', note });
+      banner('已批准，工件落盘：' + (r.artifact || '—') + '（请人工合并，系统绝不自动执行）');
+      memOverview();
+    } catch (e) { banner('批准失败：' + e.message); }
+    return;
+  }
+  if (act === 'reject') {
+    const note = prompt('拒绝原因（AI 会学习，避免再提同类建议）：') || '';
+    try { await memPost('/memory/decide', { id, action: 'reject', note }); memOverview(); }
+    catch (e) { banner('操作失败：' + e.message); }
+  }
+});
+$('#memAnalyze').onclick = memAnalyze;
+$('#memTokenGo').onclick = () => {
+  try { localStorage.setItem('lh_mem_token', $('#memToken').value.trim()); } catch (e) {}
+  banner('令牌已保存（仅存本机浏览器）'); memOverview();
+};
+
 /* ================= 事件 & 启动 ================= */
 $('#tabNear').onclick = () => { state.shopMode = 'near'; $('#tabNear').classList.add('on'); $('#tabHot').classList.remove('on'); loadShop(); };
 $('#tabHot').onclick = () => { state.shopMode = 'hot'; $('#tabHot').classList.add('on'); $('#tabNear').classList.remove('on'); loadShop(); };
@@ -763,6 +975,7 @@ function loadAll() { loadWeather(); loadLife(); loadIsochrone(); loadQuick(); lo
   renderQuickTabs();
   const ok = await locate();
   loadAll();
+  memOverview(); /* Memory 面板与定位无关,直接加载 */
   if (!ok) { loadShop(); } /* 定位失败也至少看热门店源 */
 })();
 </script>

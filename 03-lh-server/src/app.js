@@ -29,7 +29,7 @@ try {
 }
 
 /* ---------------- 路由表 ---------------- */
-const modules = ['./routes/system', './routes/ip', './routes/map', './routes/life', './routes/agent', './routes/mcp', './routes/model', './routes/voice', './routes/token', './routes/feedback', './routes/action', './routes/shop', './routes/order', './routes/profile', './routes/security'];
+const modules = ['./routes/system', './routes/ip', './routes/map', './routes/life', './routes/agent', './routes/mcp', './routes/model', './routes/voice', './routes/token', './routes/feedback', './routes/action', './routes/shop', './routes/order', './routes/profile', './routes/security', './routes/memory'];
 const ROUTES = {};
 for (const m of modules) {
   try {

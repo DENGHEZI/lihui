@@ -20,21 +20,26 @@
 
   /* ---------- 顶部搜索胶囊 ---------- */
   .top{position:absolute;top:0;left:0;right:0;z-index:20;padding:calc(env(safe-area-inset-top) + 10px) 12px 0;pointer-events:none}
-  .pill{pointer-events:auto;display:flex;align-items:center;height:44px;background:#fff;border-radius:22px;
-    box-shadow:var(--shadow-sm);padding:0 6px 0 14px;gap:8px}
+  .pill{pointer-events:auto;display:flex;align-items:center;height:44px;
+    background:rgba(255,255,255,.86);backdrop-filter:blur(14px) saturate(1.5);-webkit-backdrop-filter:blur(14px) saturate(1.5);
+    border:1px solid rgba(255,255,255,.65);border-radius:22px;
+    box-shadow:0 2px 10px rgba(18,26,43,.08),inset 0 1px 0 rgba(255,255,255,.8);padding:0 6px 0 14px;gap:8px}
   .pill .city{font-size:14px;font-weight:600;display:flex;align-items:center;gap:2px;color:var(--txt)}
   .pill .city .caret{font-size:9px;color:var(--txt3)}
   .pill .divider{width:1px;height:18px;background:var(--line)}
   .pill input{flex:1;border:0;outline:none;background:transparent;font-size:14px;height:44px;color:var(--txt)}
   .pill input::placeholder{color:var(--txt3)}
-  .pill .go{width:36px;height:36px;border-radius:18px;background:var(--blue);color:#fff;font-size:15px;
-    display:flex;align-items:center;justify-content:center;border:0}
+  .pill .go{width:36px;height:36px;border-radius:18px;border:0;color:#fff;font-size:15px;
+    background:linear-gradient(135deg,#1677ff,#4ea1ff);box-shadow:0 3px 10px -2px rgba(22,119,255,.45),inset 0 1px 0 rgba(255,255,255,.35);
+    display:flex;align-items:center;justify-content:center}
 
   /* ---------- 右侧竖向按钮 ---------- */
   .side{position:absolute;right:12px;z-index:20;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px}
-  .side button{width:44px;height:44px;border-radius:14px;border:0;background:#fff;box-shadow:var(--shadow-sm);
-    font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer}
-  .side button:active{transform:scale(.94)}
+  .side button{width:44px;height:44px;border-radius:14px;border:1px solid rgba(255,255,255,.65);
+    background:rgba(255,255,255,.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    box-shadow:0 2px 10px rgba(18,26,43,.08);
+    font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#3b4351}
+  .side button:active{transform:scale(.94);background:#fff}
 
   /* ---------- 中心地名气泡 ---------- */
   .callout{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:15;pointer-events:none}
@@ -43,8 +48,9 @@
   .callout .tip{margin:0 auto;width:0;height:0;border:7px solid transparent;border-top-color:#fff}
 
   /* ---------- 底部大面板 ---------- */
-  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:25;background:#fff;border-radius:20px 20px 0 0;
-    box-shadow:0 -4px 20px rgba(18,26,43,.10);padding-bottom:calc(env(safe-area-inset-bottom) + 12px);transition:height .26s ease}
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:25;background:#fff;border-radius:22px 22px 0 0;
+    box-shadow:0 -8px 28px rgba(18,26,43,.12),inset 0 1px 0 rgba(255,255,255,.9);
+    padding-bottom:calc(env(safe-area-inset-bottom) + 12px);transition:height .26s ease}
   .sheet .handle{width:36px;height:4px;border-radius:2px;background:#dfe3ea;margin:8px auto 4px}
   .sheet .loc-row{display:flex;align-items:center;gap:8px;padding:2px 16px 8px;font-size:13px;color:var(--txt2)}
   .sheet .loc-row .dot{width:8px;height:8px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
