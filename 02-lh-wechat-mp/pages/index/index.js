@@ -368,6 +368,43 @@ Page({
     } catch (e) {}
   },
 
+  /** 城市 chip 点击:重新定位(自动) 或 手动选城市(纠正 IP 属地偏差) */
+  onCityChip() {
+    wx.showActionSheet({
+      itemList: ['📍 重新定位（自动）', '🏙️ 手动选择城市'],
+      success: (r) => {
+        if (r.tapIndex === 0) this.locateMe()
+        else this.pickCity()
+      }
+    })
+  },
+
+  /** 手动选城市:输入城市名 → geocode → 全局生效(首页/生活圈/商城全部跟随) */
+  pickCity() {
+    wx.showModal({
+      title: '手动选择城市',
+      content: 'IP 定位可能不准（如人在株洲显示长沙），输入你所在城市即可纠正。',
+      editable: true,
+      placeholderText: '输入城市名，如：株洲市',
+      confirmText: '切换',
+      success: async (r) => {
+        if (!r.confirm) return
+        const city = (r.content || '').trim()
+        if (!city) return
+        wx.showLoading({ title: '切换到 ' + city, mask: true })
+        try {
+          const loc = await app.setManualCity(city)
+          wx.hideLoading()
+          this.applyLocation(loc, city)
+          wx.showToast({ title: '已切换到 ' + city, icon: 'none' })
+        } catch (e) {
+          wx.hideLoading()
+          wx.showToast({ title: (e && (e.msg || e.message)) || '城市识别失败，试试带「市」的全名', icon: 'none', duration: 2600 })
+        }
+      }
+    })
+  },
+
   async locateMe() {
     wx.showLoading({ title: '定位中' })
     const loc = await app.getLocation({ force: true })

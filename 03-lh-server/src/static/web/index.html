@@ -255,6 +255,21 @@
   footer .pills { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
   footer .pills span { border: 1px solid var(--line); background: var(--card); border-radius: 999px;
     padding: 4px 14px; box-shadow: 0 1px 3px rgba(27,33,41,.04); }
+
+  /* ---------- 城市选择浮层 ---------- */
+  .city-pick { position: fixed; inset: 0; z-index: 50; display: none;
+    background: rgba(27,33,41,.38); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+  .city-pick.show { display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .cp-card { width: 100%; max-width: 360px; background: var(--card); border-radius: 18px;
+    padding: 20px; box-shadow: 0 24px 60px -16px rgba(27,33,41,.35); }
+  .cp-card .cp-t { font-size: 16px; font-weight: 650; margin-bottom: 4px; }
+  .cp-card .cp-hint { font-size: 12px; color: var(--text-3); margin-bottom: 12px; }
+  .cp-card input { width: 100%; border: 1px solid var(--line); border-radius: 11px;
+    padding: 10px 13px; font-size: 14px; outline: none; background: #FAFBFC; color: var(--text);
+    transition: border-color .2s, box-shadow .2s; }
+  .cp-card input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(22,119,255,.12); background: #fff; }
+  .cp-card .cp-row { display: flex; gap: 8px; margin-top: 14px; }
+  .cp-card .cp-row .btn { flex: 1; }
 </style>
 </head>
 <body>
@@ -330,7 +345,20 @@
     <div class="pills"><span>🐟 鲤慧 LiHui</span><span>lihui-tech.online</span></div>
     店源与 POI 数据来自百度地图开放平台 · 价格为参考估算<br>
     完整体验（下单 / 助手 / 语音）请使用微信小程序版
-  </footer>
+</footer>
+
+<!-- 手动选城市浮层（纠正 IP 属地偏差：如人在株洲被锚定到长沙） -->
+<div class="city-pick" id="cityPick">
+  <div class="cp-card">
+    <div class="cp-t">选择城市</div>
+    <div class="cp-hint">IP 定位可能不准（如人在株洲显示长沙）。输入城市名即可纠正，全部数据将切换到该城市。</div>
+    <input id="cityInput" placeholder="输入城市名，如：株洲市" />
+    <div class="cp-row">
+      <button class="btn" id="cpReloc">📍 重新定位</button>
+      <button class="btn primary" id="cpGo">切换城市</button>
+    </div>
+  </div>
+</div>
 </div>
 
 <script>
@@ -393,6 +421,13 @@ function wgs84ToGcj02(lng, lat) {
   dLng = (dLng * 180) / (a / sqrtMagic * Math.cos(radLat) * Math.PI);
   return { lng: lng + dLng, lat: lat + dLat };
 }
+/* 百度 BD-09 → GCJ-02（geocode 接口返回 BD-09，全站统一 GCJ-02 再用） */
+function bd09ToGcj02(lng, lat) {
+  const x = lng - 0.0065, y = lat - 0.006;
+  const z = Math.sqrt(x * x + y * y) - 0.00002 * Math.sin(y * Math.PI * 3000 / 180);
+  const theta = Math.atan2(y, x) - 0.000003 * Math.cos(x * Math.PI * 3000 / 180);
+  return { lng: z * Math.cos(theta), lat: z * Math.sin(theta) };
+}
 
 /* ================= 定位 ================= */
 /* IP 定位接口返回的 city 常是「湖南省郴州市北湖区」这种带省带区的全称，
@@ -445,8 +480,8 @@ async function locate() {
     if (isFinite(Number(p.lng)) && isFinite(Number(p.lat))) {
       state.lng = Number(p.lng); state.lat = Number(p.lat);
       setLocUI(d.city || '', d.district || '', 'IP 锚定 · 城市级');
-      $('#addr').textContent = '未授权精确定位，已按 IP 估算城市中心。点右上角可重试。';
-      banner('浏览器定位未授权，当前为 IP 城市级定位（误差数公里）。授权定位后体验更准。');
+      $('#addr').textContent = '未授权精确定位，已按 IP 估算城市中心（可能不准，可点右上角手动选城市）。';
+      banner('浏览器定位未授权，当前为 IP 城市级定位（误差数公里，运营商属地可能偏差到省会）。可点右上角城市名手动纠正。');
       return true;
     }
   } catch (e) {}
@@ -686,7 +721,33 @@ async function loadShop() {
 /* ================= 事件 & 启动 ================= */
 $('#tabNear').onclick = () => { state.shopMode = 'near'; $('#tabNear').classList.add('on'); $('#tabHot').classList.remove('on'); loadShop(); };
 $('#tabHot').onclick = () => { state.shopMode = 'hot'; $('#tabHot').classList.add('on'); $('#tabNear').classList.remove('on'); loadShop(); };
-$('#locChip').onclick = $('#reloc').onclick = async () => { banner(''); await locate(); loadAll(); };
+
+/* ---------- 手动选城市浮层 ---------- */
+const cityPick = $('#cityPick');
+$('#locChip').onclick = () => cityPick.classList.add('show');
+$('#reloc').onclick = async () => { cityPick.classList.remove('show'); banner(''); await locate(); loadAll(); };
+cityPick.onclick = (e) => { if (e.target === cityPick) cityPick.classList.remove('show'); };
+$('#cpReloc').onclick = async () => { cityPick.classList.remove('show'); banner(''); await locate(); loadAll(); };
+$('#cpGo').onclick = async () => {
+  const name = ($('#cityInput').value || '').trim();
+  if (!name) { $('#cityInput').focus(); return; }
+  $('#cpGo').textContent = '切换中…';
+  try {
+    const g = await api('/map/geocode', { address: name });
+    if (!isFinite(Number(g.lng)) || !isFinite(Number(g.lat))) throw new Error('没找到该城市');
+    const gcj = bd09ToGcj02(Number(g.lng), Number(g.lat)); // geocode 返回 BD-09 → 全站统一 GCJ-02
+    state.lng = gcj.lng; state.lat = gcj.lat;
+    setLocUI(name, '', '手动选择 · 城市级');
+    $('#addr').textContent = '已手动切换到 ' + name + '，数据与推荐已同步更新。';
+    banner('');
+    cityPick.classList.remove('show');
+    loadAll();
+  } catch (e) {
+    banner('城市「' + name + '」识别失败：' + (e.message || '') + '，试试带「市」的全名');
+  } finally {
+    $('#cpGo').textContent = '切换城市';
+  }
+};
 $('#isoGo').onclick = loadIsochrone;
 document.querySelectorAll('#isoCtl .mtab').forEach((t) => {
   t.onclick = () => {

@@ -55,6 +55,48 @@ App({
     console.error('[鲤慧] 运行错误', err)
   },
 
+  /** 读取持久化的手动城市(无则 null) */
+  _manualLoc() {
+    try {
+      const m = wx.getStorageSync('lh_manual_city')
+      if (m && isFinite(Number(m.lng)) && isFinite(Number(m.lat))) {
+        return Object.assign({}, m, { accuracy: 5000, source: 'manual', ts: Date.now() })
+      }
+    } catch (e) {}
+    return null
+  },
+
+  /**
+   * 手动切换城市:城市名 → 百度 geocode(返回 BD-09)→ 统一换算 GCJ-02 → 全局生效并持久化。
+   * 用于纠正 IP 锚定的属地偏差(湖南宽带/蜂窝 IP 属地常挂省会)。
+   */
+  async setManualCity(cityName) {
+    const name = String(cityName || '').trim()
+    if (!name) throw new Error('城市名不能为空')
+    const api = require('./utils/api.js')
+    const g = await api.geocode(name, '')
+    if (!g || !isFinite(Number(g.lng)) || !isFinite(Number(g.lat))) {
+      throw new Error('没找到该城市，试试带「市」的全名')
+    }
+    const gcj = safeGcj02(Number(g.lng), Number(g.lat))
+    const loc = {
+      lng: gcj ? gcj.lng : Number(g.lng),
+      lat: gcj ? gcj.lat : Number(g.lat),
+      city: name,
+      district: '',
+      formatted: name,
+      accuracy: 5000,
+      source: 'manual',
+      ts: Date.now(),
+      coord: 'gcj02'
+    }
+    this.globalData.location = loc
+    try { wx.setStorageSync('lh_manual_city', { city: name, lng: loc.lng, lat: loc.lat, ts: Date.now() }) } catch (e) {}
+    this.emit('locationChange', loc)
+    console.log('[鲤慧-定位] 手动切换城市 →', name, loc.lng.toFixed(4), loc.lat.toFixed(4))
+    return loc
+  },
+
   /**
    * 全局定位：优先高精度 GPS，失败回落服务端 IP 锚定（城市级）
    *
@@ -65,6 +107,12 @@ App({
     opts = opts || {}
     const self = this
     const now = Date.now()
+    // 手动城市优先:用户显式选过城市(纠正 IP 属地不准,如人在株洲被 IP 锚定到长沙),
+    // 非强制定位时不覆盖;点「重新定位」(force)成功后自动清除手动城市
+    if (!opts.force) {
+      const manual = this._manualLoc()
+      if (manual) return Promise.resolve(manual)
+    }
     const cached = this.globalData.location
     if (!opts.force && cached && cached.ts && now - cached.ts < LOC_TTL) {
       console.log('[鲤慧-定位] 复用缓存', cached.source, '±' + cached.accuracy + 'm')
@@ -94,6 +142,8 @@ App({
           self.emit('locationChange', loc)
           // GPS 结果回写服务端，让「无坐标 / IP 兜底」的请求也能精确定位
           if (loc.source === 'gps' || loc.source === 'gps-coarse') {
+            // 真 GPS 成功 = 用户拿到了准确位置,手动城市使命完成
+            try { wx.removeStorageSync('lh_manual_city') } catch (e) {}
             try {
               const api = require('./utils/api.js')
               api.reportLocation(loc.lng, loc.lat, loc.accuracy)

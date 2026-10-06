@@ -20,7 +20,7 @@
   <!-- 顶部搜索区（定位城市合并进搜索框前缀） -->
   <view class="top" style="padding-top: {{safeTop}}px">
     <view class="search-bar">
-      <view class="s-city" bindtap="locateMe">{{cityShort}}<text class="s-caret">▾</text></view>
+      <view class="s-city" bindtap="onCityChip">{{cityShort}}<text class="s-caret">▾</text></view>
       <view class="s-divider"></view>
       <text class="s-ico">🔍</text>
       <input
