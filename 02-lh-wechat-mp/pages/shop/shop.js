@@ -18,7 +18,7 @@ Page({
     thirdName: '携程 / 美团',
     sources: [
       { key: 'near', name: '附近真实', sub: '按我的位置 3km' },
-      { key: 'hot', name: '郴州热门', sub: '全城高频去处' }
+      { key: 'hot', name: '本城热门', sub: '按你的城市推荐' }
     ],
     curSource: 'near',
     from: '',
@@ -66,19 +66,21 @@ Page({
     this.setData({ loading: true })
     let loc = app.globalData.location || {}
     // 定位为主：进商城默认「附近真实」，定位尚未就绪时最多等 4s；
-    // 仍拿不到坐标才自动切「郴州热门」兜底，并明确告知（下次定位更新 onShow 会切回）
+    // 仍拿不到坐标才自动切「本城热门」兜底，并明确告知（下次定位更新 onShow 会切回）
     if (this.data.curSource === 'near' && !isFinite(Number(loc.lng))) {
       const ok = await this.waitLoc(4000)
       if (!ok) {
         this.setData({ curSource: 'hot', list: [], emptyHint: '', quotaHit: false })
-        wx.showToast({ title: '未获取到定位，已展示郴州热门', icon: 'none', duration: 2400 })
+        wx.showToast({ title: '未获取到定位，已展示本城热门', icon: 'none', duration: 2400 })
         return this.load()
       }
       loc = app.globalData.location || {}
     }
+    this.syncHotTabName(loc)
     const mode = this.data.curSource
     try {
       // 真实店源：服务端已用百度 POI 建过目录，这里只取列表（省百度配额）
+      // ⚠️ hot（本城热门）也要带坐标：服务端拿它当城市级检索圆心，GPS 在哪个城市就拉哪个城市的热门
       const d = await api.shopSource(mode, loc.lng, loc.lat, {
         category: this.data.curCat,
         keyword: this.data.keyword
@@ -131,6 +133,13 @@ Page({
       }
       tick()
     })
+  },
+
+  /** 热门 tab 城市名动态化：GPS 在哪个城市，tab 就显示「XX热门」；拿不到市名则保持「本城热门」 */
+  syncHotTabName(loc) {
+    const m = String((loc && loc.city) || '').match(/([\u4e00-\u9fa5]{2,8}市)/)
+    const name = m ? m[1] + '热门' : '本城热门'
+    if (name !== this.data.sources[1].name) this.setData({ 'sources[1].name': name })
   },
 
   fmtTime(ts) {

@@ -8,7 +8,8 @@
  *
  * 双源：
  *  · near —— 按用户当前坐标实时拉附近（默认 3km），距离、地址全是真的
- *  · hot  —— 郴州热门（东江湖 / 莽山 / 裕后街 …），不依赖定位、换城市也能用
+ *  · hot  —— 本城热门：带坐标时按用户所在城市拉（15km 城市级 + 通用高频词），
+ *            GPS 在哪个城市就是那个城市的热门；完全没坐标时才回落郴州词表（比赛主场兜底）
  *
  * 关于价格：百度 place【不给成交价】，价格由 services/supplier.js 去携程/美团拉；
  * 没配 key 时这里只给参考价（前端必须标「参考」角标，别让用户以为那是真实价格）。
@@ -32,6 +33,7 @@ const fileOf = (mode) => (mode === 'hot' ? 'catalog-hot' : 'catalog-near');
 
 const CATALOG_TTL = 60 * 60 * 1000; // 落盘缓存 1 小时（百度 place 有【日配额】，别把次数烧在刷新上）
 const DEFAULT_RADIUS = 3000;
+const HOT_RADIUS = 15000; // 本城热门：城市级检索半径（GPS 在哪个城市就拉哪个城市的热门）
 
 /** 类目 → 展示名 / 单位 / 主供应商 */
 const META = {
@@ -57,6 +59,8 @@ const QUERIES = {
     { category: 'service', keyword: '家政服务' },
     { category: 'service', keyword: '汽车养护' },
   ],
+  // hot 两套词表：HOT_CITY 是通用高频词（配合用户坐标=所在城市的热门）；
+  // HOT_FALLBACK 是郴州写死词（用户完全没坐标时兜底——比赛主场，保证有数据）。
   hot: [
     { category: 'hotel', keyword: '郴州酒店' },
     { category: 'hotel', keyword: '北湖区酒店' },
@@ -68,12 +72,23 @@ const QUERIES = {
     { category: 'service', keyword: '郴州家政' },
   ],
 };
+// 本城热门：通用词（不带城市前缀，圆心就是用户坐标，百度按坐标周边检索）
+const HOT_CITY = [
+  { category: 'hotel', keyword: '酒店' },
+  { category: 'hotel', keyword: '民宿' },
+  { category: 'ticket', keyword: '公园' },
+  { category: 'ticket', keyword: '风景区' },
+  { category: 'food', keyword: '餐厅' },
+  { category: 'food', keyword: '美食' },
+  { category: 'service', keyword: '家政服务' },
+  { category: 'service', keyword: '汽车养护' },
+];
 
 /** 类目兜底：某些 mode 下某类目没命中，用这个补一条通用词 */
 function fillMissing(mode, hits) {
   const extra = {
     near: { food: '小吃', service: '体检' },
-    hot: { ticket: '苏仙岭', food: '烤鱼' },
+    hot: { ticket: '公园', food: '小吃' },
   }[mode] || {};
   return Object.keys(extra)
     .filter((c) => !hits[c])
@@ -148,22 +163,33 @@ async function build(mode = 'near', q = {}) {
     if (mem) return { ...mem, from: 'cache' };
   }
 
+  const lngQ = Number(q.lng);
+  const latQ = Number(q.lat);
   const disk = store.read(fileOf(mode), null);
-  if (!q.force && disk && disk.mode === mode && disk.items && disk.items.length) {
-    if (Date.now() - (disk.syncedAt || 0) < CATALOG_TTL) {
-      cache.set(key, disk, CATALOG_TTL);
-      return { ...disk, from: 'disk' };
-    }
+  // ★ 磁盘缓存命中前先校验「是不是同一个城市」：hot/near 都按坐标建目录，
+  //   单文件目录若不校验，A 城同步的数据会被 B 城用户直接读走（跨城串数据）。
+  //   旧数据没有 center 字段则跳过校验（向后兼容）。
+  const diskUsable = disk && disk.mode === mode && disk.items && disk.items.length &&
+    (!q.force) && (Date.now() - (disk.syncedAt || 0) < CATALOG_TTL);
+  const diskSameCity = (() => {
+    if (!diskUsable || !disk.center) return diskUsable;
+    const dLng = Number(disk.center.lng), dLat = Number(disk.center.lat);
+    if (!Number.isFinite(dLng) || !Number.isFinite(dLat) || !Number.isFinite(lngQ) || !Number.isFinite(latQ)) return true;
+    return distanceOf(lngQ, latQ, dLng, dLat) <= Math.max(Number(q.radius) || DEFAULT_RADIUS, HOT_RADIUS) * 2;
+  })();
+  if (diskUsable && diskSameCity) {
+    cache.set(key, disk, CATALOG_TTL);
+    return { ...disk, from: 'disk' };
   }
 
   const hits = {};
-  const queries = QUERIES[mode] || QUERIES.near;
-  const radius = Number(q.radius) || DEFAULT_RADIUS;
-  const lng = Number(q.lng);
-  const lat = Number(q.lat);
-
-  // near 模式必须给坐标（百度要拿它当检索圆心）；hot 模式没有坐标就用 0,0 走 region 检索
-  const withLoc = mode === 'near' && Number.isFinite(lng) && Number.isFinite(lat);
+  // hot 有坐标 = 本城热门（城市级半径 + 通用词）；没坐标才用郴州词表兜底（0,0 文本检索）
+  const hasLoc = Number.isFinite(lngQ) && Number.isFinite(latQ);
+  const withLoc = mode === 'near' || (mode === 'hot' && hasLoc);
+  const queries = mode === 'hot' ? (withLoc ? HOT_CITY : QUERIES.hot) : (QUERIES[mode] || QUERIES.near);
+  const radius = Number(q.radius) || (mode === 'hot' ? HOT_RADIUS : DEFAULT_RADIUS);
+  const lng = withLoc ? lngQ : 0;
+  const lat = withLoc ? latQ : 0;
 
   const ran = queries.concat(fillMissing(mode, hits));
   // ⚠️ 百度 place 是【日配额】计费的（超限直接 302，当天后续全部拿不到数据）。
@@ -216,6 +242,8 @@ async function build(mode = 'near', q = {}) {
 
   const out = {
     mode,
+    // 记录本次目录的检索圆心：下次磁盘命中前用于「是不是同一个城市」校验
+    center: withLoc ? { lng, lat } : null,
     syncedAt: Date.now(),
     count: items.length,
     items,

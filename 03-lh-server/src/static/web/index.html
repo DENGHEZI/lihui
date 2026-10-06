@@ -320,7 +320,7 @@
     <h2>🛒 附近真实店源 <span class="sub" id="shopFrom"></span></h2>
     <div class="tabs">
       <div class="tab on" data-mode="near" id="tabNear">📍 附近 3km</div>
-      <div class="tab" data-mode="hot" id="tabHot">🔥 郴州热门</div>
+      <div class="tab" data-mode="hot" id="tabHot">🔥 本城热门</div>
     </div>
     <div class="list" id="shopList"><div class="spin"></div></div>
     <div class="muted" style="margin-top:12px">下单与支付在第三方平台完成（携程 / 美团），鲤慧负责选品与留痕；标「参考」的价格为估算，实际以平台为准。</div>
@@ -411,6 +411,9 @@ function setLocUI(city, district, src) {
   $('#locText').textContent = [state.district || state.city].filter(Boolean).join('') || '已定位';
   $('#locDot').classList.remove('off');
   $('#locSrc').textContent = src;
+  /* 热门 tab 跟随城市：GPS 在哪个城市就展示那个城市的热门 */
+  const hot = $('#tabHot');
+  if (hot) hot.textContent = '🔥 ' + (c || '本城') + '热门';
 }
 
 async function locate() {
@@ -659,7 +662,8 @@ async function loadQuick() {
 /* ================= 真实店源 ================= */
 async function loadShop() {
   $('#shopList').innerHTML = '<div class="spin"></div>';
-  const p = state.shopMode === 'near' && state.lng != null ? { lng: state.lng, lat: state.lat } : {};
+  // ⚠️ hot（本城热门）同样带坐标：服务端拿它当城市级检索圆心，GPS 在哪个城市就拉哪个城市的热门
+  const p = state.lng != null ? { lng: state.lng, lat: state.lat } : {};
   try {
     const r = await api('/shop/source', Object.assign({ mode: state.shopMode }, p));
     if (r.quotaHit) banner('百度地图今日配额已用尽，店源为缓存数据（约 1 小时内），明日自动恢复。');
