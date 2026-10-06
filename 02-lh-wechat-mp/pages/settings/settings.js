@@ -4,10 +4,12 @@ const voice = require('../../utils/voice.js')
 const action = require('../../utils/action.js')
 
 const theme = require('../../utils/theme.js')
+const profile = require('../../utils/profile.js')
 Page({
   data: {
     models: [],
     plan: 'pro',
+    personalize: true,
     voice: { engine: 'baidu', speaker: 'per_4', speed: 1, pitch: 1, volume: 1, wakeWord: '小鲤小鲤', dialect: 'putonghua', autoSpeak: true, careMode: false },
     speedVal: 50,
     pitchVal: 50,
@@ -58,7 +60,7 @@ Page({
       dialectNames: this.data.dialects.map((d) => d.name)
     })
     this.syncPickers()
-    this.setData({ plan: getPlan() })
+    this.setData({ plan: getPlan(), personalize: profile.isEnabled() })
     this.loadModels()
     this.loadVoice()
   },
@@ -227,6 +229,14 @@ Page({
     const on = setCareMode(e.detail.value)
     this.setData({ 'voice.careMode': on })
     this.save()
+  },
+
+  /** 个性化推荐开关：关闭后端上停止上报行为画像（历史画像可在服务端清除） */
+  onPersonalize(e) {
+    const on = !!e.detail.value
+    profile.setEnabled(on)
+    this.setData({ personalize: on })
+    wx.showToast({ title: on ? '已开启个性化推荐' : '已关闭，不再记录习惯', icon: 'none' })
   },
 
   async save() {

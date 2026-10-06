@@ -149,7 +149,7 @@ function serveHome(res, query) {
     res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
     return res.end('底图页面缺失：' + e.message);
   }
-  const ak = config.baidu.akBrowser || security.HONEYPOT_AK_WEB;
+  const ak = config.baidu.akBrowser || security.webHoneypot();
   const lat = Number(query.lat);
   const lng = Number(query.lng);
   const seed =

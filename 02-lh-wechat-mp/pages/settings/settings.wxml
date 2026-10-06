@@ -90,6 +90,11 @@
       </view>
     </view>
     <view class="row">
+      <text class="lh-body">个性化推荐</text>
+      <switch checked="{{personalize}}" color="#1677FF" bindchange="onPersonalize" />
+    </view>
+    <text class="lh-mini">开启后系统自动学习你的常搜关键词与常去地点，搜索结果与 AI 推荐会更贴合你的习惯；只记录地点与类目，不采集任何身份信息。关闭即停止记录。</text>
+    <view class="row">
       <text class="lh-body">当前套餐</text>
       <view class="plans">
         <text class="lh-pill {{plan === 'free' ? 'lh-pill--on' : ''}}" bindtap="setFree">免费基础版</text>

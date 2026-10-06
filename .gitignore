@@ -47,3 +47,6 @@ Thumbs.db
 
 # 地址补查运行时数据（用户提交的地址，云端自行生成，不入库）
 03-lh-server/data/addr-fixes.json
+
+# 用户画像运行时数据（自动学习的用户习惯，云端自行生成，不入库）
+03-lh-server/data/profiles.json

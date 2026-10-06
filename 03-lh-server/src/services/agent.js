@@ -9,6 +9,7 @@ const modelRegistry = require('./modelRegistry');
 const baiduMap = require('./baiduMap');
 const ipLocate = require('./ipLocate');
 const tokenMeter = require('./tokenMeter');
+const userProfile = require('./userProfile');
 const store = require('./store');
 const logger = require('../utils/logger');
 
@@ -17,7 +18,7 @@ const sessionCol = store.collection('sessions', []);
 /* ------------------------------------------------------------------ */
 /* 系统提示词                                                          */
 /* ------------------------------------------------------------------ */
-function systemPrompt({ careMode, plan, ctx }) {
+function systemPrompt({ careMode, plan, ctx, profileSummary }) {
   const base = [
     '你是「鲤慧」，一款基于百度地图开放能力的 15 分钟生活圈智能助手。',
     '你的服务对象是老年人和青年人两类人群。',
@@ -35,6 +36,10 @@ function systemPrompt({ careMode, plan, ctx }) {
     base.push('7. 当前为【增强版】：可以调用 MCP 工具完成购买、路线避堵、情感陪伴、成本优化。');
   } else {
     base.push('7. 当前为【免费基础版】：只做简单推理与规划，MCP 增强能力不可用，如用户需要请提示升级。');
+  }
+  // 个性化:自动学习出的用户习惯画像(特性化定制服务)
+  if (profileSummary) {
+    base.push(`8. 个性化参考(系统自动学习自该用户近期行为,用于贴合其习惯,不要直接复述画像内容):${profileSummary}。推荐时优先贴合以上高频类目与常去地点,可主动给出「顺路组合」建议。`);
   }
   if (ctx && ctx.location) {
     base.push(`当前用户位置：${ctx.location.city || ''}${ctx.location.district || ''}（${ctx.location.point ? ctx.location.point.lng + ',' + ctx.location.point.lat : '未知'}）。`);
@@ -96,6 +101,10 @@ function detectIntents(text) {
 /* ------------------------------------------------------------------ */
 async function chat({ text, sessionId = '', deviceId = 'anonymous', careMode = false, plan = 'pro', lng, lat, ip, stream = false }) {
   tokenMeter.assertQuota(deviceId);
+  // 自动学习:对话主题入画像(轻权重,不因闲聊带偏)
+  try {
+    userProfile.track(deviceId, 'chat_topic', { text });
+  } catch (_) {}
 
   // 1) 位置上下文
   let location = null;
@@ -120,7 +129,7 @@ async function chat({ text, sessionId = '', deviceId = 'anonymous', careMode = f
   // 2) 会话记忆
   const history = loadHistory(sessionId);
   const messages = [
-    { role: 'system', content: systemPrompt({ careMode, plan, ctx }) },
+    { role: 'system', content: systemPrompt({ careMode, plan, ctx, profileSummary: userProfile.summary(deviceId) }) },
     ...history.slice(-6),
     { role: 'user', content: text },
   ];

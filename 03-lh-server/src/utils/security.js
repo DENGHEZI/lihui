@@ -31,8 +31,17 @@ const HONEYPOTS = [
   // 仿 OpenAI 兼容平台 token —— 诱捕「抓模型 key」的爬虫
   'sk-hn9f4e2a7c1b8d6m3k5p0q2r4t6v8x0',
 ];
-/** H5 底图页面未配浏览器端 AK 时注入的蜜罐(从名单取第一个,专用于网页渠道) */
-const HONEYPOT_AK_WEB = HONEYPOTS[0];
+/** 渠道标记:每个蜜罐对应一个投放渠道,泄露后能定位「从哪漏的」;轮换时原地更新值 */
+const honeypots = {
+  web: HONEYPOTS[0], // /map-home H5 页面注入
+  env: HONEYPOTS[1], // .env.example 模板诱饵
+  docs: HONEYPOTS[2], // 文档/注释诱饵
+  model: HONEYPOTS[3], // 仿模型 token 诱饵
+};
+/** 兼容旧引用:H5 页面注入值(字符串) */
+function webHoneypot() {
+  return honeypots.web;
+}
 
 /* ---------------- 安全日志 ---------------- */
 const LOG_DIR = path.join(config.dataDir, 'logs');
@@ -125,17 +134,92 @@ setInterval(() => {
   for (const [k, v] of banned) if (now > v) banned.delete(k);
 }, 300000).unref();
 
-/** 蜜罐命中统一处理:记日志 + 封禁,返回给路由层决定响应 */
+/* ---------------- 危险自动响应(分级补丁,2026-10-06) ----------------
+ * L1 单次命中:封 IP(默认 10min)→ 常规扫描器,挡掉即可。
+ * L2 同 IP 反复命中(≥3 次):封禁升级 24h → 判定「针对性攻击者」。
+ * L3 多 IP 命中同一蜜罐渠道(1h 内 ≥3 个不同 IP):判定【该渠道已泄露】
+ *    → 自动轮换该渠道蜜罐(旧钥匙作废,攻击者手里那把失效),
+ *    生成渠道泄露事件,运维在 /api/v1/security/events 面板一眼可见。 */
+const ipHitCount = new Map(); // ip -> 命中次数
+const channelHits = new Map(); // channel -> [{ ip, ts }]
+const REPEAT_BAN_MS = 24 * 60 * 60 * 1000;
+const CHANNEL_LEAK_IPS = 3; // 1h 内不同 IP 数阈值
+const CHANNEL_LEAK_WIN = 60 * 60 * 1000;
+
+/* 安全事件环形缓冲(内存,≤200 条,供面板查询;security.log 仍是全量落盘) */
+const EVENTS = [];
+function pushEvent(level, event, detail) {
+  EVENTS.push({ ts: new Date().toISOString(), level, event, ...detail });
+  if (EVENTS.length > 200) EVENTS.splice(0, EVENTS.length - 200);
+}
+
+/** 渠道蜜罐轮换:替换 honeypots[channel] 与 HONEYPOTS 数组中的对应值 */
+function rotateHoneypot(channel) {
+  const fresh =
+    'sk-' + require('crypto').randomBytes(16).toString('hex') + String(Date.now()).slice(-4);
+  const old = honeypots[channel];
+  if (!old) return null;
+  honeypots[channel] = fresh;
+  const idx = HONEYPOTS.indexOf(old);
+  if (idx >= 0) HONEYPOTS[idx] = fresh;
+  return { channel, oldMasked: old.slice(0, 6) + '****', newMasked: fresh.slice(0, 6) + '****' };
+}
+
+/** 蜜罐命中统一处理:分级响应 + 记日志 + 事件缓冲 */
 function recordHit({ ip, req, key, where }) {
+  // 渠道判定:命中的这把蜜罐是投在哪的
+  let channel = 'unknown';
+  for (const [ch, val] of Object.entries(honeypots)) if (val === key) channel = ch;
+
+  // L1:基础封禁
   ban(ip);
+  const hits = (ipHitCount.get(ip) || 0) + 1;
+  ipHitCount.set(ip, hits);
   securityLog('honeypot-hit', {
     ip,
+    level: 1,
+    channel,
     keyMasked: key.slice(0, 6) + '****',
     where,
     method: (req && req.method) || '',
     path: (req && req.url || '').slice(0, 200),
     ua: ((req && req.headers && req.headers['user-agent']) || '').slice(0, 120),
   });
+  pushEvent('warn', 'honeypot-hit', { ip, channel, where, hits });
+
+  // L2:反复命中 → 封禁升级
+  if (hits >= 3) {
+    ban(ip, REPEAT_BAN_MS);
+    securityLog('honeypot-repeat', { ip, level: 2, hits, banMs: REPEAT_BAN_MS });
+    pushEvent('danger', 'honeypot-repeat', { ip, hits, action: 'banned-24h' });
+  }
+
+  // L3:多 IP 命中同一渠道 → 判定渠道泄露,自动轮换蜜罐
+  const now = Date.now();
+  const list = (channelHits.get(channel) || []).filter((r) => now - r.ts < CHANNEL_LEAK_WIN);
+  if (!list.some((r) => r.ip === ip)) list.push({ ip, ts: now });
+  channelHits.set(channel, list);
+  const distinct = new Set(list.map((r) => r.ip)).size;
+  if (distinct >= CHANNEL_LEAK_IPS) {
+    const rot = rotateHoneypot(channel);
+    channelHits.delete(channel); // 轮换后重置该渠道计数
+    securityLog('channel-leak', { level: 3, channel, distinctIps: distinct, rotated: !!rot });
+    pushEvent('critical', 'channel-leak-rotated', { channel, distinctIps: distinct, rotation: rot });
+  }
+}
+
+/** 管理面板:事件缓冲 + 当前封禁名单 + 蜜罐状态(全部掩码,不泄真值) */
+function eventsSnapshot() {
+  const now = Date.now();
+  const bannedList = [];
+  for (const [ip, until] of banned) {
+    if (until > now) bannedList.push({ ip, until: new Date(until).toISOString() });
+  }
+  const honeypotStatus = {};
+  for (const [ch, val] of Object.entries(honeypots)) {
+    honeypotStatus[ch] = { keyMasked: val.slice(0, 6) + '****', channel: ch };
+  }
+  return { events: EVENTS.slice(-50), banned: bannedList.slice(0, 100), honeypots: honeypotStatus };
 }
 
 /* ---------------- 出站令牌桶(保护百度配额) ---------------- */
@@ -183,12 +267,14 @@ function dedup(key, fn) {
 
 module.exports = {
   HONEYPOTS,
-  HONEYPOT_AK_WEB,
+  honeypots,
+  webHoneypot,
   securityLog,
   checkRequest,
   isBanned,
   ban,
   recordHit,
+  eventsSnapshot,
   baiduBucket,
   dedup,
 };

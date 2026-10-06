@@ -108,7 +108,7 @@ function canUseCloudContainer() {
 }
 
 /* ---------------- 请求 ---------------- */
-function request(path, { method = 'GET', data = {}, loading = false, loadingText = '加载中', cacheTtl = 0 } = {}) {
+function request(path, { method = 'GET', data = {}, loading = false, loadingText = '加载中', cacheTtl = 0, silent = false } = {}) {
   // 命中缓存直接返回（零网络、零等待）
   let cacheKey = ''
   if (method === 'GET' && cacheTtl > 0) {
@@ -133,8 +133,9 @@ function request(path, { method = 'GET', data = {}, loading = false, loadingText
         return
       }
       if (body.code === 1003) {
-        wx.showModal({ title: '额度用尽', content: body.msg || '今日 Token 配额已用完', showCancel: false })
+        if (!silent) wx.showModal({ title: '额度用尽', content: body.msg || '今日 Token 配额已用完', showCancel: false })
       } else if (body.code === 3002) {
+        if (silent) { reject(body); return }
         wx.showModal({
           title: '还没有可用模型',
           content: '请先到「我的 → 模型与语音设置」添加一个模型',
@@ -143,13 +144,13 @@ function request(path, { method = 'GET', data = {}, loading = false, loadingText
             if (r.confirm) wx.navigateTo({ url: '/pages/settings/settings' })
           }
         })
-      } else {
+      } else if (!silent) {
         wx.showToast({ title: body.msg || '请求失败', icon: 'none', duration: 2200 })
       }
       reject(body)
     }
     const onFail = (err) => {
-      wx.showToast({ title: networkHint(err), icon: 'none', duration: 3000 })
+      if (!silent) wx.showToast({ title: networkHint(err), icon: 'none', duration: 3000 })
       reject(err)
     }
     const onComplete = () => {

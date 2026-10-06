@@ -4,6 +4,7 @@
  */
 const api = require('../../utils/api.js')
 const theme = require('../../utils/theme.js')
+const profile = require('../../utils/profile.js')
 const app = getApp()
 
 Page({
@@ -124,6 +125,8 @@ Page({
 
   onSearch() {
     wx.hideKeyboard()
+    const kw = (this.data.keyword || '').trim()
+    if (kw) profile.track('search', { query: kw, category: 'shop' }) // 画像埋点：商城搜索词
     this.load()
   },
 

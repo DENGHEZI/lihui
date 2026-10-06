@@ -5,6 +5,7 @@ const bmap = require('../../utils/bmap.js')
 const { getCareMode, setCareMode } = require('../../utils/token.js')
 const { parseCity } = require('../../utils/city.js')
 const voice = require('../../utils/voice.js')
+const profile = require('../../utils/profile.js')
 
 const theme = require('../../utils/theme.js')
 Page({
@@ -230,6 +231,7 @@ Page({
   async doSearch(query, icon) {
     this.setData({ loadingPoi: true, curIcon: icon || '📍' })
     this.expandSheet()
+    profile.track('search', { query: query }) // 画像埋点：搜索词（静默，5s 节流）
     try {
       const d = await api.poiSearch(query, this.data.center.lng, this.data.center.lat, config.DEFAULT_RADIUS)
       const list = (d.items || [])
@@ -457,6 +459,7 @@ Page({
   navigate(e) {
     const p = this.data.poiList[e.currentTarget.dataset.i]
     if (!p) return
+    profile.track('poi_click', { uid: p.uid || '', name: p.name, lng: Number(p.lng) || 0, lat: Number(p.lat) || 0 }) // 画像埋点：常去地点
     wx.navigateTo({ url: `/pages/route/route?name=${encodeURIComponent(p.name)}&lng=${p.lng}&lat=${p.lat}` })
   },
 

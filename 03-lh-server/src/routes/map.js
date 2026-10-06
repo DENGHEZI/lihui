@@ -28,6 +28,7 @@ try {
 } catch (_) {}
 const config = require('../config');
 const security = require('../utils/security');
+const userProfile = require('../services/userProfile');
 const POI_MEM = new Map();
 const POI_FILE = 'poi';
 const POI_MAX_AGE = 6 * 60 * 60 * 1000; // 6 小时
@@ -158,7 +159,10 @@ module.exports = {
       city: q.city || '',
     };
     const key = poiKey(q);
+    const devId = req.headers['x-device-id'] || '';
     try {
+      // 行为埋点:搜索入画像(自动学习用户常搜类目/关键词)
+      userProfile.track(devId, 'search', { query: q.query, category: q.category });
       const data = await baiduMap.poiSearch(args);
       if (data && data.items && data.items.length) {
         // 地址补查：客户补报的地址覆盖命中条目；「地图上没有的地点」按关键词注入
@@ -169,6 +173,8 @@ module.exports = {
           lat: args.lat,
           radius: args.radius,
         });
+        // 个性化:常搜类目/去过的店同距离带加权上浮(距离仍是第一权重)
+        data.items = userProfile.personalizeRank(data.items, devId);
         poiCacheSet(key, data);
       }
       return ok(res, data);
