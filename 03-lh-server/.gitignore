@@ -16,3 +16,8 @@ data/tmp/
 Thumbs.db
 *.log
 data/models.json
+
+# SQLite 数据库（LH_STORE=sqlite 的运行时库，WAL 伴生文件一并忽略）
+data/*.db
+data/*.db-wal
+data/*.db-shm

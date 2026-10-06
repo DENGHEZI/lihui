@@ -60,6 +60,11 @@ COPY 04-lh-mcp-servers /04-lh-mcp-servers
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=80
+# 分布式部署（详见 docs/DEPLOY.md）：
+#   单实例（默认）         → LH_STORE=json，零配置
+#   单机多进程             → LH_WORKERS=N + LH_STORE=sqlite
+#   多实例横向扩（共享卷）  → LH_STORE=sqlite + LH_DB_PATH=<共享卷路径>
+# 环境变量在运行时注入（docker run -e / 云托管控制台「环境变量」），不烤进镜像。
 # ★ 镜像默认端口必须与云托管（CloudBase Run / 微信云托管）的容器端口约定一致。
 #   平台按「服务设置 → 容器端口」探活；容器监听端口 = 运行时 PORT > 镜像默认。
 #   早期版本这里写死 8809，而控制台填 80 → 服务监听 8809、平台探 80，

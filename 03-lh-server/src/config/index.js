@@ -49,7 +49,8 @@ const bool = (k, d = false) => {
 
 const config = {
   root: ROOT,
-  dataDir: path.join(ROOT, 'data'),
+  // 数据目录:默认 03-lh-server/data;可用 LH_DATA_DIR 指向他处(容器挂载卷/测试隔离)
+  dataDir: path.resolve(env('LH_DATA_DIR', '') || path.join(ROOT, 'data')),
 
   server: {
     // PORT 优先级：运行时注入 > 容器内默认 80 > 物理机默认 8809
@@ -91,6 +92,15 @@ const config = {
     baiduSecretKey: env('VOICE_BAIDU_SECRET_KEY', ''),
     azureKey: env('VOICE_AZURE_KEY', ''),
     azureRegion: env('VOICE_AZURE_REGION', 'eastasia'),
+  },
+
+  // 存储层(2026-10-06 分布式升级)
+  // driver: json=沿用 data/*.json 单文件(单实例默认,零改动兼容)
+  //         sqlite=Node 22.13+ 内置 node:sqlite(零 npm 依赖),单库 WAL,
+  //                支持单机多进程(LH_WORKERS)与多实例共享卷 —— 分布式部署基础
+  store: {
+    driver: env('LH_STORE', 'json').toLowerCase() === 'sqlite' ? 'sqlite' : 'json',
+    dbPath: env('LH_DB_PATH', path.join(ROOT, 'data', 'lihui.db')),
   },
 
   // 缓存 TTL（毫秒）

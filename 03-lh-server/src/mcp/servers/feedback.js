@@ -2,35 +2,13 @@
 /**
  * 鲤慧 LiHui · MCP Server: feedback（内置版）
  * 工具：submit（提交反馈）、list_pending（管理端拉取待处理）、handle（管理端处理）
- * 数据落 03-lh-server/data/feedback.json（与 HTTP /api/v1/feedback 同源）
+ * 存储：统一存储层（2026-10-06）——与 HTTP /api/v1/feedback 同源同驱动：
+ *   json 模式 → data/feedback.json；sqlite 模式 → docs 表（与主服务跨进程共享）
  */
 const readline = require('readline');
-const fs = require('fs');
-const path = require('path');
+const store = require('../../services/store');
 
-// 本文件位于 03-lh-server/src/mcp/servers/  →  数据目录 ../../../data
-const DATA_DIR = process.env.LH_DATA_DIR || path.resolve(__dirname, '..', '..', '..', 'data');
-const FILE = path.join(DATA_DIR, 'feedback.json');
-
-function readAll() {
-  try {
-    if (!fs.existsSync(FILE)) return [];
-    const t = fs.readFileSync(FILE, 'utf8').trim();
-    return t ? JSON.parse(t) : [];
-  } catch (_) {
-    return [];
-  }
-}
-function writeAll(list) {
-  try {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(FILE, JSON.stringify(list, null, 2), 'utf8');
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-const uid = (p) => `${p}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+const col = store.collection('feedback', []);
 
 const TOOLS = [
   {
@@ -62,9 +40,8 @@ const TOOLS = [
 
 function submit(args) {
   if (!args.content) throw new Error('content 必填');
-  const list = readAll();
   const item = {
-    id: uid('fb'),
+    id: store.uid('fb'),
     type: ['bug', 'feature', 'complaint', 'praise'].includes(args.type) ? args.type : 'bug',
     content: String(args.content).slice(0, 2000),
     contact: args.contact || '',
@@ -74,27 +51,25 @@ function submit(args) {
     reply: '',
     createdAt: new Date().toISOString(),
   };
-  list.push(item);
-  writeAll(list);
-  return { ok: true, id: item.id, status: item.status, createdAt: item.createdAt, total: list.length };
+  col.add(item);
+  return { ok: true, id: item.id, status: item.status, createdAt: item.createdAt, total: col.all().length };
 }
 
 function listPending(args = {}) {
   const status = args.status || 'pending';
   const limit = Number(args.limit) || 20;
-  const list = readAll().filter((x) => x.status === status).slice(-limit).reverse();
+  const list = col.all().filter((x) => x.status === status).slice(-limit).reverse();
   return { status, count: list.length, items: list };
 }
 
 function handle(args = {}) {
-  const list = readAll();
-  const i = list.findIndex((x) => x.id === args.id);
-  if (i < 0) throw new Error('反馈不存在');
-  list[i].status = ['pending', 'processing', 'resolved', 'rejected'].includes(args.status) ? args.status : 'processing';
-  if (args.reply !== undefined) list[i].reply = args.reply;
-  list[i].handledAt = new Date().toISOString();
-  writeAll(list);
-  return { ok: true, item: list[i] };
+  const updated = col.update(args.id, {
+    status: ['pending', 'processing', 'resolved', 'rejected'].includes(args.status) ? args.status : 'processing',
+    ...(args.reply !== undefined ? { reply: args.reply } : {}),
+    handledAt: new Date().toISOString(),
+  });
+  if (!updated) throw new Error('反馈不存在');
+  return { ok: true, item: updated };
 }
 
 const HANDLERS = { submit, list_pending: listPending, handle };

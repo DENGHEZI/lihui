@@ -1,13 +1,10 @@
 /**
  * 鲤慧 LiHui · 各地生活圈管理规范库
- * 数据：data/standards.json（自然资源部《社区生活圈规划技术指南》+ 各城市导则/规定）
+ * 数据：data/standards.json → 统一存储层（2026-10-06，sqlite 模式下首次读取自动导入 docs 表）
  * 体检报告与盲区分析的「评分依据」均引用本库；端上经 GET /life/standards 获取并缓存。
  */
-const fs = require('fs');
-const path = require('path');
+const store = require('./store');
 const logger = require('../utils/logger');
-
-const FILE = path.join(__dirname, '..', '..', 'data', 'standards.json');
 
 // 内置兜底：standards.json 缺失/损坏时仍能给出国家口径（warn 提示，绝不静默返回空）
 const FALLBACK = {
@@ -26,16 +23,11 @@ const FALLBACK = {
   ],
 };
 
-let cache = null; // { mtime, data }
-
 function load() {
   try {
-    const st = fs.statSync(FILE);
-    if (cache && cache.mtime === st.mtimeMs) return cache.data;
-    const data = JSON.parse(fs.readFileSync(FILE, 'utf-8'));
-    if (!data || !Array.isArray(data.items) || !data.items.length) throw new Error('standards.json 结构为空');
-    cache = { mtime: st.mtimeMs, data };
-    return cache.data;
+    const data = store.read('standards', null);
+    if (!data || !Array.isArray(data.items) || !data.items.length) throw new Error('standards 数据结构为空');
+    return data;
   } catch (e) {
     logger.warn('standards', `load failed (${e.message}), fallback to builtin national standard`);
     return FALLBACK;

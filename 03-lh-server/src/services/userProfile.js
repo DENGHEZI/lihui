@@ -5,7 +5,12 @@
  * 再反哺到两处:①AI 助手回复特性化(prompt 注入画像摘要);
  * ②周边检索排序个性化(常搜类目 + 点过的店加权上浮)。
  *
- * 数据结构(data/profiles.json,原子写,deviceId 匿名无手机号):
+ * 存储(2026-10-06 迁入统一存储层):
+ *   单文档 profiles(store 驱动 json=profiles.json / sqlite=docs 表),
+ *   所有变更走 store.update 原子读改写 —— 多进程/多实例部署下不再有
+ *   「内存为权威」的实例间不一致;读取时落库,写时事务化。
+ *
+ * 数据结构:
  *   profiles[deviceId] = {
  *     updatedAt,
  *     cats:     { 类目: 权重 },          // 搜索/对话主题命中(医疗/商业/休闲/交通...)
@@ -22,41 +27,26 @@
  *   - 隐私边界:只存离散 POI 与类目计数,不存轨迹、不存坐标历史、不存身份信息;
  *     端上「个性化推荐」开关关闭时不产生任何上报
  */
-const fs = require('fs');
-const path = require('path');
-const config = require('../config');
+const store = require('./store');
 const logger = require('../utils/logger');
 
-const FILE = path.join(config.dataDir, 'profiles.json');
 const DAILY_DECAY = 0.98;
 const MAX_KEYWORDS = 40;
 const MAX_PLACES = 30;
 
-let cache = null; // 内存为权威,写盘原子化
+/** 取某设备画像(裸读,不触发衰减 —— 与旧版 summary/snapshot 行为一致) */
+function getProfile(deviceId) {
+  const all = store.read('profiles', {}) || {};
+  return all[deviceId] || null;
+}
 
-function load() {
-  if (cache) return cache;
-  try {
-    cache = fs.existsSync(FILE) ? JSON.parse(fs.readFileSync(FILE, 'utf8')) : {};
-  } catch (_) {
-    cache = {};
-  }
-  return cache;
-}
-function save() {
-  try {
-    const tmp = FILE + '.tmp';
-    fs.writeFileSync(tmp, JSON.stringify(cache, null, 2), 'utf8');
-    fs.renameSync(tmp, FILE);
-  } catch (e) {
-    logger.warn('profile', `save failed: ${e.message}`);
-  }
-}
-function of(deviceId) {
-  const all = load();
+/**
+ * 在「全部画像」文档上取/初始化某设备画像,并按间隔天数整体衰减(自动遗忘冷行为)。
+ * 只应在 store.update 的事务闭包内调用(sqlite 模式下持写锁)。
+ */
+function touch(all, deviceId) {
   if (!all[deviceId]) all[deviceId] = { updatedAt: Date.now(), cats: {}, keywords: {}, places: [], prefs: {}, events: 0 };
   const p = all[deviceId];
-  // 读取时按间隔天数整体衰减(自动遗忘冷行为)
   const days = Math.min(60, Math.max(0, (Date.now() - (p.updatedAt || Date.now())) / 86400000));
   if (days >= 1) {
     const f = Math.pow(DAILY_DECAY, days);
@@ -86,92 +76,100 @@ function catsOf(text) {
 /* ---------------- 行为埋点 ---------------- */
 function track(deviceId, event, payload = {}) {
   if (!deviceId || deviceId === 'anonymous') return;
-  const p = of(deviceId);
-  p.events += 1;
-  p.updatedAt = Date.now();
+  const okWrite = store.update(
+    'profiles',
+    (all) => {
+      all = all && typeof all === 'object' && !Array.isArray(all) ? all : {};
+      const p = touch(all, deviceId);
+      p.events += 1;
+      p.updatedAt = Date.now();
 
-  const bumpCats = (cats, w) => cats.forEach((c) => (p.cats[c] = +(((p.cats[c] || 0) + w)).toFixed(3)));
-  const bumpKeyword = (kw, w) => {
-    const k = String(kw).slice(0, 24);
-    if (k) p.keywords[k] = +(((p.keywords[k] || 0) + w)).toFixed(3);
-  };
+      const bumpCats = (cats, w) => cats.forEach((c) => (p.cats[c] = +(((p.cats[c] || 0) + w)).toFixed(3)));
+      const bumpKeyword = (kw, w) => {
+        const k = String(kw).slice(0, 24);
+        if (k) p.keywords[k] = +(((p.keywords[k] || 0) + w)).toFixed(3);
+      };
 
-  switch (event) {
-    case 'search': {
-      // 搜索:类目 + 关键词双记忆
-      const cats = payload.category ? [payload.category] : catsOf(payload.query);
-      if (cats) bumpCats(cats, 1);
-      bumpKeyword(payload.query, 1);
-      break;
-    }
-    case 'chat_topic': {
-      // 对话主题:轻权重(避免聊天灌水带偏画像)
-      const cats = catsOf(payload.text);
-      if (cats) bumpCats(cats, 0.5);
-      break;
-    }
-    case 'poi_click': {
-      // 点店:强信号(uid 去重,w 累积)
-      if (payload.uid) {
-        const hit = p.places.find((x) => x.uid === payload.uid);
-        if (hit) hit.w = +(hit.w + 3).toFixed(3);
-        else {
-          p.places.push({
-            uid: String(payload.uid).slice(0, 48),
-            name: String(payload.name || '').slice(0, 40),
-            lng: Number(payload.lng) || 0,
-            lat: Number(payload.lat) || 0,
-            w: 3,
-          });
+      switch (event) {
+        case 'search': {
+          // 搜索:类目 + 关键词双记忆
+          const cats = payload.category ? [payload.category] : catsOf(payload.query);
+          if (cats) bumpCats(cats, 1);
+          bumpKeyword(payload.query, 1);
+          break;
         }
-      }
-      const cats = catsOf(payload.name);
-      if (cats) bumpCats(cats, 2);
-      break;
-    }
-    case 'navigate': {
-      // 发起导航:最强信号
-      if (payload.uid) {
-        const hit = p.places.find((x) => x.uid === payload.uid);
-        if (hit) hit.w = +(hit.w + 5).toFixed(3);
-        else {
-          p.places.push({
-            uid: String(payload.uid).slice(0, 48),
-            name: String(payload.name || '').slice(0, 40),
-            lng: Number(payload.lng) || 0,
-            lat: Number(payload.lat) || 0,
-            w: 5,
-          });
+        case 'chat_topic': {
+          // 对话主题:轻权重(避免聊天灌水带偏画像)
+          const cats = catsOf(payload.text);
+          if (cats) bumpCats(cats, 0.5);
+          break;
         }
+        case 'poi_click': {
+          // 点店:强信号(uid 去重,w 累积)
+          if (payload.uid) {
+            const hit = p.places.find((x) => x.uid === payload.uid);
+            if (hit) hit.w = +(hit.w + 3).toFixed(3);
+            else {
+              p.places.push({
+                uid: String(payload.uid).slice(0, 48),
+                name: String(payload.name || '').slice(0, 40),
+                lng: Number(payload.lng) || 0,
+                lat: Number(payload.lat) || 0,
+                w: 3,
+              });
+            }
+          }
+          const cats = catsOf(payload.name);
+          if (cats) bumpCats(cats, 2);
+          break;
+        }
+        case 'navigate': {
+          // 发起导航:最强信号
+          if (payload.uid) {
+            const hit = p.places.find((x) => x.uid === payload.uid);
+            if (hit) hit.w = +(hit.w + 5).toFixed(3);
+            else {
+              p.places.push({
+                uid: String(payload.uid).slice(0, 48),
+                name: String(payload.name || '').slice(0, 40),
+                lng: Number(payload.lng) || 0,
+                lat: Number(payload.lat) || 0,
+                w: 5,
+              });
+            }
+          }
+          break;
+        }
+        case 'care_toggle':
+          p.prefs.careMode = payload.on ? 1 : 0;
+          break;
+        case 'model_switch':
+          p.prefs.model = String(payload.model || '').slice(0, 40);
+          break;
+        default:
+          break;
       }
-      break;
-    }
-    case 'care_toggle':
-      p.prefs.careMode = payload.on ? 1 : 0;
-      break;
-    case 'model_switch':
-      p.prefs.model = String(payload.model || '').slice(0, 40);
-      break;
-    default:
-      break;
-  }
 
-  // 收纳:关键词/地点上限(权重低的挤掉)
-  const kwKeys = Object.keys(p.keywords);
-  if (kwKeys.length > MAX_KEYWORDS) {
-    kwKeys.sort((a, b) => p.keywords[b] - p.keywords[a]);
-    for (const k of kwKeys.slice(MAX_KEYWORDS)) delete p.keywords[k];
-  }
-  if (p.places.length > MAX_PLACES) {
-    p.places.sort((a, b) => b.w - a.w);
-    p.places = p.places.slice(0, MAX_PLACES);
-  }
-  save();
+      // 收纳:关键词/地点上限(权重低的挤掉)
+      const kwKeys = Object.keys(p.keywords);
+      if (kwKeys.length > MAX_KEYWORDS) {
+        kwKeys.sort((a, b) => p.keywords[b] - p.keywords[a]);
+        for (const k of kwKeys.slice(MAX_KEYWORDS)) delete p.keywords[k];
+      }
+      if (p.places.length > MAX_PLACES) {
+        p.places.sort((a, b) => b.w - a.w);
+        p.places = p.places.slice(0, MAX_PLACES);
+      }
+      return all;
+    },
+    {}
+  );
+  if (!okWrite) logger.warn('profile', `track 写入失败(event=${event})`);
 }
 
 /* ---------------- 画像摘要(注入助手 prompt) ---------------- */
 function summary(deviceId) {
-  const p = load()[deviceId];
+  const p = getProfile(deviceId);
   if (!p || !p.events) return '';
   const cats = Object.entries(p.cats)
     .sort((a, b) => b[1] - a[1])
@@ -198,7 +196,7 @@ function summary(deviceId) {
  */
 function personalizeRank(items, deviceId) {
   if (!Array.isArray(items) || items.length < 2 || !deviceId) return items;
-  const p = load()[deviceId];
+  const p = getProfile(deviceId);
   if (!p || !p.events) return items;
   const topKw = Object.entries(p.keywords)
     .sort((a, b) => b[1] - a[1])
@@ -223,7 +221,7 @@ function personalizeRank(items, deviceId) {
 
 /* ---------------- 快照 / 清除 ---------------- */
 function snapshot(deviceId) {
-  const p = load()[deviceId];
+  const p = getProfile(deviceId);
   if (!p || !p.events) return { learned: false, hint: '暂无学习数据:使用搜索、点店、导航后自动积累(30 天衰减)' };
   const top = (o, n) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k]) => k);
   return {
@@ -237,13 +235,16 @@ function snapshot(deviceId) {
   };
 }
 function reset(deviceId) {
-  const all = load();
-  if (all[deviceId]) {
-    delete all[deviceId];
-    save();
-    return true;
-  }
-  return false;
+  return store.update(
+    'profiles',
+    (all) => {
+      all = all && typeof all === 'object' && !Array.isArray(all) ? all : {};
+      if (!all[deviceId]) return all;
+      delete all[deviceId];
+      return all;
+    },
+    {}
+  );
 }
 
 module.exports = { track, summary, personalizeRank, snapshot, reset };

@@ -17,10 +17,15 @@
  *
  *  4) in-flight 去重:相同参数的并发请求合并为一次计算,
  *     多端同时进页/恶意并发只算一次(防雪崩,配合各服务的 TTL 缓存)。
+ *
+ *  5) 分布式状态共享(2026-10-06):IP 封禁表与蜜罐轮换结果经统一存储层
+ *     跨实例同步 —— 内存为主(热路径零开销)+ 存储写穿/回读(封禁 10s、
+ *     轮换 30s 收敛)。多实例部署时不再出现「A 实例封了、B 实例照放」。
  */
 const fs = require('fs');
 const path = require('path');
 const config = require('../config');
+const store = require('../services/store');
 
 /* ---------------- 蜜罐密钥名单(固定值,多环境一致) ---------------- */
 const HONEYPOTS = [
@@ -38,9 +43,30 @@ const honeypots = {
   docs: HONEYPOTS[2], // 文档/注释诱饵
   model: HONEYPOTS[3], // 仿模型 token 诱饵
 };
-/** 兼容旧引用:H5 页面注入值(字符串) */
+/** 蜜罐轮换持久化(2026-10-06 分布式):L3 轮换写入存储层,多实例 ≤30s 收敛 */
+const POT_TTL = 30 * 1000;
+let potCache = { at: 0, map: null };
+function persistedRotations() {
+  if (potCache.map && Date.now() - potCache.at < POT_TTL) return potCache.map;
+  const doc = store.read('security-honeypots', { rotated: {} });
+  potCache = { at: Date.now(), map: doc && doc.rotated ? doc.rotated : {} };
+  return potCache.map;
+}
+function invalidatePotCache() {
+  potCache = { at: 0, map: null };
+}
+/** 当前生效蜜罐表 = 内置基线 + 已持久化的轮换值(重启不丢、多实例收敛) */
+function activePots() {
+  const merged = { ...honeypots };
+  for (const [ch, val] of Object.entries(persistedRotations())) if (val) merged[ch] = val;
+  return merged;
+}
+function activePotList() {
+  return Object.values(activePots());
+}
+/** 兼容旧引用:H5 页面注入值(字符串)—— 取轮换后的当前生效值 */
 function webHoneypot() {
-  return honeypots.web;
+  return activePots().web || honeypots.web;
 }
 
 /* ---------------- 安全日志 ---------------- */
@@ -73,9 +99,10 @@ const SENSITIVE_HEADER = /^(authorization|x-api-key|x-token|ak)$/i;
  * @returns {{ hit: boolean, key: string, where: string }}
  */
 function checkRequest(req, query, body) {
+  const pots = activePotList(); // 命中检测用「当前生效」蜜罐(含轮换值)
   const probe = (v, where) => {
     if (typeof v !== 'string' || v.length < 8) return null;
-    for (const h of HONEYPOTS) {
+    for (const h of pots) {
       if (v === h) return { hit: true, key: h, where };
       // 有些攻击者会搬运完整 URL,蜜罐嵌在 query 里也要抓
       if (v.includes(h)) return { hit: true, key: h, where };
@@ -109,7 +136,23 @@ function checkRequest(req, query, body) {
 
 /* ---------------- IP 封禁 ---------------- */
 const banned = new Map(); // ip -> until(ms)
+/* 分布式(2026-10-06):封禁表经存储层跨实例共享 —— 内存为主(热路径零开销),
+   每 10s 从存储回读一次,收敛其他实例新加的封禁;本实例 ban() 时写穿存储 */
+const BAN_SYNC_TTL = 10 * 1000;
+let banSyncAt = 0;
+function syncSharedBans() {
+  const now = Date.now();
+  if (now - banSyncAt < BAN_SYNC_TTL) return;
+  banSyncAt = now;
+  try {
+    const doc = store.read('security-bans', { bans: {} });
+    for (const [ip, until] of Object.entries((doc && doc.bans) || {})) {
+      if (until > now) banned.set(ip, until);
+    }
+  } catch (_) {}
+}
 function isBanned(ip) {
+  syncSharedBans();
   const until = banned.get(ip);
   if (!until) return false;
   if (Date.now() > until) {
@@ -119,7 +162,22 @@ function isBanned(ip) {
   return true;
 }
 function ban(ip, ms) {
-  banned.set(ip, Date.now() + (ms || config.security.banMs));
+  const until = Date.now() + (ms || config.security.banMs);
+  banned.set(ip, until);
+  // 写穿:封禁落存储层,其他实例 ≤10s 内同步生效
+  try {
+    store.update(
+      'security-bans',
+      (doc) => {
+        doc = doc && doc.bans ? doc : { bans: {} };
+        doc.bans[ip] = until;
+        const now = Date.now();
+        for (const k of Object.keys(doc.bans)) if (doc.bans[k] <= now) delete doc.bans[k]; // 顺手清过期
+        return doc;
+      },
+      { bans: {} }
+    );
+  } catch (_) {}
   // 防膨胀:超限清最旧
   if (banned.size > 5000) {
     const it = banned.keys();
@@ -153,7 +211,7 @@ function pushEvent(level, event, detail) {
   if (EVENTS.length > 200) EVENTS.splice(0, EVENTS.length - 200);
 }
 
-/** 渠道蜜罐轮换:替换 honeypots[channel] 与 HONEYPOTS 数组中的对应值 */
+/** 渠道蜜罐轮换:替换 honeypots[channel] 与 HONEYPOTS 数组中的对应值,并持久化到存储层 */
 function rotateHoneypot(channel) {
   const fresh =
     'sk-' + require('crypto').randomBytes(16).toString('hex') + String(Date.now()).slice(-4);
@@ -162,14 +220,27 @@ function rotateHoneypot(channel) {
   honeypots[channel] = fresh;
   const idx = HONEYPOTS.indexOf(old);
   if (idx >= 0) HONEYPOTS[idx] = fresh;
+  // 持久化:重启不丢、其他实例 ≤30s 收敛(分布式 L3 一致性)
+  try {
+    store.update(
+      'security-honeypots',
+      (doc) => {
+        doc = doc && doc.rotated ? doc : { rotated: {} };
+        doc.rotated[channel] = fresh;
+        return doc;
+      },
+      { rotated: {} }
+    );
+  } catch (_) {}
+  invalidatePotCache();
   return { channel, oldMasked: old.slice(0, 6) + '****', newMasked: fresh.slice(0, 6) + '****' };
 }
 
 /** 蜜罐命中统一处理:分级响应 + 记日志 + 事件缓冲 */
 function recordHit({ ip, req, key, where }) {
-  // 渠道判定:命中的这把蜜罐是投在哪的
+  // 渠道判定:命中的这把蜜罐是投在哪的(按当前生效表,含轮换值)
   let channel = 'unknown';
-  for (const [ch, val] of Object.entries(honeypots)) if (val === key) channel = ch;
+  for (const [ch, val] of Object.entries(activePots())) if (val === key) channel = ch;
 
   // L1:基础封禁
   ban(ip);

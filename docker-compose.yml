@@ -34,6 +34,11 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-*}
       - MCP_AUTOSTART=${MCP_AUTOSTART:-true}
       - TOKEN_DAILY_QUOTA=${TOKEN_DAILY_QUOTA:-200000}
+      # —— 存储与分布式（详见 docs/DEPLOY.md）——
+      # 单机多进程或多实例共享卷时：LH_STORE=sqlite（json 驱动多进程会互相覆盖）
+      - LH_STORE=${LH_STORE:-json}
+      - LH_DB_PATH=${LH_DB_PATH:-/app/data/lihui.db}
+      - LH_WORKERS=${LH_WORKERS:-1}
     volumes:
       # Token 账本 / 反馈 / 会话 / 模型配置 等运行时数据持久化
       - lihui-data:/app/data

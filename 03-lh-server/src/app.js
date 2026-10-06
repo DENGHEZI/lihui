@@ -7,8 +7,10 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const cluster = require('cluster');
 const config = require('./config');
 const logger = require('./utils/logger');
+const store = require('./services/store');
 const { json, fail, readBody, clientIp, TRACE } = require('./utils/http');
 const security = require('./utils/security');
 const hub = require('./mcp/hub');
@@ -211,6 +213,9 @@ async function bootstrap() {
     logger.info('app', `鲤慧服务端已启动 http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}`);
     logger.info('app', `百度地图 AK：${config.baidu.ak ? config.baidu.ak.slice(0, 6) + '****' + config.baidu.ak.slice(-4) : '未配置'}`);
     logger.info('app', `数据目录：${config.dataDir}`);
+    const st = store.stats();
+    logger.info('app', `存储驱动：${st.driver}${st.driver === 'sqlite' ? `（${st.dbPath}${st.docs !== undefined ? `，${st.docs} docs` : ''}）` : '（data/*.json 单文件）'}`);
+    logger.info('app', `进程模型：${cluster.isWorker ? `worker（主进程 ${process.ppid}，LH_WORKERS=${process.env.LH_WORKERS}）` : '单进程（设 LH_WORKERS>1 开启集群）'}`);
     logger.info('app', `路由数量：${Object.keys(ROUTES).length}`);
 
     // ★ 启动自检：静态数据文件必须在镜像里，否则接口会「静默返回空」，
@@ -235,12 +240,45 @@ async function bootstrap() {
 
 process.on('uncaughtException', (e) => logger.error('app', `uncaughtException: ${e.message}`, { stack: e.stack }));
 process.on('unhandledRejection', (e) => logger.error('app', `unhandledRejection: ${e && e.message}`));
-process.on('SIGINT', async () => {
-  logger.info('app', '收到 SIGINT，正在关闭 MCP Server…');
-  for (const s of hub.list()) if (s.status === 'running') await hub.stopOne(s.id).catch(() => {});
-  process.exit(0);
-});
 
-if (require.main === module) bootstrap();
+/* ---------------- 集群模式（2026-10-06 分布式） ----------------
+ * LH_WORKERS>1 时：主进程 fork N 个 worker（cluster 自动共享监听端口、
+ * 均摊连接），每个 worker 跑完整服务（含各自的 MCP 子进程，互为热备）。
+ * 跨 worker / 跨实例的共享状态由统一存储层承担：
+ *   - LH_STORE=sqlite（多进程必须）：node:sqlite WAL 多进程并发，零 npm 依赖
+ *   - json 驱动多进程会互相覆盖（last-writer-wins），仅限单进程使用 */
+const WORKERS = Math.max(1, Number(process.env.LH_WORKERS) || 1);
+const IS_MULTI_PRIMARY = cluster.isPrimary && WORKERS > 1;
+
+if (IS_MULTI_PRIMARY) {
+  logger.info('app', `集群模式：LH_WORKERS=${WORKERS}，主进程 ${process.pid} 只管 worker 不监听`);
+  for (let i = 0; i < WORKERS; i++) cluster.fork();
+  cluster.on('exit', (w, code, sig) => {
+    logger.warn('app', `worker#${w.id}（pid=${w.process.pid}）退出 code=${code} sig=${sig}，自动拉起替补`);
+    cluster.fork();
+  });
+  const stopPrimary = (sig) => {
+    logger.info('app', `主进程收到 ${sig}，正在关闭全部 worker…`);
+    for (const id of Object.keys(cluster.workers)) cluster.workers[id].kill();
+    setTimeout(() => process.exit(0), 3000);
+  };
+  process.on('SIGINT', () => stopPrimary('SIGINT'));
+  process.on('SIGTERM', () => stopPrimary('SIGTERM'));
+} else if (require.main === module) {
+  bootstrap();
+}
+
+/* 单进程 / worker 的退出钩子（多进程主进程的退出由 stopPrimary 统一处理） */
+const gracefulStop = async (sig) => {
+  logger.info('app', `收到 ${sig}，正在关闭 MCP Server…`);
+  try {
+    for (const s of hub.list()) if (s.status === 'running') await hub.stopOne(s.id).catch(() => {});
+  } catch (_) {}
+  process.exit(0);
+};
+if (!IS_MULTI_PRIMARY) {
+  process.on('SIGINT', () => gracefulStop('SIGINT'));
+  process.on('SIGTERM', () => gracefulStop('SIGTERM')); // Docker stop / 云平台缩容都发 SIGTERM
+}
 
 module.exports = { server, bootstrap };

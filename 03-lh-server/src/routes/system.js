@@ -13,8 +13,10 @@ module.exports = {
       version: '1.0.0',
       uptimeSec: Math.round(process.uptime()),
       node: process.version,
+      pid: process.pid,
       baiduAkConfigured: !!config.baidu.ak,
       dataDir: config.dataDir,
+      store: store.stats(),
       mcp: { total: hub.list().length, running: hub.list().filter((x) => x.status === 'running').length },
       ts: new Date().toISOString(),
     });
