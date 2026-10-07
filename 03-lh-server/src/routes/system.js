@@ -16,7 +16,7 @@ module.exports = {
       node: process.version,
       pid: process.pid,
       baiduAkConfigured: !!config.baidu.ak,
-      qianfan: vision.baiduStatus(),
+      qianfan: Object.assign({ envNames: Object.keys(process.env).filter((k) => /qianfan/i.test(k)) }, vision.baiduStatus()),
       dataDir: config.dataDir,
       store: store.stats(),
       mcp: { total: hub.list().length, running: hub.list().filter((x) => x.status === 'running').length },
