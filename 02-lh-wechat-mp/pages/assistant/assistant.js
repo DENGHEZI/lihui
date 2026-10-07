@@ -121,6 +121,61 @@ Page({
     this.setData({ scrollTo: 'm' + last })
   },
 
+  /** 识图：选图（相册/相机）→ 压缩读取 base64 → 服务端多模态识别 */
+  pickImage() {
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sizeType: ['compressed'],
+      sourceType: ['album', 'camera'],
+      success: (r) => {
+        const f = r.tempFiles && r.tempFiles[0]
+        if (!f) return
+        if (f.size > 3 * 1024 * 1024) {
+          wx.showToast({ title: '图片超过 3MB，请换一张', icon: 'none' })
+          return
+        }
+        this.sendImage(f.tempFilePath)
+      }
+    })
+  },
+
+  sendImage(filePath) {
+    const fsm = wx.getFileSystemManager()
+    fsm.readFile({
+      filePath,
+      encoding: 'base64',
+      success: (r) => this.visionFlow(filePath, r.data),
+      fail: () => wx.showToast({ title: '图片读取失败', icon: 'none' })
+    })
+  },
+
+  async visionFlow(filePath, b64) {
+    const um = { id: nid(), role: 'user', text: '', img: filePath, cards: [], actions: [] }
+    const ph = { id: nid(), role: 'assistant', text: '正在识别图片…', cards: [], actions: [], pending: true }
+    this.setData({ messages: this.data.messages.concat([um, ph]) })
+    this.toBottom()
+    const replacePh = (patch) => {
+      this.setData({
+        messages: this.data.messages.map((m) => (m.id === ph.id ? Object.assign({}, m, patch, { pending: false }) : m))
+      })
+      this.toBottom()
+    }
+    try {
+      const loc = app.globalData.location || (await app.getLocation())
+      const r = await api.agentVision({ image: b64, lng: loc.lng, lat: loc.lat })
+      replacePh({ text: r.reply, meta: (r.model || '识图') + ' · 免费识图' })
+      voice.speak(r.reply, { scene: 'chat', careMode: this.data.careMode })
+    } catch (e) {
+      replacePh({ text: (e && e.msg) || '识图没有成功，请稍后再试一次。' })
+    }
+  },
+
+  previewImg(e) {
+    const url = e.currentTarget.dataset.url
+    if (url) wx.previewImage({ urls: [url] })
+  },
+
   toggleRecord() {
     // 正在录音 → 结束并等待识别结果
     if (this.data.recording) {

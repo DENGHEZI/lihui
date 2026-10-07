@@ -69,6 +69,9 @@ const agentChat = ({ text, sessionId, lng, lat, careMode, plan }) =>
     lat
   })
 const agentTools = (plan) => get('/agent/tools', { plan: plan || getPlan() })
+// 多模态识图：image 为 base64（不带 dataURL 前缀也可，服务端会补）；识别较慢，超时放宽到 60s
+const agentVision = ({ image, question, lng, lat }) =>
+  post('/agent/vision', { image, question: question || '', lng, lat }, { timeout: 60000 })
 
 /* ---------------- 模型 / 语音 ---------------- */
 const listModels = (reveal) => get('/model/list', reveal ? { reveal: 'true' } : {})
@@ -142,6 +145,7 @@ module.exports = {
   newSessionId,
   agentChat,
   agentTools,
+  agentVision,
   listModels,
   saveModel,
   testModel,

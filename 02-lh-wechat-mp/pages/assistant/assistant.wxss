@@ -318,3 +318,26 @@
   font-weight: 600;
 }
 .rec-stop--hover { opacity: 0.85; }
+
+/* ---------- 识图按钮（📷 多模态）与图片气泡 ---------- */
+.cam-btn {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--lh-primary-soft);
+  border: 1rpx solid var(--lh-glass-line);
+  margin-right: 14rpx;
+}
+.msg-img {
+  width: 340rpx;
+  height: 250rpx;
+  border-radius: 16rpx;
+  display: block;
+  margin-bottom: 10rpx;
+  border: 1rpx solid var(--lh-glass-line, rgba(0, 0, 0, 0.06));
+  background: var(--lh-primary-soft, #F0F3F8);
+}

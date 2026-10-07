@@ -108,7 +108,7 @@ function canUseCloudContainer() {
 }
 
 /* ---------------- 请求 ---------------- */
-function request(path, { method = 'GET', data = {}, loading = false, loadingText = '加载中', cacheTtl = 0, silent = false } = {}) {
+function request(path, { method = 'GET', data = {}, loading = false, loadingText = '加载中', cacheTtl = 0, silent = false, timeout = 20000 } = {}) {
   // 命中缓存直接返回（零网络、零等待）
   let cacheKey = ''
   if (method === 'GET' && cacheTtl > 0) {
@@ -176,7 +176,7 @@ function request(path, { method = 'GET', data = {}, loading = false, loadingText
               url: config.BASE_URL + path,
               method,
               data,
-              timeout: 20000,
+              timeout,
               header,
               success: onSuccess,
               fail: onFail,
@@ -197,7 +197,7 @@ function request(path, { method = 'GET', data = {}, loading = false, loadingText
       url: config.BASE_URL + path,
       method,
       data,
-      timeout: 20000,
+      timeout,
       header,
       success: onSuccess,
       fail: onFail,

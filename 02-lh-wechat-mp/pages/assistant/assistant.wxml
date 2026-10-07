@@ -11,7 +11,8 @@
     <view class="msg-row {{item.role}}" wx:for="{{messages}}" wx:key="id" id="m{{index}}">
       <view class="avatar" wx:if="{{item.role === 'assistant'}}">鲤</view>
       <view class="bubble {{item.role}}">
-        <text class="txt">{{item.text}}</text>
+        <image class="msg-img" wx:if="{{item.img}}" src="{{item.img}}" mode="aspectFill" bindtap="previewImg" data-url="{{item.img}}" />
+        <text class="txt" wx:if="{{item.text}}">{{item.text}}</text>
 
         <view class="cards" wx:if="{{item.cards.length}}">
           <view class="card" wx:for="{{item.cards}}" wx:for-item="c" wx:key="type">
@@ -79,6 +80,9 @@
   <!-- 输入区 -->
   <view class="input-bar">
     <view class="care-toggle {{careMode ? 'on' : ''}}" bindtap="toggleCare">{{careMode ? '关怀' : '标准'}}</view>
+    <view class="cam-btn" hover-class="mic-btn--hover" bindtap="pickImage">
+      <text class="mic-ico">📷</text>
+    </view>
     <view class="mic-btn {{recording ? 'mic-btn--rec' : ''}}" hover-class="mic-btn--hover" bindtap="toggleRecord">
       <text class="mic-ico">{{recording ? '■' : '🎙'}}</text>
     </view>

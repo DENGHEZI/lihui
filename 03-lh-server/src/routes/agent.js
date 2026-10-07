@@ -4,6 +4,7 @@
 const { ok, fail, clientIp } = require('../utils/http');
 const agent = require('../services/agent');
 const hub = require('../mcp/hub');
+const vision = require('../services/vision');
 
 module.exports = {
   /**
@@ -29,6 +30,29 @@ module.exports = {
     } catch (e) {
       if (e.code === 1003) return fail(res, 1003, e.message);
       return fail(res, 3001, `对话失败：${e.message}`);
+    }
+  },
+
+  /**
+   * POST /api/v1/agent/vision —— 多模态识图
+   * body: { image: base64|dataURL, question?: string, lng?, lat? }
+   */
+  'POST /agent/vision': async (req, res, q, body) => {
+    const b = body || {};
+    if (!b.image) return fail(res, 1001, 'image 必填（base64 图片）');
+    const deviceId = b.deviceId || req.headers['x-device-id'] || 'anonymous';
+    try {
+      const data = await vision.recognize({
+        image: b.image,
+        question: b.question,
+        lng: Number(b.lng),
+        lat: Number(b.lat),
+        deviceId,
+      });
+      return ok(res, data, { 'X-Token-Cost': '0' });
+    } catch (e) {
+      if (e.code) return fail(res, e.code, e.message);
+      return fail(res, 3001, e.message);
     }
   },
 
