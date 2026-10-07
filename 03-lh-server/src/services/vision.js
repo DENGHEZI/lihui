@@ -2,11 +2,12 @@
  * 鲤慧 LiHui · 多模态识图服务
  *
  * 通道优先级：
- *  1) 智谱 GLM-4.6V（主）：ZHIPU_API_KEY 环境变量 → 本机 zhipu-vision skill 配置
- *     （本地开发开箱即用；云端部署需在云托管控制台配 ZHIPU_API_KEY 环境变量）
- *  2) ModelScope 免费推理 Qwen2.5-VL（备）：MODELSCOPE_TOKEN / preset-qwen-free 库内令牌
+ *  1) 百度千帆 ERNIE-4.5-VL（主）：QIANFAN_API_KEY（完整 bce-v3/ALTAK-xx/xx 串）
+ *     或 QIANFAN_AK + QIANFAN_SK（OAuth 换 access_token，缓存 25 天）
+ *  2) 智谱 GLM-4.6V（备）：ZHIPU_API_KEY 环境变量 → 本机 zhipu-vision skill 配置
+ *  3) ModelScope 免费推理 Qwen2.5-VL（兜底）：MODELSCOPE_TOKEN / preset-qwen-free 库内令牌
  *
- * 协议均为 OpenAI 兼容：messages content 用
+ * OpenAI 兼容协议：messages content 用
  *   [{type:'image_url', image_url:{url:'data:image/png;base64,…'}}, {type:'text',…}]
  */
 const fs = require('fs');
@@ -40,6 +41,42 @@ function resolveModelScope() {
   return key ? { key } : null;
 }
 
+/**
+ * 百度千帆凭据解析，两种形态：
+ *  · QIANFAN_API_KEY —— 控制台「安全认证」页复制的完整串（bce-v3/ALTAK-xx/xx，自带签名）直接当 Bearer
+ *  · QIANFAN_AK + QIANFAN_SK —— 千帆应用 API Key/Secret Key，走 OAuth 换 access_token（30 天有效，缓存 25 天）
+ */
+function resolveBaidu() {
+  const composite = String(process.env.QIANFAN_API_KEY || '').trim();
+  if (composite) return { kind: 'bearer', key: composite, label: 'qianfan-composite' };
+  const ak = String(process.env.QIANFAN_AK || '').trim();
+  const sk = String(process.env.QIANFAN_SK || '').trim();
+  if (ak && sk) return { kind: 'oauth', ak, sk, label: 'qianfan-oauth' };
+  return null;
+}
+
+/* ---------------- 百度 OAuth 令牌（AK/SK → access_token，模块级缓存） ---------------- */
+
+const baiduTokenCache = new Map(); // ak -> { token, expireAt }
+
+async function getBaiduToken(auth) {
+  const hit = baiduTokenCache.get(auth.ak);
+  if (hit && Date.now() < hit.expireAt) return hit.token;
+  const url = 'https://aip.baidubce.com/oauth/2.0/token'
+    + '?grant_type=client_credentials'
+    + `&client_id=${encodeURIComponent(auth.ak)}`
+    + `&client_secret=${encodeURIComponent(auth.sk)}`;
+  const raw = await fetchJSON(url, { method: 'POST', timeout: 15000, retry: 1 });
+  if (!raw || !raw.access_token) {
+    const desc = (raw && (raw.error_description || raw.error)) || '响应里没有 access_token';
+    throw new Error('百度 OAuth 换取令牌失败：' + desc);
+  }
+  // expires_in 30 天；留 5 天安全余量
+  const ttlMs = Math.max(3600, (Number(raw.expires_in) || 2592000) - 5 * 86400) * 1000;
+  baiduTokenCache.set(auth.ak, { token: raw.access_token, expireAt: Date.now() + ttlMs });
+  return raw.access_token;
+}
+
 /* ---------------- 入参规整 ---------------- */
 
 /** 入参兼容裸 base64 / dataURL 两种形态，统一转 dataURL */
@@ -64,7 +101,93 @@ function buildPrompt(question, loc) {
   return p;
 }
 
-/* ---------------- 各通道实现 ---------------- */
+/**
+ * 百度图像识别（advanced_general 通用物体识别，OAuth AK/SK 鉴权）
+ * 实测：千帆应用 AK/SK 换的 access_token 对「图像识别」有权限（千帆对话 VL 没权限）。
+ * 返回标签后本地拼装生活圈口吻的回答，零 token 成本。
+ */
+async function callBaiduClassify(auth, imageB64, question) {
+  const token = await getBaiduToken(auth);
+  const raw = await fetchJSON(
+    'https://aip.baidubce.com/rest/2.0/image-classify/v2/advanced_general?access_token=' + encodeURIComponent(token),
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      // fetchJSON 的默认 Content-Type(json) 会被这里的覆盖（headers 展开在最后）
+      body: 'image=' + encodeURIComponent(String(imageB64).replace(/^data:image\/[a-z]+;base64,/, '')),
+      timeout: 30000,
+      retry: 1,
+    }
+  );
+  if (raw && raw.error_code) {
+    throw new Error(`百度图像识别 ${raw.error_code}: ${raw.error_msg || '未知错误'}`);
+  }
+  const labels = ((raw && raw.result) || [])
+    .filter((x) => x && x.keyword)
+    .slice(0, 3)
+    .map((x) => ({ name: String(x.keyword), score: Number(x.score) || 0 }));
+  return { text: composeClassifyReply(labels, question), model: 'baidu-advanced_general', usage: null, labels };
+}
+
+/** 标签 → 鲤慧口吻的回答（坦白能力边界：类别级识别，答不了开放问题） */
+function composeClassifyReply(labels, question) {
+  if (!labels.length) {
+    return '这张照片我没能认出是什么，可能太模糊或太局部了，换张清晰一点的再试试？';
+  }
+  const top = labels[0];
+  const alt = labels.slice(1).map((x) => x.name).join('、');
+  let r = `这张照片看起来是「${top.name}」（可信度 ${Math.round(top.score * 100)}%）`;
+  if (alt) r += `，也可能是${alt}`;
+  r += '。';
+  const q = String(question || '').trim();
+  if (q) {
+    r += `关于「${q}」：我目前能识别物体类别，细节建议结合结果实地确认；换更清晰的照片或补充文字描述，我能答得更准。`;
+  } else {
+    r += '想知道价位、营业猜测或适不适合老人小孩，补充一句想问什么，我再细说。';
+  }
+  return r;
+}
+
+
+/** 从 OpenAI 兼容响应里抠出正文（含思考模型的 content 空 → reasoning_content 尾部兜底） */
+function pickText(msg) {
+  let text = (msg && msg.content) || '';
+  if (Array.isArray(text)) text = text.map((c) => c.text || '').join('');
+  if (!text && msg && msg.reasoning_content) {
+    const rc = String(msg.reasoning_content).trim();
+    const m = rc.match(/[“"']?([^“”"']{2,60})[”"']?[,。；;]?\s*$/);
+    text = m ? m[1] : rc.slice(-60);
+  }
+  return String(text).trim();
+}
+
+/**
+ * 百度千帆 ERNIE-4.5-VL（v2 OpenAI 兼容端点）
+ * 鉴权两形态：完整 bce-v3 串直接 Bearer；AK/SK 先 OAuth 换 access_token 再 Bearer
+ */
+async function callQianfan(auth, dataUrl, prompt) {
+  const bearer = auth.kind === 'oauth' ? await getBaiduToken(auth) : auth.key;
+  const raw = await fetchJSON('https://qianfan.baidubce.com/v2/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${bearer}` },
+    body: {
+      model: process.env.VISION_QIANFAN_MODEL || 'ernie-4.5-vl-28b-a3b',
+      messages: [{ role: 'user', content: [
+        { type: 'image_url', image_url: { url: dataUrl } },
+        { type: 'text', text: prompt },
+      ] }],
+      enable_thinking: false, // 识图要快，跳过深度思考（content 直接出结论）
+      max_tokens: 1024,
+      stream: false,
+    },
+    timeout: 60000,
+    retry: 0,
+  });
+  if (raw && raw.error) throw new Error(`千帆 ${raw.error.code || ''}: ${raw.error.message || '未知错误'}`);
+  const msg = (raw.choices && raw.choices[0] && raw.choices[0].message) || {};
+  const model = (raw.model) || 'ernie-4.5-vl-28b-a3b';
+  return { text: pickText(msg), model, usage: raw.usage || null };
+}
 
 async function callZhipu(z, dataUrl, prompt) {
   const base = z.url || 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
@@ -85,15 +208,7 @@ async function callZhipu(z, dataUrl, prompt) {
     retry: 0,
   });
   const msg = (raw.choices && raw.choices[0] && raw.choices[0].message) || {};
-  let text = msg.content || '';
-  if (Array.isArray(text)) text = text.map((c) => c.text || '').join('');
-  // 思考把 max_tokens 吃光导致 content 为空时，退回思考链里的结论
-  if (!text && msg.reasoning_content) {
-    const rc = String(msg.reasoning_content).trim();
-    const m = rc.match(/[“"']?([^“”"']{2,60})[”"']?[,。；;]?\s*$/);
-    text = m ? m[1] : rc.slice(-60);
-  }
-  return { text: text.trim(), model: z.model || 'glm-4.6v', usage: raw.usage || null };
+  return { text: pickText(msg), model: z.model || 'glm-4.6v', usage: raw.usage || null };
 }
 
 async function callModelScope(ms, dataUrl, prompt) {
@@ -142,6 +257,15 @@ async function recognize({ image, question = '', lng, lat } = {}) {
   const prompt = buildPrompt(question, hasLoc ? { lng: Number(lng), lat: Number(lat) } : null);
 
   const channels = [];
+  const bd = resolveBaidu();
+  if (bd && bd.kind === 'oauth') {
+    // AK/SK：千帆对话 VL 无权限（实测），但「图像识别」REST 有权限 —— 走 classify
+    channels.push({ name: 'baidu-classify', fn: () => callBaiduClassify(bd, dataUrl, question) });
+  }
+  if (bd && bd.kind === 'bearer') {
+    // 完整 bce-v3/ALTAK 串：可直接调千帆 ERNIE-4.5-VL（生成式，回答质量更高）
+    channels.push({ name: 'qianfan-vl', fn: () => callQianfan(bd, dataUrl, prompt) });
+  }
   const zp = resolveZhipu();
   if (zp) channels.push({ name: 'zhipu', fn: () => callZhipu(zp, dataUrl, prompt) });
   const ms = resolveModelScope();
@@ -149,7 +273,7 @@ async function recognize({ image, question = '', lng, lat } = {}) {
 
   if (!channels.length) {
     // ⚠️ 不用 3002（会被端上全局逻辑当成「模型未配置」弹误导弹窗），3005 走通用 toast 显示真实原因
-    const e = new Error('识图模型未配置：请在云托管环境变量设置 ZHIPU_API_KEY（或 MODELSCOPE_TOKEN）');
+    const e = new Error('识图模型未配置：请在云托管环境变量设置 QIANFAN_API_KEY（或 QIANFAN_AK+QIANFAN_SK / ZHIPU_API_KEY）');
     e.code = 3005;
     throw e;
   }
