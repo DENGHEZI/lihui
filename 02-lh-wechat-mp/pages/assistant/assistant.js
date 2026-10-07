@@ -51,6 +51,40 @@ Page({
     this.setData({ careMode: getCareMode() })
   },
 
+  onHide() {
+    // 离开页面即停止播报，避免后台继续出声
+    voice.stopSpeak()
+    if (this.data.playingId) this.setData({ playingId: '' })
+  },
+
+  /**
+   * 手动播放某条助手回复的语音（🔊）。
+   * opts.force=true：绕过设置页「自动播报」开关 —— 用户点了按钮就是要听。
+   * 再点一次或播完自动复位；失败给明确 toast（不再静默）。
+   */
+  playMsg(e) {
+    const id = e.currentTarget.dataset.id
+    const m = this.data.messages.find((x) => x.id === id)
+    if (!m || !m.text) return
+    // 正在播这条 → 再点即停止
+    if (this.data.playingId === id) {
+      voice.stopSpeak()
+      this.setData({ playingId: '' })
+      return
+    }
+    voice.stopSpeak() // 打断上一条
+    this.setData({ playingId: id })
+    voice
+      .speak(m.text, { force: true, scene: 'chat', careMode: this.data.careMode })
+      .then((ok) => {
+        if (!ok) wx.showToast({ title: '播报没成功，请稍后再试', icon: 'none', duration: 2200 })
+        if (this.data.playingId === id) this.setData({ playingId: '' })
+      })
+      .catch(() => {
+        if (this.data.playingId === id) this.setData({ playingId: '' })
+      })
+  },
+
   onInput(e) {
     this.setData({ input: e.detail.value })
   },

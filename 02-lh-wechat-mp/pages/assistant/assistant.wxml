@@ -62,6 +62,13 @@
           <button class="lh-btn act-btn" wx:for="{{item.actions}}" wx:key="uri" bindtap="runAction" data-i="{{index}}">打开{{item.app}}导航</button>
         </view>
 
+        <!-- 语音播放：每条助手回复可手动播报 / 停止（自动播报关了也能点） -->
+        <view class="tts-row" wx:if="{{item.role === 'assistant' && item.text && !item.pending}}">
+          <view class="tts-btn {{playingId === item.id ? 'tts-btn--on' : ''}}" hover-class="tts-btn--hover" catchtap="playMsg" data-id="{{item.id}}">
+            <text>{{playingId === item.id ? '⏹ 停止播报' : '🔊 播放语音'}}</text>
+          </view>
+        </view>
+
         <text class="lh-mini meta" wx:if="{{item.meta}}">{{item.meta}}</text>
       </view>
     </view>
