@@ -177,7 +177,9 @@ function fetchBinary(url) {
 /* --------------------------- ASR --------------------------- */
 async function asr(audioBuffer, format = 'wav') {
   const cfg = getConfig();
-  if (cfg.engine === 'baidu') {
+  const hasKeys = !!(config.voice.baiduApiKey && config.voice.baiduSecretKey);
+  // 有密钥就走百度识别（cfg.engine 主要管 TTS 音色/通道，不该挡住 ASR）
+  if (cfg.engine === 'baidu' || hasKeys) {
     try {
       const token = await getBaiduToken();
       if (token) {
@@ -191,6 +193,14 @@ async function asr(audioBuffer, format = 'wav') {
         if (raw && raw.err_no === 0 && raw.result && raw.result[0]) {
           return { text: raw.result[0], engine: 'baidu' };
         }
+        // 百度接口明确报错（配额/权限/音频格式）——如实透传，别伪装成"未配置"
+        if (raw && raw.err_no) {
+          const known = { 17: '每日调用量超限', 18: 'QPS 超限', 216201: '音频格式错误', 3301: '音频质量差，没识别出内容', 6: '应用未开通该接口权限' };
+          return { text: '', engine: 'none', error: `百度语音识别 ${raw.err_no}: ${known[raw.err_no] || raw.err_msg || '失败'}` };
+        }
+      } else if (hasKeys) {
+        // 密钥在但 OAuth 失败——多半是 Secret Key 被重置过
+        return { text: '', engine: 'none', hint: '百度语音密钥无效（Secret Key 可能已重置）：请到百度控制台应用管理复制当前 Secret Key，更新云托管环境变量 VOICE_BAIDU_SECRET_KEY 后重新部署。' };
       }
     } catch (e) {
       logger.warn('voice', `baidu asr failed: ${e.message}`);
