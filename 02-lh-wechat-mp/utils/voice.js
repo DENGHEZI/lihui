@@ -1,16 +1,16 @@
 /**
- * 鲤慧 LiHui · 小程序语音能力（v2 全链路）
+ * 鲤慧 LiHui · 小程序语音能力（v3 · 全内置零插件）
  *
- * 识别链路（优先级）：
- *   1) 微信同声传译插件 WechatSI —— 免费官方，实时识别（onRecognize 部分结果），支持中英文
- *   2) RecorderManager 录音 → 服务端 ASR（需百度密钥，未配置时不可用）
- * 播报链路（优先级）：
- *   1) 服务端 TTS（自定义音色 / 语速 / 音调 / 音量，见设置页）
- *   2) WechatSI 插件 textToSpeech（普通话兜底）
+ * 识别链路（唯一）：
+ *   RecorderManager（微信原生录音）→ 服务端 ASR（/voice/asr）
+ *   ⚠️ 不再使用「微信同声传译插件」——插件授权失败(89360)会导致模拟器无法启动，
+ *      且依赖 mp 后台逐个授权，与「能力内置」原则冲突。已整体移除。
+ * 播报链路（唯一）：
+ *   服务端 TTS（/voice/tts）→ 音频 URL 播放
+ *   服务端内置微软 Edge 免费合成引擎（无需任何密钥），百度语音密钥配置后自动优先用百度音色。
  *
- * ⚠️ 架构要点：RecorderManager 与 WechatSI 识别管理器都是「全局单例」，
- *    onXxx 监听器只能注册一次，否则多次点击麦克风会堆积旧监听器、
- *    跨页面互踩，导致「点麦克风对话莫名关闭」（已修复的历史 Bug）。
+ * ⚠️ 架构要点：RecorderManager 是「全局单例」，onXxx 监听器只能注册一次，
+ *    否则多次点击麦克风会堆积旧监听器、跨页面互踩（已修复的历史 Bug）。
  */
 const api = require('./api.js')
 const config = require('./config.js')
@@ -37,7 +37,7 @@ function getCached() {
   return voiceCfg
 }
 
-/* ---------------- 播报 ---------------- */
+/* ---------------- 播报（服务端 TTS） ---------------- */
 function speak(text, opts) {
   opts = opts || {}
   if (!text) return Promise.resolve(false)
@@ -53,15 +53,15 @@ function speak(text, opts) {
         if (r && r.mode === 'server-audio' && r.audioUrl) {
           const base = config.BASE_URL.replace('/api/v1', '')
           const url = /^https?:\/\//.test(r.audioUrl) ? r.audioUrl : base + r.audioUrl
-          return play(url, volume, text)
+          return play(url, volume)
         }
-        return pluginSpeak(text)
+        return false
       })
-      .catch(() => pluginSpeak(text))
+      .catch(() => false)
   })
 }
 
-function play(url, volume, fallbackText) {
+function play(url, volume) {
   return new Promise((resolve) => {
     try {
       if (audio) {
@@ -73,47 +73,12 @@ function play(url, volume, fallbackText) {
       audio.src = url
       audio.volume = Math.min(1, volume || 1)
       audio.onEnded(() => resolve(true))
-      audio.onError(() => {
-        pluginSpeak(fallbackText || '').then(() => resolve(false))
-      })
+      audio.onError(() => resolve(false))
       audio.play()
     } catch (e) {
       resolve(false)
     }
   })
-}
-
-/** 端上 TTS：微信同声传译插件（免费，普通话） */
-function pluginSpeak(text) {
-  const plugin = getPlugin()
-  if (plugin && plugin.textToSpeech) {
-    return new Promise((resolve) => {
-      plugin.textToSpeech({
-        lang: 'zh_CN',
-        tts: true,
-        content: String(text).slice(0, 500),
-        success: (res) => {
-          try {
-            if (audio) {
-              audio.stop()
-              audio.destroy()
-              audio = null
-            }
-            audio = wx.createInnerAudioContext()
-            audio.src = res.filename
-            audio.onEnded(() => resolve(true))
-            audio.onError(() => resolve(false))
-            audio.play()
-          } catch (e) {
-            resolve(false)
-          }
-        },
-        fail: () => resolve(false)
-      })
-    })
-  }
-  console.log('[鲤慧-语音] 插件 TTS 不可用，文本：', text)
-  return Promise.resolve(false)
 }
 
 function stopSpeak() {
@@ -126,44 +91,7 @@ function stopSpeak() {
   } catch (e) {}
 }
 
-/* ---------------- 识别（主链路：WechatSI 实时识别） ---------------- */
-let siManager = null
-let siHandlers = null // { onPartial, onFinal, onError }
-
-function getPlugin() {
-  try {
-    return requirePlugin('WechatSI') || null
-  } catch (e) {
-    return null
-  }
-}
-
-/** 全局只初始化一次；监听器只注册一次，通过 siHandlers 转发到当前调用方 */
-function getSiManager() {
-  if (siManager) return siManager
-  const plugin = getPlugin()
-  if (!plugin || !plugin.getRecordRecognitionManager) return null
-  siManager = plugin.getRecordRecognitionManager()
-  siManager.onRecognize((res) => {
-    if (siHandlers && siHandlers.onPartial && res && res.result) siHandlers.onPartial(res.result)
-  })
-  siManager.onStop((res) => {
-    const h = siHandlers
-    siHandlers = null
-    if (!h) return
-    const text = String((res && res.result) || '').trim()
-    if (text) h.onFinal(text)
-    else h.onError({ msg: '没听清，请再试一次' })
-  })
-  siManager.onError((err) => {
-    const h = siHandlers
-    siHandlers = null
-    if (h) h.onError(err)
-  })
-  return siManager
-}
-
-/* ---------------- 识别（兜底：录音 + 服务端 ASR） ---------------- */
+/* ---------------- 识别（录音 → 服务端 ASR） ---------------- */
 let recHandler = null
 
 function ensureRecorder() {
@@ -192,7 +120,7 @@ function ensureRecorder() {
 /**
  * 开始语音识别（统一入口，页面只调这个）
  * handlers: { onPartial(text)?, onFinal(text), onError(err) }
- * 返回 'plugin' | 'recorder' | 'denied' | null
+ * 返回 'recorder' | 'denied' | null
  */
 function startSpeech(handlers) {
   wx.getSetting({
@@ -210,49 +138,26 @@ function startSpeech(handlers) {
         handlers.onError({ msg: 'record auth denied' })
         return
       }
-      _startSpeechInner(handlers)
+      recHandler = handlers
+      try {
+        ensureRecorder().start({
+          duration: 60000,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          encodeBitRate: 96000,
+          format: 'wav'
+        })
+      } catch (e) {
+        recHandler = null
+        handlers.onError(e)
+      }
     },
-    fail: () => _startSpeechInner(handlers)
+    fail: () => handlers.onError({ msg: 'getSetting failed' })
   })
 }
 
-function _startSpeechInner(handlers) {
-  const mgr = getSiManager()
-  if (mgr) {
-    siHandlers = handlers
-    try {
-      mgr.start({ duration: 60000, lang: 'zh_CN' })
-      return 'plugin'
-    } catch (e) {
-      siHandlers = null
-    }
-  }
-  // 兜底：录音 → 服务端 ASR
-  recHandler = handlers
-  try {
-    ensureRecorder().start({
-      duration: 60000,
-      sampleRate: 16000,
-      numberOfChannels: 1,
-      encodeBitRate: 96000,
-      format: 'wav'
-    })
-    return 'recorder'
-  } catch (e) {
-    recHandler = null
-    handlers.onError(e)
-    return null
-  }
-}
-
-/** 结束识别：mode 为 startSpeech 的返回值 */
-function stopSpeech(mode) {
-  if (mode === 'plugin' && siManager) {
-    try {
-      siManager.stop()
-    } catch (e) {}
-    return
-  }
+/** 结束识别 */
+function stopSpeech() {
   try {
     recorder && recorder.stop()
   } catch (e) {}
@@ -267,7 +172,7 @@ function startRecord(onStop) {
 }
 
 function stopRecord() {
-  stopSpeech('recorder')
+  stopSpeech()
 }
 
 function recognize(tempFilePath) {
@@ -282,7 +187,6 @@ module.exports = {
   stopSpeak,
   startSpeech,
   stopSpeech,
-  getPlugin,
   startRecord,
   stopRecord,
   recognize
