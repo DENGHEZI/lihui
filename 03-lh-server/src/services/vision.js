@@ -148,8 +148,9 @@ async function recognize({ image, question = '', lng, lat } = {}) {
   if (ms) channels.push({ name: 'modelscope', fn: () => callModelScope(ms, dataUrl, prompt) });
 
   if (!channels.length) {
+    // ⚠️ 不用 3002（会被端上全局逻辑当成「模型未配置」弹误导弹窗），3005 走通用 toast 显示真实原因
     const e = new Error('识图模型未配置：请在云托管环境变量设置 ZHIPU_API_KEY（或 MODELSCOPE_TOKEN）');
-    e.code = 3002;
+    e.code = 3005;
     throw e;
   }
 

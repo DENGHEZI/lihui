@@ -91,25 +91,29 @@ const openApp = (p) => post('/action/open-app', p)
 const desktopOperate = (p) => post('/action/desktop-operate', p)
 const publicConfig = () => get('/config/public')
 
-/* ---------------- 语音识别上传 ---------------- */
+/* ---------------- 语音识别上传 ----------------
+ * ⚠️ 真机上 wx.uploadFile 直连域名会被「uploadFile 合法域名」校验拦截，
+ *    而语音必须可用 → 改为读音频 base64 走 callContainer JSON 通道（免域名校验）
+ */
 function uploadAsr(filePath) {
-  const config = require('./config.js')
   return new Promise((resolve, reject) => {
-    wx.uploadFile({
-      url: config.BASE_URL + '/voice/asr',
+    const fsm = wx.getFileSystemManager()
+    fsm.readFile({
       filePath,
-      name: 'audio',
-      header: { 'X-Device-Id': getDeviceId() },
-      success: (res) => {
-        try {
-          const body = JSON.parse(res.data)
-          if (body.code === 0 && body.data && body.data.text) resolve(body.data.text)
-          else reject(new Error((body.data && body.data.hint) || '未识别到内容'))
-        } catch (e) {
-          reject(e)
+      encoding: 'base64',
+      success: (r) => {
+        if (r.data && r.data.length > 2 * 1024 * 1024) {
+          reject(new Error('语音太长，请说短一点'))
+          return
         }
+        post('/voice/asr', { audio: r.data, format: 'wav' })
+          .then((d) => {
+            if (d && d.text) resolve(d.text)
+            else reject(new Error((d && d.hint) || '未识别到内容'))
+          })
+          .catch(reject)
       },
-      fail: reject
+      fail: () => reject(new Error('音频读取失败'))
     })
   })
 }

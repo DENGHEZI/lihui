@@ -28,13 +28,21 @@ module.exports = {
 
   /**
    * POST /api/v1/voice/asr
-   * multipart/form-data 字段 audio；也支持 raw body（Content-Type: audio/wav）
+   * 三种入参：① multipart/form-data 字段 audio ② raw body（audio/wav）
+   * ③ JSON { audio: base64, format } —— 小程序真机走 callContainer 内网通道必须用 JSON
+   *    （wx.uploadFile 直连域名会被「uploadFile 合法域名」校验拦掉）
    */
   'POST /voice/asr': async (req, res, q, body) => {
-    const raw = body && body.__raw;
-    if (!raw || !raw.length) return fail(res, 1001, '请上传音频文件（字段名 audio）或 raw audio body');
-    const ct = (body.__contentType || req.headers['content-type'] || '');
-    const format = ct.includes('wav') ? 'wav' : ct.includes('pcm') ? 'pcm' : 'wav';
+    const b = body || {};
+    let raw = b.__raw;
+    let format = (b.__contentType || req.headers['content-type'] || '').includes('pcm') ? 'pcm' : 'wav';
+    if (!raw && b.audio) {
+      const s = String(b.audio).replace(/^data:[^,]+,/, '');
+      if (s.length > 2 * 1024 * 1024) return fail(res, 1001, '语音太长，请说短一点（≤60 秒）');
+      raw = Buffer.from(s, 'base64');
+      if (b.format === 'pcm' || b.format === 'wav') format = b.format;
+    }
+    if (!raw || !raw.length) return fail(res, 1001, '请上传音频文件（字段名 audio）或 JSON {audio: base64}');
     try {
       const r = await voice.asr(raw, format);
       return ok(res, r);

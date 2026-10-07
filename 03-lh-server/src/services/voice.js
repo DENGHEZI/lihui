@@ -112,7 +112,8 @@ async function tts(text, opts = {}) {
         const buf = await fetchBinary(url);
         if (buf && buf.length > 100) {
           const audioUrl = saveAudio(buf, 'mp3');
-          return { mode: 'server-audio', audioUrl, text, options };
+          // audioB64 供小程序走 callContainer JSON 通道(真机免 downloadFile 域名校验)
+          return { mode: 'server-audio', audioUrl, audioB64: buf.toString('base64'), text, options };
         }
       }
     } catch (e) {
@@ -126,7 +127,7 @@ async function tts(text, opts = {}) {
       const buf = await edgeTts(text, options);
       if (buf && buf.length > 1000) {
         const audioUrl = saveAudio(buf, 'mp3');
-        return { mode: 'server-audio', audioUrl, text, options, engine: 'edge' };
+        return { mode: 'server-audio', audioUrl, audioB64: buf.toString('base64'), text, options, engine: 'edge' };
       }
     } catch (e) {
       logger.warn('voice', `edge tts failed: ${e.message}`);
