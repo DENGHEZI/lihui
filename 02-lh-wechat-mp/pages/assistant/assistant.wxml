@@ -1,4 +1,7 @@
 <view class="page {{careMode ? 'care-mode' : ''}}">
+  <!-- 关怀模式悬浮开关（从输入栏移出，降低输入区拥挤度） -->
+  <view class="care-fab {{careMode ? 'on' : ''}}" bindtap="toggleCare">{{careMode ? '关怀已开' : '关怀模式'}}</view>
+
   <!-- 场景快捷入口 -->
   <scroll-view scroll-x class="scene-bar" enhanced show-scrollbar="{{false}}">
     <view class="scene-list">
@@ -77,16 +80,17 @@
     </view>
   </view>
 
-  <!-- 输入区 -->
+  <!-- 输入区：📷 识图 · 🎙 语音 · 输入框 · ➤ 发送 -->
   <view class="input-bar">
-    <view class="care-toggle {{careMode ? 'on' : ''}}" bindtap="toggleCare">{{careMode ? '关怀' : '标准'}}</view>
-    <view class="cam-btn" hover-class="mic-btn--hover" bindtap="pickImage">
-      <text class="mic-ico">📷</text>
+    <view class="round-btn cam-btn" hover-class="round-btn--hover" bindtap="pickImage">
+      <text class="r-ico">📷</text>
     </view>
-    <view class="mic-btn {{recording ? 'mic-btn--rec' : ''}}" hover-class="mic-btn--hover" bindtap="toggleRecord">
-      <text class="mic-ico">{{recording ? '■' : '🎙'}}</text>
+    <view class="round-btn mic-btn {{recording ? 'mic-btn--rec' : ''}}" hover-class="round-btn--hover" bindtap="toggleRecord">
+      <text class="r-ico">{{recording ? '■' : '🎙'}}</text>
     </view>
     <input class="chat-input" value="{{input}}" placeholder="问鲤慧：附近哪里能看病？" placeholder-class="ph" confirm-type="send" bindinput="onInput" bindconfirm="send" />
-    <view class="send-btn {{input ? '' : 'dis'}}" bindtap="send">发送</view>
+    <view class="send-btn {{input ? '' : 'dis'}}" hover-class="send-btn--hover" bindtap="send">
+      <text class="send-ico">↑</text>
+    </view>
   </view>
 </view>
