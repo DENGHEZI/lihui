@@ -17,6 +17,7 @@ module.exports = {
       pid: process.pid,
       baiduAkConfigured: !!config.baidu.ak,
       qianfan: Object.assign({ envNames: Object.keys(process.env).filter((k) => /qianfan/i.test(k)) }, vision.baiduStatus()),
+      voiceAsr: { configured: !!(config.voice.baiduApiKey && config.voice.baiduSecretKey), envNames: Object.keys(process.env).filter((k) => /voice_baidu/i.test(k)) },
       dataDir: config.dataDir,
       store: store.stats(),
       mcp: { total: hub.list().length, running: hub.list().filter((x) => x.status === 'running').length },
