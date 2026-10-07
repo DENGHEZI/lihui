@@ -55,8 +55,11 @@ module.exports = {
     try {
       const built = await catalog.build(mode, { lng: q.lng, lat: q.lat, radius: q.radius });
       const list = catalog.list(mode, q);
-      // quotaHit / quotaMessage 必须透传：否则百度配额挂了，端上不知道"是没店还是没额度"
-      return ok(res, { mode, from: built.from, syncedAt: built.syncedAt, quotaHit: !!built.quotaHit, quotaMessage: built.quotaMessage || '', ...list });
+      // quotaHit / quotaMessage / center 必须透传：
+      //  · quotaHit —— 百度配额挂了，端上要知道"是没店还是没额度"
+      //  · center   —— 目录实际同步圆心；端上拿它和用户当前定位比对，
+      //               差太远就提示"目录可能是别的位置同步的"，避免假距离误导
+      return ok(res, { mode, from: built.from, syncedAt: built.syncedAt, center: built.center || null, quotaHit: !!built.quotaHit, quotaMessage: built.quotaMessage || '', ...list });
     } catch (e) {
       return fail(res, 5000, e.message || '真实店源读取失败');
     }

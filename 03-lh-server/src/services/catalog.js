@@ -175,7 +175,12 @@ async function build(mode = 'near', q = {}) {
     if (!diskUsable || !disk.center) return diskUsable;
     const dLng = Number(disk.center.lng), dLat = Number(disk.center.lat);
     if (!Number.isFinite(dLng) || !Number.isFinite(dLat) || !Number.isFinite(lngQ) || !Number.isFinite(latQ)) return true;
-    return distanceOf(lngQ, latQ, dLng, dLat) <= Math.max(Number(q.radius) || DEFAULT_RADIUS, HOT_RADIUS) * 2;
+    // ★ near 目录要跟着人的位置走：圆心漂移超过检索半径的 60% 就重建。
+    //   旧版 radius×2=6km 太宽——手机定位漂 3km（GPS 缓存/WiFi 漂移很常见）后，
+    //   目录还是老圆心的，用户会看到"漂移点楼下的店全在几十米内"的假距离。
+    //   hot（本城热门）是城市级目录，仍按 HOT_RADIUS 宽松处理。
+    const th = mode === 'hot' ? HOT_RADIUS : (Number(q.radius) || DEFAULT_RADIUS) * 0.6;
+    return distanceOf(lngQ, latQ, dLng, dLat) <= th;
   })();
   if (diskUsable && diskSameCity) {
     cache.set(key, disk, CATALOG_TTL);

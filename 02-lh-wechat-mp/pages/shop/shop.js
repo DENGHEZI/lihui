@@ -24,7 +24,12 @@ Page({
     from: '',
     quotaHit: false,
     quotaMessage: '',
-    realLinked: ''
+    realLinked: '',
+    // 定位状态条：让"距离不对"这类问题当场可见——
+    // 定位漂了（GPS 缓存/WiFi 漂移/手动城市/IP 估计）时，用户能看到来源与精度并一键重新定位
+    locDesc: '',
+    locWarn: false,
+    relocating: false
   },
 
   async onLoad() {
@@ -62,6 +67,48 @@ Page({
     this.load()
   },
 
+  /** 定位来源 → 用户能看懂的文案；精度差/非真 GPS 的标橙提醒 */
+  applyLocState(loc) {
+    if (!loc || !isFinite(Number(loc.lng))) {
+      this.setData({ locDesc: '未获取到定位', locWarn: true })
+      return
+    }
+    const acc = Number(loc.accuracy)
+    let desc = ''
+    let warn = false
+    if (loc.source === 'gps') {
+      desc = `GPS 定位 ±${isFinite(acc) ? Math.round(acc) : '?'}m`
+    } else if (loc.source === 'gps-coarse') {
+      desc = `粗定位 ±${isFinite(acc) ? Math.round(acc) : '?'}m`
+      warn = true
+    } else if (loc.source === 'manual') {
+      desc = `手动城市${loc.city ? '·' + loc.city : ''}`
+      warn = true
+    } else {
+      desc = 'IP 估计（城市级）'
+      warn = true
+    }
+    this.setData({ locDesc: desc, locWarn: warn })
+  },
+
+  /** 一键重新定位：强刷 GPS（顺带清掉手动城市），成功后重拉列表 */
+  async onRelocate() {
+    if (this.data.relocating) return
+    this.setData({ relocating: true })
+    try {
+      const loc = await app.getLocation({ force: true })
+      if (loc && isFinite(Number(loc.lng))) {
+        wx.showToast({ title: '已重新定位', icon: 'success', duration: 1200 })
+      } else {
+        wx.showToast({ title: '定位失败，检查定位权限', icon: 'none' })
+      }
+    } catch (e) {
+      wx.showToast({ title: '定位失败，检查定位权限', icon: 'none' })
+    }
+    this.setData({ relocating: false })
+    this.load()
+  },
+
   async load() {
     this.setData({ loading: true })
     let loc = app.globalData.location || {}
@@ -76,6 +123,7 @@ Page({
       }
       loc = app.globalData.location || {}
     }
+    this.applyLocState(loc)
     this.syncHotTabName(loc)
     const mode = this.data.curSource
     try {

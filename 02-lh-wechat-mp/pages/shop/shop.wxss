@@ -253,6 +253,49 @@
   flex-shrink: 0;
 }
 
+/* ---------- 定位状态条 ---------- */
+.locbar {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin: 0 4rpx 14rpx;
+  padding: 12rpx 16rpx;
+  border: 1rpx solid var(--lh-line);
+  background: var(--lh-card);
+  border-radius: 14rpx;
+}
+
+.locbar--warn {
+  border-color: var(--lh-warning, #d98b00);
+  background: var(--lh-warning-soft, #fff7e8);
+}
+
+.loc-dot {
+  font-size: 22rpx;
+  flex-shrink: 0;
+}
+
+.loc-txt {
+  flex: 1;
+  font-size: 20rpx;
+  color: var(--lh-text-weak);
+  line-height: 1.4;
+}
+
+.locbar--warn .loc-txt {
+  color: var(--lh-warning, #b26a00);
+}
+
+.loc-reloc {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  font-weight: 600;
+  color: var(--lh-primary);
+  padding: 6rpx 14rpx;
+  border: 1rpx solid var(--lh-primary);
+  border-radius: 999rpx;
+}
+
 .quota {
   display: flex;
   gap: 12rpx;

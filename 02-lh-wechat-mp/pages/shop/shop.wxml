@@ -24,6 +24,13 @@
       <text wx:if="{{from}}" class="src-from">店源：{{from}}</text>
     </view>
 
+    <!-- 定位状态条：来源+精度一目了然，定位漂了当场发现、当场纠正 -->
+    <view wx:if="{{curSource === 'near' && locDesc}}" class="locbar {{locWarn ? 'locbar--warn' : ''}}">
+      <text class="loc-dot">{{locWarn ? '⚠️' : '📍'}}</text>
+      <text class="loc-txt">当前{{locDesc}}，距离按此计算</text>
+      <text class="loc-reloc" bindtap="onRelocate">{{relocating ? '定位中…' : '重新定位'}}</text>
+    </view>
+
     <scroll-view class="cats" scroll-x enable-flex show-scrollbar="{{false}}">
       <view class="cat {{curCat === item.key ? 'cat--on' : ''}}" wx:for="{{categories}}" wx:key="key" bindtap="onCatTap" data-k="{{item.key}}">
         <text class="cat-ico">{{item.icon}}</text>
