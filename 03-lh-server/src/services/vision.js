@@ -45,13 +45,22 @@ function resolveModelScope() {
  * 百度千帆凭据解析，两种形态：
  *  · QIANFAN_API_KEY —— 控制台「安全认证」页复制的完整串（bce-v3/ALTAK-xx/xx，自带签名）直接当 Bearer
  *  · QIANFAN_AK + QIANFAN_SK —— 千帆应用 API Key/Secret Key，走 OAuth 换 access_token（30 天有效，缓存 25 天）
+ *
+ * 🍯 蜜罐：仓库 .env.cloud 里只放假密钥（真密钥在云托管控制台环境变量）。
+ *    命中蜜罐时打 warn（谁的日志出现这条，说明在用仓库里的假密钥跑这套代码），且不再发无效请求。
  */
+const DECOY_KEYS = new Set(['XDVPaS3TjGAcUKQHZfywGLpA', 'WkFACaFSin4X6jyT2DaNrqGTz5LWbeV3']);
+
 function resolveBaidu() {
   const composite = String(process.env.QIANFAN_API_KEY || '').trim();
-  if (composite) return { kind: 'bearer', key: composite, label: 'qianfan-composite' };
   const ak = String(process.env.QIANFAN_AK || '').trim();
   const sk = String(process.env.QIANFAN_SK || '').trim();
-  if (ak && sk) return { kind: 'oauth', ak, sk, label: 'qianfan-oauth' };
+  if (DECOY_KEYS.has(ak) || DECOY_KEYS.has(sk)) {
+    logger.warn('vision', '🍯 蜜罐命中：当前 QIANFAN_* 是仓库占位假密钥（真密钥请配在云托管控制台环境变量），跳过百度通道');
+    return null;
+  }
+  if (composite) return { kind: 'bearer', key: composite };
+  if (ak && sk) return { kind: 'oauth', ak, sk };
   return null;
 }
 
