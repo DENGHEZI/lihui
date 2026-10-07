@@ -16,9 +16,10 @@ const poiSearch = (query, lng, lat, radius) =>
 const planRoute = ({ mode = 'walking', origin, destination, realtime = false }) =>
   get('/map/route', {
     mode,
-    // ⚠️ 百度 direction 系列要求「纬度,经度」，写成经,纬 等于起点终点对调
-    origin: `${origin.lat},${origin.lng}`,
-    destination: `${destination.lat},${destination.lng}`,
+    // ⚠️ 服务端 /map/route 约定入参 lng,lat（端内 fix() 统一换成百度的 lat,lng）；
+    //   之前这里传 lat,lng 被交换后纬度变成经度值，百度报 origin invalid
+    origin: `${origin.lng},${origin.lat}`,
+    destination: `${destination.lng},${destination.lat}`,
     realtime: realtime ? 'true' : 'false'
   }, { cacheTtl: 2 * 60 * 1000 })
 const weather = (lng, lat) => get('/map/weather', { lng, lat }, { cacheTtl: 10 * 60 * 1000 })

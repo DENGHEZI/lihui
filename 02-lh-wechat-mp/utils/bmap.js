@@ -1,108 +1,95 @@
 /**
- * 鲤慧 LiHui · 百度地图 · 微信小程序端直连封装
+ * 鲤慧 LiHui · 百度地图端封装（2026-10-07 改为服务端中转）
  *
- * 用途：小程序端可直接调用的百度地图 Web 服务 API（轻量、低延迟），
- *      用于行政区定位、输入联想等「端上体验敏感」的场景；
- *      路线规划、POI 检索等重能力仍走服务端中转（见 utils/api.js），以统一限流与缓存。
+ * 变更原因：直连百度用的端上 AK 报「APP Referer 校验失败 / 被禁用」——
+ * 微信小程序的请求 Referer 固定为 servicewechat.com/{appid}，百度控制台
+ * 白名单一旦没配就全挂，且端上明文持 AK 本身就是泄露面。
  *
- * 前置条件：
- *   1) 小程序后台 → 开发设置 → 服务器域名 → request 合法域名加入 https://api.map.baidu.com
- *   2) 百度地图开放平台 → 该 AK 的 Referer 白名单设为「微信小程序」并绑定 AppID
+ * 现在全部走服务端中转（/map/* 端点，AK 只存服务端 .env，附缓存与限流），
+ * 与 utils/api.js 同一通道（云托管 callContainer / request 自适应）。
+ * 导出签名与返回形状与旧直连版完全一致，调用页（index/route）零改动。
  */
 const config = require('./config.js')
+const { get } = require('./request.js')
+const api = require('./api.js')
 
-function call(pathname, params) {
-  const qs = Object.keys(params)
-    .filter((k) => params[k] !== undefined && params[k] !== '')
-    .map((k) => `${k}=${encodeURIComponent(params[k])}`)
-    .join('&')
-  return new Promise((resolve, reject) => {
-    wx.request({
-      url: `${config.BAIDU_BASE}${pathname}?${qs}&ak=${config.BAIDU_AK}&output=json`,
-      method: 'GET',
-      timeout: 9000,
-      success: (res) => {
-        const d = res.data || {}
-        if (d.status !== undefined && d.status !== 0) {
-          reject(new Error(d.message || d.msg || '百度接口错误'))
-          return
-        }
-        resolve(d)
-      },
-      fail: reject
-    })
-  })
-}
-
-/** 地址 → 坐标 */
+/** 地址 → 坐标（服务端 ret_coordtype=gcj02，坐标系一致） */
 function geocode(address, city) {
-  // ret_coordtype=gcj02：geocoding 默认吐 BD-09，与端上坐标系不一致会偏 500~900m
-  return call('/geocoding/v3/', { address, city: city || '', ret_coordtype: 'gcj02' }).then((d) => {
-    const l = (d.result && d.result.location) || {}
-    return { lng: Number(l.lng), lat: Number(l.lat), level: (d.result && d.result.level) || '' }
-  })
+  return api.geocode(address, city).then((d) => ({
+    lng: Number(d.lng),
+    lat: Number(d.lat),
+    level: d.level || ''
+  }))
 }
 
 /** 坐标 → 地址 */
 function reverseGeocode(lng, lat) {
-  return call('/reverse_geocoding/v3/', { location: `${lat},${lng}`, coordtype: 'gcj02' }).then((d) => {
-    const r = d.result || {}
-    const ad = r.addressComponent || {}
-    return {
-      formatted: r.formatted_address || '',
-      city: ad.city || '',
-      district: ad.district || '',
-      province: ad.province || ''
-    }
-  })
+  return api.reverseGeocode(lng, lat).then((d) => ({
+    formatted: d.formatted || '',
+    city: d.city || '',
+    district: d.district || '',
+    province: d.province || ''
+  }))
 }
 
-/** 输入联想 */
+/** 输入联想（服务端已拍平为 {name,district,lng,lat}，坐标系 gcj02） */
 function suggest(keyword, city) {
-  return call('/place/v2/suggestion', {
-    query: keyword,
-    region: city || '',
-    city_limit: false,
-    ret_coord_type: 'gcj02'
-  }).then((d) =>
-    (d.result || []).map((x) => ({
+  return get('/map/suggest', { keyword, city: city || '' }, { cacheTtl: 5 * 60 * 1000 }).then((list) =>
+    (list || []).map((x) => ({
       name: x.name,
       district: x.district,
-      lng: x.location && Number(x.location.lng),
-      lat: x.location && Number(x.location.lat)
+      lng: x.lng !== undefined ? Number(x.lng) : null,
+      lat: x.lat !== undefined ? Number(x.lat) : null
     }))
   )
 }
 
-/** 周边 POI（轻量兜底，主链路走服务端）
- *  ⚠️ coord_type=3 必须显式声明：不传时百度按 BD-09 解释 location，
- *     等于把 GCJ-02 的检索圆心当成百度坐标，整圈结果会整体偏移 500~900m。 */
+/** 周边 POI（服务端已带 RRF 融合 + 地址补查 + 个性化排序，形状兼容） */
 function poiSearch(query, lng, lat, radius) {
-  return call('/place/v2/search', {
-    query,
-    location: `${lat},${lng}`,
-    radius: radius || 1200,
-    page_size: 20,
-    page_num: 0,
-    scope: 2,
-    coord_type: 3
-  }).then((d) => ({
-    total: d.total || 0,
-    items: (d.results || []).map((x) => {
-      const l = x.location || {}
-      const info = x.detail_info || {}
-      return {
-        uid: x.uid,
-        name: x.name,
-        address: x.address,
-        lng: Number(l.lng),
-        lat: Number(l.lat),
-        distance: info.distance !== undefined ? Number(info.distance) : null,
-        tag: info.tag || '',
-        rating: info.overall_rating || null
-      }
-    })
+  return api.poiSearch(query, lng, lat, radius).then((d) => ({
+    total: (d && d.total) || 0,
+    items: ((d && d.items) || []).map((x) => ({
+      uid: x.uid,
+      name: x.name,
+      address: x.address,
+      lng: Number(x.lng),
+      lat: Number(x.lat),
+      distance: x.distance !== undefined && x.distance !== null ? Number(x.distance) : null,
+      tag: x.tag || '',
+      rating: x.rating || null
+    }))
   }))
+}
+
+/**
+ * 兼容透传：旧版把百度原始响应透给调用方；现在无直连能力。
+ * 仅映射已知路径到服务端端点，未映射路径直接报错（避免滥用透传通道）。
+ */
+const PATH_MAP = {
+  '/geocoding/v3/': (p) => get('/map/geocode', { address: p.address, city: p.city || '' }),
+  '/reverse_geocoding/v3/': (p) => {
+    // 旧直连参数是 location:'lat,lng'，兼容 lat,lng 与 {lng,lat} 两种
+    let lng = p.lng, lat = p.lat
+    if (p.location && typeof p.location === 'string') {
+      const [a, b] = p.location.split(',')
+      lat = lat || Number(a); lng = lng || Number(b)
+    }
+    return get('/map/reverse-geocode', { lng, lat })
+  },
+  '/place/v2/search': (p) => {
+    let lng = p.lng, lat = p.lat
+    if (p.location && typeof p.location === 'string') {
+      const [a, b] = p.location.split(',')
+      lat = lat || Number(a); lng = lng || Number(b)
+    }
+    return get('/map/poi/search', { query: p.query, lng, lat, radius: p.radius })
+  }
+}
+
+function call(pathname, params) {
+  const fn = PATH_MAP[pathname]
+  if (!fn) return Promise.reject(new Error(`该接口已改为服务端中转，未映射路径：${pathname}（请改用 geocode/reverseGeocode/suggest/poiSearch）`))
+  return fn(params || {})
 }
 
 module.exports = { call, geocode, reverseGeocode, suggest, poiSearch }
