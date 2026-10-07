@@ -79,10 +79,17 @@ seed();
 const clients = new Map(); // id -> McpClient
 
 function buildClient(rec) {
+  // 防御:注册表里的解释器路径可能随运行时升级失效(如 WorkBuddy 升级 managed node
+  // 目录 22.22.2-3 → 22.22.2-6),失效时回退当前 node,避免 8 个 MCP 全挂
+  let command = rec.command;
+  if (command && !fs.existsSync(command)) {
+    logger.warn('mcpHub', `注册的解释器已失效(${command}),回退当前 node`);
+    command = process.execPath;
+  }
   return new McpClient({
     id: rec.id,
     name: rec.name,
-    command: rec.command,
+    command,
     args: rec.args,
     env: { ...(rec.env || {}), BAIDU_AK: config.baidu.ak },
     cwd: config.root,
