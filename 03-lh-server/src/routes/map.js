@@ -84,7 +84,10 @@ module.exports = {
     const geoRe = /^-?\d{1,3}(\.\d+)?,-?\d{1,3}(\.\d+)?$/;
     const center = String(q.center || '').match(geoRe);
     if (!center) return fail(res, 1001, 'center 必填,格式 lng,lat');
-    const markers = String(q.markers || '').match(geoRe);
+    // markers 支持多点(lng,lat|lng,lat),逐段严格校验
+    const markerList = String(q.markers || '').split('|').filter(Boolean);
+    const markersOk = markerList.length > 0 && markerList.length <= 8 && markerList.every((m) => geoRe.test(m));
+    const markers = markersOk ? String(q.markers) : null;
     const paths = String(q.paths || '');
     // paths 只允许 数字/逗号/分号/负号/小数点(静态图路径参数),长度 ≤1800(百度 URL 上限)
     if (!paths || paths.length > 1800 || !/^[-0-9.,;]+$/.test(paths)) {
@@ -96,13 +99,15 @@ module.exports = {
     const pathStyles = /^0x[0-9A-Fa-f]{6},\d{1,2},(0(\.\d{1,2})?|1(\.0{1,2})?)$/.test(String(q.pathStyles || ''))
       ? String(q.pathStyles)
       : '0x1677FF,3,0.25';
+    // ⚠️ markers/paths 百度要求 ; 与 | 裸放 URL(encodeURIComponent 会编成 %3B/%7C 导致返回空白占位图)。
+    //    两参数均已过白名单(纯数字/逗号/分号/竖线/负号),可安全裸拼;center/zoom 等仍走编码。
     const url =
       'https://api.map.baidu.com/staticimage/v2?ak=' + encodeURIComponent(config.baidu.ak) +
       '&center=' + encodeURIComponent(center[0]) +
       '&zoom=' + zoom + '&width=' + w + '&height=' + h +
-      (markers ? '&markers=' + encodeURIComponent(markers[0]) : '') +
-      '&paths=' + encodeURIComponent(paths) +
-      '&pathStyles=' + encodeURIComponent(pathStyles);
+      (markers ? '&markers=' + markers : '') +
+      '&paths=' + paths +
+      '&pathStyles=' + pathStyles;
     if (!bmapSite || !bmapSite.fetchUrl) return fail(res, 5002, '静态图代理不可用');
     try {
       await security.baiduBucket.take(); // 与其他百度出站共享 QPS 令牌桶

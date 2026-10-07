@@ -2,8 +2,10 @@ const app = getApp()
 const api = require('../../utils/api.js')
 const bmap = require('../../utils/bmap.js')
 const action = require('../../utils/action.js')
+const config = require('../../utils/config.js')
 
 const theme = require('../../utils/theme.js')
+
 /** 百度指令清洗：<b>冲口路</b> → rich-text 节点（蓝色加粗），不再显示原始标签 */
 function instrNodes(s) {
   const str = String(s || '').replace(/<\/?font[^>]*>/gi, '')
@@ -13,7 +15,7 @@ function instrNodes(s) {
     if (!p) continue
     const m = p.match(/^<b>([\s\S]*?)<\/b>$/)
     if (m) {
-      nodes.push({ name: 'b', attrs: { style: 'color:#1677FF;font-weight:600;' }, children: [{ type: 'text', text: m[1] }] })
+      nodes.push({ name: 'b', attrs: { style: 'color:var(--lh-primary);font-weight:600;' }, children: [{ type: 'text', text: m[1] }] })
     } else {
       nodes.push({ type: 'text', text: p })
     }
@@ -38,6 +40,49 @@ function normalizeRoute(r) {
   return out
 }
 
+/** 把路线折线画上服务端代理的百度静态图（AK 不出服务端）
+ *  ⚠️ 静态图 paths 是 lng,lat 顺序（与 directionlite steps 的 lat,lng 相反），必须转换；
+ *    pathStyles 必须三段式 0xRRGGBB,weight,opacity，两段式百度报错返回空白占位图 */
+function buildStaticMap(r, origin, dest) {
+  try {
+    const pts = [] // [lng,lat] —— directionlite steps.path 原生就是 lng,lat 序,静态图 paths 也要 lng,lat,原样拼接
+    for (const s of r.steps || []) {
+      if (!s.path) continue
+      for (const p of String(s.path).split(';')) {
+        const [a, b] = p.split(',')
+        if (isFinite(+a) && isFinite(+b)) pts.push([+a, +b])
+      }
+    }
+    if (pts.length < 2) return null
+    // 坐标截断到 5 位小数(≈1m,静态图足够),采样至 ≤75 点保证 paths ≤1500 字符
+    // (服务端上限 1800,给 URL 其他参数留余量)
+    const round = (n) => Number(n.toFixed(5))
+    const maxPts = 75
+    const step = Math.max(1, Math.ceil(pts.length / maxPts))
+    const sampled = pts.filter((_, i) => i % step === 0 || i === pts.length - 1).map(([ln, la]) => [round(ln), round(la)])
+    let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180
+    for (const [ln, la] of pts) {
+      if (la < minLat) minLat = la
+      if (la > maxLat) maxLat = la
+      if (ln < minLng) minLng = ln
+      if (ln > maxLng) maxLng = ln
+    }
+    const span = Math.max(maxLat - minLat, (maxLng - minLng) * 0.7, 0.008)
+    const zoom = Math.max(5, Math.min(17, Math.round(15 - Math.log2(span * 100))))
+    const qs = [
+      'center=' + (minLng + maxLng) / 2 + ',' + (minLat + maxLat) / 2,
+      'markers=' + origin.lng + ',' + origin.lat + '|' + dest.lng + ',' + dest.lat,
+      'paths=' + encodeURIComponent(sampled.map((p) => p.join(',')).join(';')),
+      'pathStyles=0x1677FF,6,0.85',
+      'zoom=' + zoom,
+      'width=750&height=420'
+    ].join('&')
+    return config.BASE_URL + '/map/staticimg?' + qs
+  } catch (e) {
+    return null
+  }
+}
+
 Page({
   onShow() {
     theme.apply(this)
@@ -49,12 +94,18 @@ Page({
     destName: '',
     dest: null,
     mode: 'walking',
+    modeIndex: 0,
     realtime: false,
     loading: false,
     result: null,
     costPlan: null,
     fallbackDriving: false,
     fallbackTip: '',
+    mapUrl: '',
+    showMap: true,
+    showSteps: false,
+    sugList: [],
+    sugShow: false,
     modes: [
       { key: 'walking', name: '步行', icon: '🚶' },
       { key: 'riding', name: '骑行', icon: '🚲' },
@@ -80,16 +131,54 @@ Page({
   },
 
   onDestInput(e) {
-    this.setData({ destName: e.detail.value, dest: null })
+    const v = e.detail.value
+    this.setData({ destName: v, dest: null, sugShow: false })
+    if (this._sugTimer) clearTimeout(this._sugTimer)
+    if (!v || v.length < 2) return
+    this._sugTimer = setTimeout(() => this.fetchSug(v), 300)
   },
 
-  setMode(e) {
-    this.setData({ mode: this.data.modes[e.currentTarget.dataset.i].key, fallbackDriving: false, fallbackTip: '' })
-    if (this.data.dest) this.plan()
+  async fetchSug(kw) {
+    try {
+      const city = (this.data.originName || '').slice(0, 3)
+      const list = await bmap.suggest(kw, city)
+      this.setData({ sugList: (list || []).slice(0, 6), sugShow: (list || []).length > 0 })
+    } catch (e) {
+      this.setData({ sugList: [], sugShow: false })
+    }
+  },
+
+  pickSug(e) {
+    const i = Number(e.currentTarget.dataset.i)
+    const s = this.data.sugList[i]
+    if (!s) return
+    this.setData({
+      destName: s.name,
+      dest: s.lng && s.lat ? { lng: s.lng, lat: s.lat } : null,
+      sugShow: false,
+      sugList: []
+    })
+    this.plan()
+  },
+
+  hideSug() {
+    if (this._hideTimer) clearTimeout(this._hideTimer)
+    this._hideTimer = setTimeout(() => this.setData({ sugShow: false }), 200)
   },
 
   onRealtime(e) {
     this.setData({ realtime: e.detail.value })
+  },
+
+  setMode(e) {
+    const i = e.currentTarget.dataset.i
+    this.setData({
+      mode: this.data.modes[i].key,
+      modeIndex: i,
+      fallbackDriving: false,
+      fallbackTip: ''
+    })
+    if (this.data.dest) this.plan()
   },
 
   swap() {
@@ -101,6 +190,15 @@ Page({
       originName: this.data.destName,
       destName: this.data.originName
     })
+  },
+
+  toggleSteps() {
+    this.setData({ showSteps: !this.data.showSteps })
+  },
+
+  onMapError() {
+    // 静态图不可用（云托管未开未鉴权等）时优雅降级为纯摘要卡
+    this.setData({ showMap: false })
   },
 
   async plan() {
@@ -132,7 +230,9 @@ Page({
         destination: dest,
         realtime: this.data.realtime
       })
-      this.setData({ result: normalizeRoute(r), fallbackDriving: false })
+      const result = normalizeRoute(r)
+      const mapUrl = buildStaticMap(result, this.data.origin, dest)
+      this.setData({ result, fallbackDriving: false, mapUrl, showMap: !!mapUrl, showSteps: false })
       if (this.data.mode === 'driving') this.loadCost()
     } catch (e) {
       // 公交方案不可用（含跨城无直达）时，自动回落驾车参考，保证用户总能拿到可行方案
@@ -144,10 +244,15 @@ Page({
             destination: dest,
             realtime: this.data.realtime
           })
+          const result = normalizeRoute(r)
+          const mapUrl = buildStaticMap(result, this.data.origin, dest)
           this.setData({
-            result: normalizeRoute(r),
+            result,
             fallbackDriving: true,
-            fallbackTip: this.crossCityTip(r)
+            fallbackTip: this.crossCityTip(result),
+            mapUrl,
+            showMap: !!mapUrl,
+            showSteps: false
           })
         } catch (e2) {
           wx.showToast({ title: '暂无可达方案，请换个目的地试试', icon: 'none' })

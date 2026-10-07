@@ -1,95 +1,143 @@
 <view class="lh-page {{theme === 'dark' ? 'theme-dark' : ''}}">
-  <view class="lh-card">
-    <text class="lh-h2">路线规划</text>
-    <view class="from-to">
-      <view class="dot start"></view>
-      <view class="ft-mid">
-        <text class="ft-label">起点</text>
-        <text class="ft-val">{{originName}}</text>
+
+  <!-- ============ 路线地图卡 ============ -->
+  <view class="map-card" wx:if="{{result && showMap && mapUrl}}">
+    <image class="map-img" src="{{mapUrl}}" mode="aspectFill" binderror="onMapError" />
+    <view class="map-hero">
+      <view class="hero-min">
+        <text class="hero-num">{{result.min}}</text>
+        <text class="hero-unit">分钟</text>
+      </view>
+      <text class="hero-sub">{{modes[modeIndex].name}} · {{result.km}} 公里</text>
+    </view>
+    <view class="map-badge" wx:if="{{result.congestion}}">{{result.congestion}}</view>
+  </view>
+
+  <!-- ============ 起终点表单（玻璃卡） ============ -->
+  <view class="panel">
+    <view class="ft-wrap">
+      <view class="ft-rail">
+        <view class="rail-dot rail-dot--start"></view>
+        <view class="rail-line"></view>
+        <view class="rail-dot rail-dot--end"></view>
+      </view>
+      <view class="ft-fields">
+        <view class="ft-row">
+          <text class="ft-label">起点</text>
+          <input class="ft-input" value="{{originName}}" placeholder="我的位置" placeholder-class="ph" disabled="{{true}}" />
+        </view>
+        <view class="ft-divider"></view>
+        <view class="ft-row">
+          <text class="ft-label">终点</text>
+          <view class="ft-dest-wrap">
+            <input class="ft-input" value="{{destName}}" placeholder="搜索目的地，如「万达广场」" placeholder-class="ph"
+              bindinput="onDestInput" bindblur="hideSug" confirm-type="search" bindconfirm="plan" />
+            <view class="sug-pop" wx:if="{{sugShow}}">
+              <view class="sug-item" wx:for="{{sugList}}" wx:key="name" hover-class="sug-item--hover" bindtap="pickSug" data-i="{{index}}">
+                <text class="sug-ico">📍</text>
+                <text class="sug-name">{{item.name}}</text>
+                <text class="sug-district" wx:if="{{item.district}}">{{item.district}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="swap-btn" hover-class="swap-btn--hover" bindtap="swap">
+        <text class="swap-ico">⇅</text>
       </view>
     </view>
-    <view class="from-to">
-      <view class="dot end"></view>
-      <view class="ft-mid">
-        <text class="ft-label">终点</text>
-        <input class="ft-inp" value="{{destName}}" placeholder="输入目的地" placeholder-class="ph" bindinput="onDestInput" />
+
+    <!-- 四模式分段控件 -->
+    <view class="seg">
+      <view class="seg-slider" style="left: {{modeIndex * 25}}%"></view>
+      <view class="seg-item {{mode === item.key ? 'seg-item--on' : ''}}" wx:for="{{modes}}" wx:key="key" bindtap="setMode" data-i="{{index}}">
+        <text class="seg-ico">{{item.icon}}</text>
+        <text class="seg-name">{{item.name}}</text>
       </view>
-      <text class="swap" bindtap="swap">⇅</text>
     </view>
 
-    <view class="modes">
-      <text
-        class="lh-pill mode-pill {{mode === item.key ? 'lh-pill--on' : ''}}"
-        wx:for="{{modes}}"
-        wx:key="key"
-        bindtap="setMode"
-        data-i="{{index}}"
-      >{{item.icon}} {{item.name}}</text>
-    </view>
-
-    <view class="realtime" wx:if="{{mode === 'driving'}}">
-      <text class="lh-body">实时避堵</text>
+    <view class="realtime-row" wx:if="{{mode === 'driving'}}">
+      <view class="rt-text">
+        <text class="rt-title">实时避堵</text>
+        <text class="rt-sub">结合路况选择更快路线</text>
+      </view>
       <switch checked="{{realtime}}" color="#1677FF" bindchange="onRealtime" />
     </view>
 
-    <button class="lh-btn" bindtap="plan" loading="{{loading}}">规划路线</button>
+    <button class="plan-btn" hover-class="plan-btn--hover" bindtap="plan" loading="{{loading}}">
+      {{loading ? '规划中…' : (result ? '重新规划' : '规划路线')}}
+    </button>
   </view>
 
-  <view class="lh-card" wx:if="{{result}}">
+  <!-- ============ 结果摘要（地图卡隐藏时的兜底） ============ -->
+  <view class="panel" wx:if="{{result && (!showMap || !mapUrl)}}">
     <view class="sum">
-      <view class="sum-item">
-        <text class="sum-num">{{result.km}}</text>
-        <text class="sum-unit">km</text>
-      </view>
-      <view class="sum-item">
+      <view class="sum-main">
         <text class="sum-num">{{result.min}}</text>
         <text class="sum-unit">分钟</text>
       </view>
-      <view class="sum-item">
-        <text class="sum-num">{{result.trafficLight}}</text>
-        <text class="sum-unit">红绿灯</text>
+      <view class="sum-side">
+        <text class="sum-km">{{result.km}} 公里</text>
+        <text class="sum-tag" wx:if="{{result.trafficLight}}">{{result.trafficLight}} 个红绿灯</text>
+        <text class="sum-tag sum-tag--warn" wx:if="{{result.congestion}}">{{result.congestion}}</text>
       </view>
     </view>
+  </view>
 
-    <view class="congestion" wx:if="{{result.congestion}}">
-      <text class="cong-text">当前路况：{{result.congestion}}</text>
+  <!-- 跨城提示 -->
+  <view class="panel tip-panel" wx:if="{{fallbackDriving && fallbackTip}}">
+    <text class="tip-ico">💡</text>
+    <text class="tip-txt">{{fallbackTip}}</text>
+  </view>
+
+  <!-- ============ 步骤详情（默认折叠） ============ -->
+  <view class="panel" wx:if="{{result && result.steps.length}}">
+    <view class="steps-head" bindtap="toggleSteps" hover-class="steps-head--hover">
+      <text class="steps-title">路线详情</text>
+      <text class="steps-toggle">{{showSteps ? '收起 ▲' : '展开 ' + result.steps.length + ' 步 ▼'}}</text>
     </view>
-
-    <!-- 公交不可达时的跨城出行意见 -->
-    <view class="fallback-tip" wx:if="{{fallbackDriving && fallbackTip}}">
-      <text class="fb-ico">💡</text>
-      <text class="fb-txt">{{fallbackTip}}</text>
-    </view>
-
-    <view class="steps">
+    <view class="steps" wx:if="{{showSteps}}">
       <view class="step-row" wx:for="{{result.steps}}" wx:key="instruction">
-        <view class="step-idx">{{index + 1}}</view>
+        <view class="step-rail">
+          <view class="step-dot"></view>
+          <view class="step-line" wx:if="{{index < result.steps.length - 1}}"></view>
+        </view>
         <view class="step-mid">
           <rich-text class="step-txt" nodes="{{item.rich}}"></rich-text>
-          <text class="lh-mini">{{item.distance}} 米 · 约 {{item.min}} 分钟</text>
+          <text class="step-meta">{{item.distance}} 米 · 约 {{item.min}} 分钟</text>
         </view>
       </view>
     </view>
-
-    <view class="alts" wx:if="{{result.alternatives.length}}">
-      <text class="lh-h2">备选方案</text>
-      <view class="alt-row" wx:for="{{result.alternatives}}" wx:key="index">
-        <text class="lh-body">方案 {{index + 2}}</text>
-        <text class="lh-cap">{{item.km}} km · {{item.min}} 分钟</text>
-      </view>
-    </view>
-
-    <button class="lh-btn lh-btn--ghost ghost" bindtap="openNav">开始导航（内置地图，可选百度/高德）</button>
   </view>
 
-  <view class="lh-card" wx:if="{{costPlan}}">
-    <text class="lh-h2">省钱对比</text>
-    <text class="lh-body">{{costPlan.verdict}}</text>
-    <view class="cost-row" wx:for="{{costPlan.ranking}}" wx:key="name">
-      <text class="c-name">{{item.name}}</text>
-      <text class="c-cost">¥{{item.cost}}</text>
-      <text class="c-time">{{item.minutes}} 分钟</text>
+  <!-- ============ 备选方案 ============ -->
+  <view class="panel" wx:if="{{result && result.alternatives.length}}">
+    <text class="panel-title">备选方案</text>
+    <view class="alt-row" wx:for="{{result.alternatives}}" wx:key="index" hover-class="alt-row--hover">
+      <text class="alt-name">方案 {{index + 2}}</text>
+      <text class="alt-meta">{{item.km}} km · {{item.min}} 分钟</text>
     </view>
+  </view>
+
+  <!-- ============ 省钱对比 ============ -->
+  <view class="panel" wx:if="{{costPlan}}">
+    <text class="panel-title">出行成本对比</text>
+    <text class="cost-verdict" wx:if="{{costPlan.verdict}}">{{costPlan.verdict}}</text>
+    <view class="cost-row" wx:for="{{costPlan.ranking}}" wx:key="name">
+      <text class="c-rank">{{index + 1}}</text>
+      <text class="c-name">{{item.name}}</text>
+      <text class="c-time">{{item.minutes}} 分钟</text>
+      <text class="c-cost">¥{{item.cost}}</text>
+    </view>
+  </view>
+
+  <!-- ============ 开始导航 ============ -->
+  <view class="nav-wrap" wx:if="{{result}}">
+    <button class="nav-btn" hover-class="nav-btn--hover" bindtap="openNav">
+      <text class="nav-ico">🧭</text>
+      <text>开始导航</text>
+    </button>
+    <text class="nav-note">跳转内置地图，可选百度 / 高德</text>
   </view>
 
   <view style="height: 64rpx"></view>
