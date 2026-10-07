@@ -10,13 +10,38 @@
     "pages/order/detail"
   ],
   "subPackages": [
-    { "root": "pages/route", "pages": ["route"] },
-    { "root": "pages/settings", "pages": ["settings"] },
-    { "root": "pages/feedback", "pages": ["feedback"] }
+    {
+      "root": "pages/route",
+      "pages": [
+        "route"
+      ]
+    },
+    {
+      "root": "pages/settings",
+      "pages": [
+        "settings"
+      ]
+    },
+    {
+      "root": "pages/feedback",
+      "pages": [
+        "feedback"
+      ]
+    }
   ],
   "preloadRule": {
-    "pages/index/index": { "network": "all", "packages": ["pages/route"] },
-    "pages/assistant/assistant": { "network": "wifi", "packages": ["pages/settings"] }
+    "pages/index/index": {
+      "network": "all",
+      "packages": [
+        "pages/route"
+      ]
+    },
+    "pages/assistant/assistant": {
+      "network": "wifi",
+      "packages": [
+        "pages/settings"
+      ]
+    }
   },
   "window": {
     "backgroundTextStyle": "dark",
@@ -63,7 +88,10 @@
       "desc": "用于定位生成15分钟生活圈体检与便民推荐"
     }
   },
-  "requiredPrivateInfos": ["getLocation", "chooseLocation"],
+  "requiredPrivateInfos": [
+    "getLocation",
+    "chooseLocation"
+  ],
   "networkTimeout": {
     "request": 20000,
     "uploadFile": 30000,
@@ -71,5 +99,11 @@
   },
   "sitemapLocation": "sitemap.json",
   "style": "v2",
-  "lazyCodeLoading": "requiredComponents"
+  "lazyCodeLoading": "requiredComponents",
+  "plugins": {
+    "WechatSI": {
+      "version": "0.3.5",
+      "provider": "wx069ba97219f66d99"
+    }
+  }
 }

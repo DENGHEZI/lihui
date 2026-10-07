@@ -136,9 +136,19 @@ Page({
         if (t) this.ask(t)
         else wx.showToast({ title: '没听清，请再试一次', icon: 'none' })
       },
-      onError: () => {
+      onError: (e) => {
         this.setData({ recording: false, speechText: '' })
-        wx.showToast({ title: '语音未就绪：请检查麦克风权限，或先用文字输入', icon: 'none', duration: 2400 })
+        const denied = e && /auth|deny|permission/i.test((e && e.errMsg) || e || '')
+        if (denied) {
+          wx.showModal({
+            title: '需要麦克风权限',
+            content: '请在设置中允许「麦克风」，即可按住说话',
+            confirmText: '去设置',
+            success: (r) => { if (r.confirm) wx.openSetting() }
+          })
+        } else {
+          wx.showToast({ title: '语音未就绪，请先用文字输入', icon: 'none', duration: 2400 })
+        }
       }
     })
     this.setData({ recording: true, speechText: '' })

@@ -241,3 +241,80 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ---------- 麦克风按钮（对话栏语音） ---------- */
+.mic-btn {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--lh-primary-soft);
+  border: 1rpx solid var(--lh-glass-line);
+}
+.mic-btn--hover { opacity: 0.75; }
+.mic-btn--rec {
+  background: var(--lh-danger-soft, rgba(245, 34, 45, 0.12));
+  border-color: var(--lh-danger);
+  animation: micPulse 1.1s ease-in-out infinite;
+}
+.mic-ico { font-size: 30rpx; line-height: 1; }
+@keyframes micPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+/* ---------- 录音浮层 ---------- */
+.rec-mask {
+  position: fixed;
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(10, 16, 28, 0.45);
+  display: flex;
+  align-items: flex-end;
+  z-index: 90;
+}
+.rec-card {
+  width: 100%;
+  background: var(--lh-card-solid);
+  border-radius: 28rpx 28rpx 0 0;
+  padding: 44rpx 36rpx calc(44rpx + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 26rpx;
+}
+.rec-wave { display: flex; align-items: center; gap: 10rpx; height: 60rpx; }
+.rec-bar {
+  width: 8rpx;
+  height: 24rpx;
+  border-radius: 6rpx;
+  background: var(--lh-primary);
+  animation: waveBar 0.9s ease-in-out infinite;
+}
+.rec-bar:nth-child(2) { animation-delay: 0.12s; }
+.rec-bar:nth-child(3) { animation-delay: 0.24s; }
+.rec-bar:nth-child(4) { animation-delay: 0.36s; }
+.rec-bar:nth-child(5) { animation-delay: 0.48s; }
+@keyframes waveBar {
+  0%, 100% { height: 20rpx; opacity: 0.55; }
+  50% { height: 56rpx; opacity: 1; }
+}
+.rec-text {
+  min-height: 44rpx;
+  font-size: 30rpx;
+  color: var(--lh-text);
+  text-align: center;
+  line-height: 1.55;
+  max-width: 100%;
+}
+.rec-stop {
+  padding: 16rpx 72rpx;
+  border-radius: 999rpx;
+  background: var(--lh-primary);
+  color: #FFFFFF;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+.rec-stop--hover { opacity: 0.85; }

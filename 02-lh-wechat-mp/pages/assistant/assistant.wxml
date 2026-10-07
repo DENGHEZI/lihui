@@ -64,9 +64,24 @@
     <view style="height: 32rpx"></view>
   </scroll-view>
 
+  <!-- 录音中浮层：实时识别文字 + 停止 -->
+  <view class="rec-mask" wx:if="{{recording}}" bindtap="toggleRecord">
+    <view class="rec-card" catchtap="">
+      <view class="rec-wave">
+        <view class="rec-bar"></view><view class="rec-bar"></view><view class="rec-bar"></view>
+        <view class="rec-bar"></view><view class="rec-bar"></view>
+      </view>
+      <text class="rec-text">{{speechText || '正在听…请说话'}}</text>
+      <view class="rec-stop" hover-class="rec-stop--hover" catchtap="toggleRecord">完成</view>
+    </view>
+  </view>
+
   <!-- 输入区 -->
   <view class="input-bar">
     <view class="care-toggle {{careMode ? 'on' : ''}}" bindtap="toggleCare">{{careMode ? '关怀' : '标准'}}</view>
+    <view class="mic-btn {{recording ? 'mic-btn--rec' : ''}}" hover-class="mic-btn--hover" bindtap="toggleRecord">
+      <text class="mic-ico">{{recording ? '■' : '🎙'}}</text>
+    </view>
     <input class="chat-input" value="{{input}}" placeholder="问鲤慧：附近哪里能看病？" placeholder-class="ph" confirm-type="send" bindinput="onInput" bindconfirm="send" />
     <view class="send-btn {{input ? '' : 'dis'}}" bindtap="send">发送</view>
   </view>
