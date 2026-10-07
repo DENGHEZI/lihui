@@ -109,6 +109,20 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 > 商城页全部店名 / 地址 / 电话来自**百度地图 place 实时检索**（按当前定位 3km 拉取，非内置假数据）；  
 > 配额耗尽时前端弹提示条并回落到最近一次可用结果，**不白板**。
 
+### 📱 真机实测（2026-10-07 · 手机实拍，非模拟器）
+
+<div align="center">
+
+| ![真机：AI 识图 + 语音播报按钮](docs/screenshots/27-real-device-vision-tts.jpg) | ![真机：个性化生活圈方案](docs/screenshots/28-real-device-life-plan.jpg) |
+| :---: | :---: |
+| **AI 识图 · GLM-4.6V** + 手动「🔊 播放语音 / ⏹ 停止播报」真机验证 | **个性化生活圈方案**：买菜 / 取药 / 散步路线 + 老人关怀与预算建议 |
+| ![真机：体检 95 分雷达图](docs/screenshots/29-real-device-life-radar.jpg) | ![真机：步行等时圈与服务盲区](docs/screenshots/30-real-device-isochrone.jpg) |
+| **生活圈体检 95 分**：六类雷达图 + 国家规范依据徽章 | **步行等时圈**：74 覆盖分 · 0/16 盲区 · 1.75km² · 910m 最远可达，交互地图 / 百度底图双模式 |
+| ![真机：商城百度真实店源](docs/screenshots/31-real-device-shop.jpg) | |
+| **鲤慧商城**：百度真实店源（名称 / 地址 / 电话 / 参考价）+ 一键去下单 | |
+
+</div>
+
 ---
 
 ## 🆕 2026-10-07 更新
