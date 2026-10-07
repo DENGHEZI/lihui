@@ -51,8 +51,18 @@ node 03-lh-server/src/app.js     # → http://localhost:8809/
 | **定位 · 天气 · 生活圈体检** —— Hero 数据胶囊条实时回填（总分 / 覆盖分 / 盲区 / 气温） | **步行等时圈 · 服务盲区** —— 真实路网 36 方向算路 + 盲区网格 + 覆盖分 |
 | ![网页版：六类设施体检明细 + 便民速查](docs/screenshots/23-web-quick-shop.png) | ![网页版：能力全景矩阵](docs/screenshots/24-web-caps.png) |
 | **体检明细 · 便民速查** —— 六类设施评分条 + 1.5km POI 分类速查 | **能力全景** —— 网页版 / 小程序 / 双端共用 10 项能力一屏总览 |
-| ![网页版：Memory 安全运维](docs/screenshots/25-web-memory.png) | |
-| **Memory · 安全运维记忆** —— 蜜罐 / 封禁事件 + AI 建议（脱敏出网 · 人机协同） | |
+| ![网页版：Memory 安全运维](docs/screenshots/25-web-memory.png) | ![百度底图测试页](docs/screenshots/26-web-map-home.png) |
+| **Memory · 安全运维记忆** —— 蜜罐 / 封禁事件 + AI 建议（脱敏出网 · 人机协同） | **百度底图测试页**（`/map-home`）—— 服务端伪造 Referer 代理 JS API 与瓦片，AK 零下发 |
+
+</div>
+
+**📱 小程序测试版 V1.0.0**（微信开发者工具 CLI 全自动出码，总包 217.9 KB 编译通过，1.0.0 版本已上传微信平台）：
+
+<div align="center">
+
+![鲤慧小程序测试版预览码 V1.0.0](docs/release/v1.0.0-mp-preview-qr.png)
+
+**微信扫一扫 → 打开测试版**；后台「版本管理」可将上传的 1.0.0 设为体验版
 
 </div>
 
