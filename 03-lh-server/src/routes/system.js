@@ -5,6 +5,7 @@ const config = require('../config');
 const { ok } = require('../utils/http');
 const hub = require('../mcp/hub');
 const store = require('../services/store');
+const vision = require('../services/vision');
 
 module.exports = {
   'GET /health': async (req, res) => {
@@ -15,6 +16,7 @@ module.exports = {
       node: process.version,
       pid: process.pid,
       baiduAkConfigured: !!config.baidu.ak,
+      qianfan: vision.baiduStatus(),
       dataDir: config.dataDir,
       store: store.stats(),
       mcp: { total: hub.list().length, running: hub.list().filter((x) => x.status === 'running').length },

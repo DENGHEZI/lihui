@@ -57,11 +57,25 @@ function resolveBaidu() {
   const sk = String(process.env.QIANFAN_SK || '').trim();
   if (DECOY_KEYS.has(ak) || DECOY_KEYS.has(sk)) {
     logger.warn('vision', '🍯 蜜罐命中：当前 QIANFAN_* 是仓库占位假密钥（真密钥请配在云托管控制台环境变量），跳过百度通道');
-    return null;
+    return { kind: 'decoy' };
   }
   if (composite) return { kind: 'bearer', key: composite };
   if (ak && sk) return { kind: 'oauth', ak, sk };
   return null;
+}
+
+/** 诊断探针：百度识图密钥状态（/health 用，不泄露任何值） */
+function baiduStatus() {
+  const composite = String(process.env.QIANFAN_API_KEY || '').trim();
+  const ak = String(process.env.QIANFAN_AK || '').trim();
+  const sk = String(process.env.QIANFAN_SK || '').trim();
+  let status;
+  if (DECOY_KEYS.has(ak) || DECOY_KEYS.has(sk)) status = 'decoy(仓库蜜罐假密钥)';
+  else if (composite) status = 'ok(bearer)';
+  else if (ak && sk) status = 'ok(oauth)';
+  else if (ak || sk) status = 'half(只配了AK或SK之一)';
+  else status = 'none(未配置)';
+  return { status };
 }
 
 /* ---------------- 百度 OAuth 令牌（AK/SK → access_token，模块级缓存） ---------------- */
@@ -312,4 +326,4 @@ async function recognize({ image, question = '', lng, lat } = {}) {
   throw new Error('识图没有成功：' + ((lastErr && lastErr.message) || '未知错误'));
 }
 
-module.exports = { recognize };
+module.exports = { recognize, baiduStatus };
