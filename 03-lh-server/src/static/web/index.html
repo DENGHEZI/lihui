@@ -211,6 +211,50 @@
     background: var(--primary-weak); color: var(--primary); font-weight: 650; border: 1px solid var(--primary-line); }
   .eng-badge.degraded { background: var(--warn-bg); color: var(--warn-text); border-color: #F4E3C0; }
 
+  /* ---------- 等时圈 · 内嵌百度地图 ---------- */
+  .iso-map-wrap { position: relative; margin-top: 14px; border: 1px solid var(--line); border-radius: 14px;
+    overflow: hidden; height: 430px; background: #F2F5F9; }
+  .iso-map-wrap #isoMap { position: absolute; inset: 0; }
+  .iso-map-wrap .iso-map-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    gap: 10px; font-size: 13px; color: var(--text-3); z-index: 5; background: #F2F5F9; transition: opacity .3s; }
+  .iso-map-wrap .iso-map-loading.off { opacity: 0; pointer-events: none; }
+  .iso-map-badge { position: absolute; left: 12px; top: 12px; z-index: 6; font-size: 12px; font-weight: 650;
+    background: rgba(255,255,255,.92); border: 1px solid var(--primary-line); color: var(--primary);
+    border-radius: 999px; padding: 4px 12px; box-shadow: 0 2px 10px rgba(18,26,43,.08); }
+  .iso-view-tgl { margin-left: auto; display: flex; gap: 0; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .iso-view-tgl span { font-size: 12.5px; padding: 6px 14px; cursor: pointer; color: var(--text-2); background: #fff; transition: all .18s; }
+  .iso-view-tgl span.on { background: var(--primary-weak); color: var(--primary); font-weight: 650; }
+
+  /* ---------- 智能助手（网页版） ---------- */
+  .ai-chat { display: flex; flex-direction: column; height: 460px; }
+  .ai-msgs { flex: 1; overflow-y: auto; padding: 4px 4px 10px; display: flex; flex-direction: column; gap: 12px; }
+  .ai-row { display: flex; gap: 10px; align-items: flex-start; }
+  .ai-row.me { flex-direction: row-reverse; }
+  .ai-ava { flex: none; width: 34px; height: 34px; border-radius: 11px; display: flex; align-items: center; justify-content: center;
+    font-size: 17px; background: var(--primary-weak); border: 1px solid var(--primary-line); }
+  .ai-row.me .ai-ava { background: #F4F6F9; border-color: var(--line); }
+  .ai-bub { max-width: 78%; padding: 10px 14px; border-radius: 14px; font-size: 13.5px; line-height: 1.75;
+    background: #F7F9FC; border: 1px solid var(--line); color: var(--text-1); word-break: break-word; }
+  .ai-row.me .ai-bub { background: var(--primary-weak); border-color: var(--primary-line); }
+  .ai-bub b { font-weight: 650; }
+  .ai-bub .ai-meta { display: block; margin-top: 6px; font-size: 11px; color: var(--text-3); }
+  .ai-bub.typing { display: flex; gap: 5px; align-items: center; padding: 13px 16px; }
+  .ai-bub.typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); opacity: .35; animation: aiBlink 1.2s infinite; }
+  .ai-bub.typing i:nth-child(2) { animation-delay: .2s; }
+  .ai-bub.typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes aiBlink { 0%,70%,100% { opacity: .25; } 35% { opacity: .95; } }
+  .ai-input { display: flex; gap: 8px; margin-top: 12px; }
+  .ai-input input { flex: 1; height: 44px; border: 1px solid var(--line); border-radius: 12px; padding: 0 14px;
+    font-size: 13.5px; outline: none; background: #fff; color: var(--text-1); transition: border-color .18s; }
+  .ai-input input:focus { border-color: var(--primary); }
+  .ai-input button { flex: none; height: 44px; padding: 0 20px; border: 0; border-radius: 12px; font-size: 13.5px;
+    font-weight: 650; color: #fff; background: linear-gradient(135deg, var(--primary), #3E9BFF); cursor: pointer; }
+  .ai-input button:disabled { opacity: .55; cursor: not-allowed; }
+  .ai-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .ai-chips span { font-size: 12px; color: var(--text-2); background: #F4F6F9; border: 1px solid var(--line);
+    border-radius: 999px; padding: 5px 12px; cursor: pointer; transition: all .18s; }
+  .ai-chips span:hover { border-color: var(--primary-line); color: var(--primary); }
+
   /* ---------- Tabs ---------- */
   .tabs { display: flex; gap: 8px; margin: 14px 0 4px; flex-wrap: wrap; }
   .tab {
@@ -436,6 +480,10 @@
       <div class="mtab" data-m="30">30 分钟</div>
       <div class="mtab" data-m="45">45 分钟</div>
       <div class="mtab" data-m="60">60 分钟</div>
+      <div class="iso-view-tgl" id="isoViewTgl">
+        <span class="on" data-v="map">🗺 真实地图</span>
+        <span data-v="svg">📐 示意图</span>
+      </div>
       <button class="btn primary go" id="isoGo">重新计算</button>
     </div>
     <div id="isoBox"><div class="spin"></div><div class="empty">正在计算你的步行等时圈…</div></div>
@@ -463,6 +511,19 @@
 
   </div>
   </section>
+
+  <!-- 🐟 智能助手（网页版）：同一 agent 后端，文字对话 -->
+  <div class="card" id="aiCard">
+    <h2>🐟 智能助手 <span class="sub">生活圈问答 · 找店 / 出行 / 体检解读 · 同一小程序 Agent 后端</span></h2>
+    <div class="ai-chat">
+      <div class="ai-msgs" id="aiMsgs"></div>
+      <div class="ai-chips" id="aiChips"></div>
+      <div class="ai-input">
+        <input id="aiInput" placeholder="问点什么：附近哪家便利店还开着？帮我解读体检结果…" maxlength="500" />
+        <button id="aiSend">发送</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 🧠 Memory · 人机协同安全运维：AI 只建议不执行，批准产出工件由人合并 -->
   <div class="card" id="memCard">
@@ -492,7 +553,8 @@
     <h2>🧩 能力全景 <span class="sub">网页版 + 微信小程序 · 同一后端</span></h2>
     <div class="cap-grid">
       <div class="cap"><div class="ic">🩺</div><div class="nm">生活圈体检</div><div class="ds">六类设施加权评分 · 最近距离 · 短板提示</div><span class="st ok">✅ 网页版已支持</span></div>
-      <div class="cap"><div class="ic">⏱</div><div class="nm">步行等时圈</div><div class="ds">真实路网 36 方向算路 · 盲区网格 · 覆盖雷达</div><span class="st ok">✅ 网页版已支持</span></div>
+      <div class="cap"><div class="ic">⏱</div><div class="nm">步行等时圈</div><div class="ds">真实路网算路 · 百度地图实景渲染 · 盲区网格</div><span class="st ok">✅ 网页版已支持</span></div>
+      <div class="cap"><div class="ic">🐟</div><div class="nm">智能助手</div><div class="ds">生活圈问答 · 找店 / 出行 / 体检解读</div><span class="st ok">✅ 网页版已支持</span></div>
       <div class="cap"><div class="ic">🧭</div><div class="nm">便民速查</div><div class="ds">吃饭 / 买菜 / 看病 / 公交 / 公园 1.5km POI</div><span class="st ok">✅ 网页版已支持</span></div>
       <div class="cap"><div class="ic">🛒</div><div class="nm">真实店源</div><div class="ds">百度真实门店 + 参考价 · 附近 / 本城热门</div><span class="st ok">✅ 网页版已支持</span></div>
       <div class="cap"><div class="ic">🗺️</div><div class="nm">地图主页</div><div class="ds">地图打点 · 路线规划 · 实时天气</div><span class="st mp">小程序端</span></div>
@@ -507,7 +569,7 @@
   <footer>
     <div class="pills"><span>🐟 鲤慧 LiHui</span><span>lihui-tech.online</span></div>
     店源与 POI 数据来自百度地图开放平台 · 价格为参考估算<br>
-    完整体验（下单 / 助手 / 语音）请使用微信小程序版
+    商城下单 / 拍照识图 / 语音对话请使用微信小程序版
 </footer>
 
 <!-- 手动选城市浮层（纠正 IP 属地偏差：如人在株洲被锚定到长沙） -->
@@ -551,6 +613,18 @@ async function api(path, params) {
   return body.data;
 }
 
+/* POST（智能助手对话用）：与 GET api() 同一套 code!==0 抛错约定 */
+async function apiPost(path, body) {
+  const r = await fetch(API + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId() },
+    body: JSON.stringify(body || {}),
+  });
+  const b = await r.json();
+  if (b.code !== 0) throw Object.assign(new Error(b.msg || '请求失败'), b);
+  return b.data;
+}
+
 function banner(msg) {
   const b = $('#banner');
   if (!msg) { b.classList.remove('show'); return; }
@@ -591,6 +665,72 @@ function bd09ToGcj02(lng, lat) {
   const theta = Math.atan2(y, x) - 0.000003 * Math.cos(x * Math.PI * 3000 / 180);
   return { lng: z * Math.cos(theta), lat: z * Math.sin(theta) };
 }
+/* GCJ-02 → BD-09（等时圈数据是全站统一 GCJ-02，百度底图要 BD-09 才不偏移） */
+function gcj02ToBd09(lng, lat) {
+  const xPi = 3.14159265358979324 * 3000.0 / 180.0;
+  const a = 6378245.0, ee = 0.00669342162296594323;
+  let dLat = (20 * Math.sin(6 * lng * Math.PI / 180) + 20 * Math.sin(2 * lng * Math.PI / 180 * 3)
+    + 20 * Math.sin(lng * Math.PI / 180 * 12) + 40 * Math.sin(lng * Math.PI / 180 * 2.5) * Math.cos(40 * Math.PI / 180)
+    + 320 * Math.sin(lng * Math.PI / 180 * 12.0) * Math.sin(40 * Math.PI / 180)) * 0.00000001;
+  let dLng = (20 * Math.sin(lng * Math.PI / 180 * 2) + 20 * Math.sin(lng * Math.PI / 180 * 3)
+    + 20 * Math.sin(lng * Math.PI / 180 * 6) + 20 * Math.sin(lng * Math.PI / 180 * 6) * Math.cos(2 * lat * Math.PI / 180 * 3)
+    + 160 * Math.sin(lng * Math.PI / 180 * 12.0) * Math.sin(2 * lat * Math.PI / 180 * 3)) * 0.00000001;
+  const radLat = lat / 180.0 * Math.PI;
+  let magic = Math.sin(radLat); magic = 1 - ee * magic * magic;
+  const sqrtMagic = Math.sqrt(magic);
+  dLat = (dLat * 180.0) / (((a * (1 - ee)) / (magic * sqrtMagic)) * Math.PI);
+  dLng = (dLng * 180.0) / (a / sqrtMagic * Math.cos(radLat) * Math.PI);
+  const mgLat = lat + dLat, mgLng = lng + dLng;
+  const x = mgLng * Math.cos(xPi / 180), y = mgLat;
+  const z = Math.sqrt(x * x + y * y) - 2 * 0.0000000000001 * y;
+  const theta = Math.atan2(y, x);
+  return { lng: z * Math.cos(theta + xPi / 180) + 0.0065, lat: z * Math.sin(theta + xPi / 180) + 0.0060 };
+}
+
+/* ================= 百度地图 JS API 加载（等时圈实景渲染用） =================
+ * 与 /map-home 完全同源的方案：脚本与瓦片全走服务端 /bmap/proxy、/bmap/tile
+ * （那边伪造 map.baidu.com 的 Referer），AK 由服务端注入 __AK__（浏览器端 AK，
+ * Referer 白名单锁定，泄露无害）。加载失败自动回落原 SVG 示意图，绝不白屏。 */
+(function () {
+  const desc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
+  Object.defineProperty(HTMLScriptElement.prototype, 'src', {
+    configurable: true,
+    enumerable: true,
+    get: function () { return desc.get.call(this); },
+    set: function (v) {
+      if (typeof v === 'string' && v.indexOf('api.map.baidu.com') > -1) {
+        desc.set.call(this, '/bmap/proxy?u=' + encodeURIComponent(v));
+      } else {
+        desc.set.call(this, v);
+      }
+    }
+  });
+})();
+window.__bmapOK = false;
+window.webBmapReady = function () {
+  try {
+    if (typeof BMap === 'undefined') return;
+    /* 校验一遍底图可用性：TileLayer + MapType 能否实例化（异常则标记失败走 SVG） */
+    const probe = document.createElement('div');
+    new BMap.Map(probe, { enableMapClick: false });
+    window.__bmapOK = true;
+    /* 地图就绪后，若等时圈数据已到但还在等地图，补渲染一次 */
+    if (window.__isoPending) { const d = window.__isoPending; window.__isoPending = null; renderIsoMap(d); }
+  } catch (e) { window.__bmapOK = false; }
+};
+(function loadBmap() {
+  try {
+    const s = document.createElement('script');
+    s.src = 'https://api.map.baidu.com/api?v=3.0&ak=__AK__&callback=webBmapReady';
+    document.body.appendChild(s);
+  } catch (e) { /* 加载失败 → 永远走 SVG 回落 */ }
+  setTimeout(function () {
+    if (!window.__bmapOK) {
+      window.__bmapFail = true;
+      if (window.__isoPending) { const d = window.__isoPending; window.__isoPending = null; renderIsoSvg(d); }
+    }
+  }, 9000);
+})();
 
 /* ================= 定位 ================= */
 /* IP 定位接口返回的 city 常是「湖南省郴州市北湖区」这种带省带区的全称，
@@ -725,7 +865,26 @@ function loadIsochrone() {
     .catch((e) => { $('#isoBox').innerHTML = '<div class="empty">等时圈计算失败：' + esc(e.message) + '</div>'; });
 }
 
+/* ---------- 渲染调度：默认「百度地图实景」；JS API 未就绪先挂图框等；
+ * 加载失败/渲染异常自动回落原 SVG 示意图，绝不白屏 ---------- */
+let isoView = 'map';
 function renderIsochrone(d) {
+  state.isoData = d;
+  if (isoView === 'map') {
+    if (window.__bmapOK) return renderIsoMap(d);
+    if (!window.__bmapFail) { /* 脚本还在路上：先挂地图框占位 */
+      window.__isoPending = d;
+      $('#isoBox').innerHTML =
+        '<div class="iso-map-wrap"><div id="isoMap"></div>' +
+        '<div class="iso-map-badge">⏱ ' + esc(String(d.minutes)) + ' 分钟步行圈 · 百度地图</div>' +
+        '<div class="iso-map-loading"><div class="spin"></div>百度底图加载中…</div></div>';
+      return;
+    }
+  }
+  renderIsoSvg(d);
+}
+
+function renderIsoSvg(d) {
   const W = 640, H = 400, PAD = 34;
   const c = d.center;
   const MLAT = 111320;
@@ -798,6 +957,11 @@ function renderIsochrone(d) {
   svg += '<g transform="translate(' + (W - 26) + ',30)"><path d="M0,-11 L5,7 L0,3 L-5,7 Z" fill="#646A73"/><text x="0" y="19" font-size="9" fill="#8F959E" text-anchor="middle">N</text></g>';
   svg += '</svg>';
 
+  $('#isoBox').innerHTML = '<div class="iso-svg-wrap">' + svg + '</div>' + isoStatsHtml(d);
+}
+
+/* ---------- 统计 / 雷达 / 图例（地图视图与示意图共用） ---------- */
+function isoStatsHtml(d) {
   const s = d.summary || {};
   const eng = d.engine || '';
   const engineBadge = '<span class="eng-badge' + (d.degraded ? ' degraded' : '') + '">' + (ENG_NAME[eng] || eng) + '</span>';
@@ -853,10 +1017,81 @@ function renderIsochrone(d) {
   if (hcv) hcv.textContent = (d.coverageScore == null ? '--' : d.coverageScore) + ' 分';
   if (hbd) hbd.textContent = String(s.blindCount || 0) + ' / ' + (s.gridInside || 0);
 
-  $('#isoBox').innerHTML =
-    '<div class="iso-svg-wrap">' + svg + '</div>' +
-    '<div class="iso-stats">' + stats + '</div>' +
+  return '<div class="iso-stats">' + stats + '</div>' +
     '<div class="iso-bottom"><div class="iso-radar">' + radar + '</div><div class="iso-legend">' + legend + '</div></div>';
+}
+
+/* ---------- 百度地图实景渲染（与 /map-home 同源的瓦片代理方案） ---------- */
+let isoMapInst = null;
+function redHomeIcon() {
+  return new BMap.Icon('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><circle cx="15" cy="15" r="7.5" fill="#F53F3F" stroke="#fff" stroke-width="2.5"/></svg>'),
+    new BMap.Size(30, 30));
+}
+function renderIsoMap(d) {
+  window.__isoPending = null;
+  $('#isoBox').innerHTML =
+    '<div class="iso-map-wrap"><div id="isoMap"></div>' +
+    '<div class="iso-map-badge">⏱ ' + esc(String(d.minutes)) + ' 分钟步行圈 · 百度地图实景</div>' +
+    '<div class="iso-map-loading" id="isoMapLoad"><div class="spin"></div>百度底图加载中…</div></div>' +
+    isoStatsHtml(d);
+  try {
+    const el = document.getElementById('isoMap');
+    if (!el || typeof BMap === 'undefined') throw new Error('BMap 未就绪');
+    const tl = new BMap.TileLayer();
+    tl.getTilesUrl = function (tile, zoom) {
+      return '/bmap/tile?x=' + tile.x + '&y=' + tile.y + '&z=' + zoom + '&styles=pl&scaler=1&udt=20260929&v=3.0';
+    };
+    isoMapInst = new BMap.Map(el, { enableMapClick: false });
+    /* ⚠️ 必须 centerAndZoom 先初始化（未初始化的 Map 不渲染瓦片——踩过：只 setViewport
+     * 时家点能落、底图整片灰）。先给个初值，overlays 就位后 setViewport 精调视野 */
+    const homeBd0 = gcj02ToBd09(Number(d.center.lng), Number(d.center.lat));
+    isoMapInst.centerAndZoom(new BMap.Point(homeBd0.lng, homeBd0.lat), 15);
+    isoMapInst.setMapType(new BMap.MapType('LiHuiIso', tl, { minZoom: 3, maxZoom: 19, tileSize: 256 }));
+    isoMapInst.enableScrollWheelZoom(true);
+
+    const bd = (p) => { const c = gcj02ToBd09(Number(p.lng), Number(p.lat)); return new BMap.Point(c.lng, c.lat); };
+    const pts = (d.polygon || []).map(bd);
+    if (!pts.length) throw new Error('无多边形数据');
+    const homeBd = gcj02ToBd09(Number(d.center.lng), Number(d.center.lat));
+    const homePt = new BMap.Point(homeBd.lng, homeBd.lat);
+
+    /* 盲区/覆盖网格：地图上只画盲区格（红）与正常格（淡蓝），j=0 最南 */
+    let mnLng = 1e9, mxLng = -1e9, mnLat = 1e9, mxLat = -1e9;
+    (d.polygon || []).forEach((p) => {
+      mnLng = Math.min(mnLng, Number(p.lng)); mxLng = Math.max(mxLng, Number(p.lng));
+      mnLat = Math.min(mnLat, Number(p.lat)); mxLat = Math.max(mxLat, Number(p.lat));
+    });
+    const n = d.grid || 5;
+    (d.cells || []).forEach((cell) => {
+      if (!cell.insideCircle) return;
+      const l0 = mnLng + (cell.i / n) * (mxLng - mnLng), l1 = mnLng + ((cell.i + 1) / n) * (mxLng - mnLng);
+      const a0 = mnLat + (cell.j / n) * (mxLat - mnLat), a1 = mnLat + ((cell.j + 1) / n) * (mxLat - mnLat);
+      const blind = !!cell.blind;
+      isoMapInst.addOverlay(new BMap.Polygon(
+        [bd({ lng: l0, lat: a0 }), bd({ lng: l1, lat: a0 }), bd({ lng: l1, lat: a1 }), bd({ lng: l0, lat: a1 })],
+        {
+          strokeColor: blind ? '#F53F3F' : 'rgba(22,119,255,.45)',
+          strokeWeight: blind ? 1.2 : .6, strokeOpacity: .8,
+          fillColor: blind ? 'rgba(245,63,63,.30)' : 'rgba(22,119,255,.08)', fillOpacity: 1,
+        }
+      ));
+    });
+
+    /* 等时圈多边形（半透明蓝面）+ 家 */
+    isoMapInst.addOverlay(new BMap.Polygon(pts, {
+      strokeColor: '#1677FF', strokeWeight: 2.5, strokeOpacity: .95,
+      fillColor: '#1677FF', fillOpacity: .10,
+    }));
+    isoMapInst.addOverlay(new BMap.Marker(homePt, { icon: redHomeIcon() }));
+
+    isoMapInst.setViewport(pts.concat([homePt]), { margins: [46, 46, 46, 46] });
+    const offLoad = () => { const l = document.getElementById('isoMapLoad'); if (l) l.classList.add('off'); };
+    isoMapInst.addEventListener('tilesloaded', offLoad);
+    setTimeout(offLoad, 4000); /* tilesloaded 万一不触发（缓存瓦片瞬间完成前已错过）也兜底 */
+  } catch (e) {
+    renderIsoSvg(state.isoData === d ? d : state.isoData || d); /* 任何异常 → 示意图兜底 */
+  }
 }
 
 /* ================= 便民速查 ================= */
@@ -1072,6 +1307,87 @@ $('#cpGo').onclick = async () => {
   }
 };
 $('#isoGo').onclick = loadIsochrone;
+/* ---------- 等时圈视图切换：真实地图 / 示意图 ---------- */
+document.querySelectorAll('#isoViewTgl span').forEach((t) => {
+  t.onclick = () => {
+    if (t.dataset.v === isoView) return;
+    document.querySelectorAll('#isoViewTgl span').forEach((x) => x.classList.remove('on'));
+    t.classList.add('on');
+    isoView = t.dataset.v;
+    if (state.isoData) renderIsochrone(state.isoData);
+  };
+});
+
+/* ================= 智能助手（网页版 · 同一 agent 后端） ================= */
+const AI_SESSION_KEY = 'lh_web_session';
+function aiSessionId() {
+  let id = '';
+  try { id = localStorage.getItem(AI_SESSION_KEY) || ''; } catch (e) {}
+  if (!id) {
+    id = 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    try { localStorage.setItem(AI_SESSION_KEY, id); } catch (e) {}
+  }
+  return id;
+}
+let aiBusy = false;
+function aiBubble(role, html, meta) {
+  const row = document.createElement('div');
+  row.className = 'ai-row' + (role === 'me' ? ' me' : '');
+  row.innerHTML = '<div class="ai-ava">' + (role === 'me' ? '🙂' : '🐟') + '</div>' +
+    '<div class="ai-bub">' + html + (meta ? '<span class="ai-meta">' + esc(meta) + '</span>' : '') + '</div>';
+  const box = $('#aiMsgs');
+  box.appendChild(row);
+  box.scrollTop = box.scrollHeight;
+  return row;
+}
+/* 轻量富化：先转义防注入，再 **加粗** → <b>、换行 → <br>（和小程序 md.js 同风格，网页从简） */
+function aiRich(text) {
+  return esc(String(text)).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+}
+async function aiSend(text) {
+  text = (text || $('#aiInput').value || '').trim();
+  if (!text || aiBusy) return;
+  $('#aiInput').value = '';
+  aiBubble('me', aiRich(text));
+  aiBusy = true;
+  $('#aiSend').disabled = true;
+  const typing = aiBubble('ai', '<span class="typing"><i></i><i></i><i></i></span>');
+  try {
+    const r = await apiPost('/agent/chat', {
+      text,
+      sessionId: aiSessionId(),
+      deviceId: deviceId(),
+      lng: state.lng,
+      lat: state.lat,
+    });
+    typing.querySelector('.ai-bub').innerHTML =
+      aiRich(r.reply || '（这轮没有产出回复，再问一次试试）') +
+      (r.model ? '<span class="ai-meta">' + esc(r.model) + ' · Token ' + ((r.usage && r.usage.total) || 0) + '</span>' : '');
+    const box = $('#aiMsgs');
+    box.scrollTop = box.scrollHeight;
+  } catch (e) {
+    typing.querySelector('.ai-bub').innerHTML =
+      '没答上来：' + esc(e.message || '网络异常') + '<br><span style="color:var(--text-3)">稍后再问，或换个说法试试。</span>';
+  } finally {
+    aiBusy = false;
+    $('#aiSend').disabled = false;
+    $('#aiInput').focus();
+  }
+}
+$('#aiSend').onclick = () => aiSend();
+$('#aiInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') aiSend(); });
+/* 常用问法（点击即问） */
+[
+  '我这 15 分钟生活圈怎么样？',
+  '附近有什么好吃的？',
+  '最近的公园怎么走？',
+  '帮我看看家里周边缺什么配套',
+].forEach((q) => {
+  const s = document.createElement('span');
+  s.textContent = q;
+  s.onclick = () => aiSend(q);
+  $('#aiChips').appendChild(s);
+});
 document.querySelectorAll('#isoCtl .mtab').forEach((t) => {
   t.onclick = () => {
     document.querySelectorAll('#isoCtl .mtab').forEach((x) => x.classList.remove('on'));
@@ -1096,6 +1412,7 @@ document.documentElement.classList.add('js');
 
 (async function init() {
   renderQuickTabs();
+  aiBubble('ai', aiRich('你好，我是鲤慧 🐟\n周边配套、找店、出行、体检解读都可以问我——**试试下面这些**，或者直接输入。'));
   const ok = await locate();
   loadAll();
   memOverview(); /* Memory 面板与定位无关,直接加载 */

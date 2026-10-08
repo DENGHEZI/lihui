@@ -5,6 +5,7 @@ const { ok, fail, clientIp } = require('../utils/http');
 const agent = require('../services/agent');
 const hub = require('../mcp/hub');
 const vision = require('../services/vision');
+const standards = require('../services/standards');
 
 module.exports = {
   /**
@@ -75,5 +76,26 @@ module.exports = {
       grouped[t.serverId].tools.push({ name: t.name, description: t.description });
     }
     return ok(res, { plan, total: tools.length, groups: Object.keys(grouped).map((k) => ({ serverId: k, ...grouped[k] })) });
+  },
+
+  /** GET /api/v1/agent/standards?q= —— 标准知识库 RRF 检索（调试/演示：直接看三通道融合命中） */
+  'GET /agent/standards': async (req, res, q) => {
+    const query = String(q.q || '').trim();
+    if (!query) return fail(res, 1001, 'q 必填');
+    const hits = standards.rag ? standards.rag.search(query) : [];
+    return ok(res, {
+      query,
+      total: hits.length,
+      items: hits.map((h) => ({
+        code: h.chunk.code,
+        title: h.chunk.title,
+        org: h.chunk.org,
+        year: h.chunk.year,
+        region: h.chunk.region,
+        section: h.chunk.h,
+        excerpt: h.chunk.text.slice(0, 160) + (h.chunk.text.length > 160 ? '…' : ''),
+        rrfScore: h.rrfScore,
+      })),
+    });
   },
 };

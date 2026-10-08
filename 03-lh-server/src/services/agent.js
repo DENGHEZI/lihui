@@ -12,6 +12,7 @@ const tokenMeter = require('./tokenMeter');
 const userProfile = require('./userProfile');
 const store = require('./store');
 const logger = require('../utils/logger');
+const standards = require('./standards');
 
 const sessionCol = store.collection('sessions', []);
 
@@ -220,6 +221,19 @@ async function chat({ text, sessionId = '', deviceId = 'anonymous', careMode = f
     }
   } catch (_) {}
 
+  // 3c) 国际标准知识库 RAG（RRF 三通道融合检索）：问题涉及标准/规范/指标/国际口径时，
+  //     注入权威原文（编号+出处+要点），杜绝大模型凭记忆编造 ISO/GB 编号与指标
+  //     ⚠️ RAG 能力挂在 standards.rag 命名空间下（resolve/load 是城市规范匹配，别混）
+  let standardsNote = '';
+  try {
+    standardsNote = (standards.rag && standards.rag.maybeRetrieve(text)) || '';
+    if (standardsNote) {
+      toolCallsLog.push({ server: 'standards-kb', tool: 'rrf_search', ok: true, note: '标准知识库 RRF 命中' });
+    }
+  } catch (e) {
+    logger.warn('agent', `standards RAG failed: ${e.message}`);
+  }
+
   // 4) 有模型：云端 Qwen 把工具结果润色成人性化回复（联网搜索兜底时效信息）
   if (canUseModel) {
     try {
@@ -232,6 +246,9 @@ async function chat({ text, sessionId = '', deviceId = 'anonymous', careMode = f
             (expandNote ? `\n${expandNote}。可在回答末尾用一句话告知用户能力已扩展。` : '') +
             '\n回答我上一个问题的要求：\n1. 名称、距离、价格等事实只能来自以上工具结果或联网检索，禁止凭记忆编造。\n2. 工具查不到的就明说查不到，给出替代建议。\n3. 不要只说「我查一下」。',
         });
+      }
+      if (standardsNote) {
+        messages.push({ role: 'user', content: standardsNote });
       }
       const resp = await modelRegistry.chat({ messages, deviceId, modelId: active.id });
       if (resp.text) {
@@ -249,6 +266,11 @@ async function chat({ text, sessionId = '', deviceId = 'anonymous', careMode = f
   if (!reply) {
     reply = expandNote ? `${rule.reply}\n🧩 ${expandNote}。可稍后再问我一次，试试新接入的能力。` : rule.reply;
     model = model || 'local-rule-orchestrator';
+    // 兜底回复也附标准依据（取注入块的 [n] 标准号《名称》行）
+    if (standardsNote) {
+      const cites = (standardsNote.match(/\[\d+\] [^\n]+/g) || []).map((l) => l.split(' — ')[0]).slice(0, 3);
+      if (cites.length) reply += '\n\n依据：' + cites.join('；');
+    }
   }
 
   // 4c) 清理兜底话术前缀（模型有时先说「我查一下」再给出实质内容，前缀会误导用户）

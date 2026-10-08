@@ -101,7 +101,12 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/' || pathname === '/index.html') {
     const webFile = path.join(__dirname, 'static', 'web', 'index.html');
     try {
-      const html = fs.readFileSync(webFile);
+      let html = fs.readFileSync(webFile, 'utf8');
+      // ★ 浏览器端 AK 注入（与 /map-home 同策略）：等时圈卡片内嵌百度地图需要 JS API。
+      //   只注入 akBrowser（Referer 白名单锁定本站域名，泄露无害、可独立重置）；
+      //   未配置时注入蜜罐 AK —— 扒页面的人拿到废钥匙，一打接口 security.log 立刻记下。
+      const akBrowser = (bmapSite && config.baidu.akBrowser) ? config.baidu.akBrowser : security.webHoneypot();
+      html = html.replace(/__AK__/g, akBrowser);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
       return res.end(html);
     } catch (e) {
