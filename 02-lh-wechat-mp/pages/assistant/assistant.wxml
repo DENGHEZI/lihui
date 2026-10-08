@@ -15,7 +15,32 @@
       <view class="avatar" wx:if="{{item.role === 'assistant'}}">鲤</view>
       <view class="bubble {{item.role}}">
         <image class="msg-img" wx:if="{{item.img}}" src="{{item.img}}" mode="aspectFill" bindtap="previewImg" data-url="{{item.img}}" />
-        <text class="txt" wx:if="{{item.text}}">{{item.text}}</text>
+
+        <!-- Markdown 富渲染：分段卡片 + 图标徽章 + 自定义列表（无 blocks 时回退纯文本） -->
+        <block wx:if="{{item.blocks && item.blocks.length}}">
+          <view class="md" wx:for="{{item.blocks}}" wx:for-item="blk" wx:key="_k">
+            <view class="md-hd" wx:if="{{blk.title}}">
+              <view class="md-ico">{{blk.icon}}</view>
+              <text class="md-t">{{blk.title}}</text>
+              <view class="md-line"></view>
+            </view>
+            <text class="md-lead" wx:if="{{blk.lead}}">{{blk.lead}}</text>
+            <view class="md-li" wx:for="{{blk.items}}" wx:for-item="li" wx:key="_k">
+              <text class="md-n" wx:if="{{li.n}}">{{li.n}}</text>
+              <view class="md-dot" wx:else></view>
+              <view class="md-tx">
+                <block wx:for="{{li.segs}}" wx:for-item="sg" wx:key="_k">
+                  <text class="md-b" wx:if="{{sg.b}}">{{sg.v}}</text>
+                  <text wx:else>{{sg.v}}</text>
+                </block>
+              </view>
+            </view>
+          </view>
+          <view class="md-end" wx:if="{{item.role === 'assistant'}}">
+            <text class="md-end-t">🐟 鲤慧为你整理</text>
+          </view>
+        </block>
+        <text class="txt" wx:elif="{{item.text}}">{{item.text}}</text>
 
         <view class="cards" wx:if="{{item.cards.length}}">
           <view class="card" wx:for="{{item.cards}}" wx:for-item="c" wx:key="type">

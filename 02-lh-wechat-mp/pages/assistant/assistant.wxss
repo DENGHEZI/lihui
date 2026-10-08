@@ -361,3 +361,99 @@
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.04); }
 }
+
+/* ---------- Markdown 富渲染（分段卡片 + 图标徽章装饰，明暗主题自适应） ---------- */
+.md { margin: 2rpx 0; }
+.md + .md { margin-top: 16rpx; }
+.md-hd {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin: 14rpx 0 8rpx;
+}
+.md-hd:first-child { margin-top: 4rpx; }
+.md-ico {
+  flex: none;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 12rpx;
+  background: linear-gradient(135deg, var(--lh-primary, #1677FF), #5FB0FF);
+  color: #FFFFFF;
+  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2rpx 10rpx rgba(22, 119, 255, 0.35);
+}
+.md-t {
+  font-size: 28rpx;
+  font-weight: 650;
+  color: var(--lh-text, #1B2129);
+  letter-spacing: 0.5rpx;
+}
+.md-line {
+  flex: 1;
+  height: 2rpx;
+  border-radius: 2rpx;
+  background: linear-gradient(90deg, var(--lh-primary-line, rgba(22, 119, 255, 0.28)), transparent);
+}
+.md-lead {
+  display: block;
+  font-size: 27rpx;
+  color: var(--lh-text, #1B2129);
+  line-height: 1.6;
+  margin: 2rpx 0 8rpx;
+}
+.md-li {
+  display: flex;
+  gap: 12rpx;
+  padding: 7rpx 0;
+  align-items: flex-start;
+}
+.md-dot {
+  flex: none;
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  background: var(--lh-primary, #1677FF);
+  margin-top: 15rpx;
+  box-shadow: 0 0 0 4rpx rgba(22, 119, 255, 0.12);
+}
+.md-n {
+  flex: none;
+  min-width: 34rpx;
+  height: 34rpx;
+  margin-top: 5rpx;
+  padding: 0 6rpx;
+  border-radius: 10rpx;
+  background: var(--lh-primary-soft, rgba(22, 119, 255, 0.08));
+  color: var(--lh-primary, #1677FF);
+  font-size: 20rpx;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.md-tx {
+  flex: 1;
+  font-size: 27rpx;
+  line-height: 1.62;
+  color: var(--lh-text, #1B2129);
+  word-break: break-all;
+}
+.md-b {
+  font-weight: 650;
+  color: var(--lh-primary, #1677FF);
+}
+.md-end {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12rpx;
+  opacity: 0.75;
+}
+.md-end-t {
+  font-size: 20rpx;
+  color: var(--lh-text-3, #9096A0);
+  letter-spacing: 1rpx;
+}

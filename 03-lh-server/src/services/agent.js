@@ -97,6 +97,69 @@ function detectIntents(text) {
 }
 
 /* ------------------------------------------------------------------ */
+/* MCP 自扩展（ModelScope 广场）：不确定/能力缺失时自动搜索并接入新工具   */
+/* 铁律：限时 8s、进程级安装上限、同包去重、失败静默降级（绝不拖垮对话）  */
+/* ------------------------------------------------------------------ */
+const AUTO_INSTALL_LIMIT = 3;
+let autoInstalledCount = 0;
+const autoInstalledRefs = new Set();
+const UNCERTAIN_RE = /(不确定|无法确认|查不到|没查到|没有找到|未找到|需要联网|要联网|暂无.{0,6}(信息|数据|结果)|建议.{0,6}扩大范围)/;
+const EXPAND_HINT_RE = /(帮我查|网上查|搜索一下|联网搜|最新消息|今天新闻|实时查)/;
+
+function keywordOf(text) {
+  const t = String(text || '').replace(/[，。？！、,.?!\s]+/g, ' ').trim();
+  const stop = /(附近|帮我|我想|请问|哪里|多少|怎么办|现在|今天|一下|可以|需要|怎么|什么|生活圈|鲤慧|一个|有没有|是不是)/g;
+  let w = t.replace(stop, ' ').replace(/\s+/g, ' ').trim();
+  if (!w) w = t;
+  const words = w.split(' ').filter((x) => x.length >= 2);
+  if (!words.length) return '';
+  return words.sort((a, b) => b.length - a.length)[0].slice(0, 12);
+}
+
+function withTimeout(promise, ms, fallback) {
+  return Promise.race([
+    promise.catch(() => fallback),
+    new Promise((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
+async function maybeSelfExpand({ text, rule }) {
+  const failedAll = rule.toolData && rule.toolData.length > 0 && rule.toolData.every((t) => !t.ok);
+  const uncertain = UNCERTAIN_RE.test(rule.reply || '');
+  const userWantsMore = EXPAND_HINT_RE.test(text);
+  const noCapability = (!rule.toolData || !rule.toolData.length) && (uncertain || userWantsMore);
+  if (!(failedAll || uncertain || noCapability || userWantsMore)) return null;
+  if (autoInstalledCount >= AUTO_INSTALL_LIMIT) return null;
+  const kw = keywordOf(text);
+  if (!kw) return null;
+  return withTimeout(
+    (async () => {
+      const reg = await hub.searchRegistry(kw, { pageSize: 8 });
+      const items = (reg.items || []).filter((x) => x.installRef && !autoInstalledRefs.has(x.installRef));
+      if (!items.length) return null;
+      const pick = items.slice().sort((a, b) => (b.stars || 0) - (a.stars || 0))[0];
+      autoInstalledRefs.add(pick.installRef);
+      const id = ('ms-' + String(pick.id || pick.name).toLowerCase().replace(/[^a-z0-9]+/g, '-')).slice(0, 40).replace(/-+$/, '');
+      const r = await hub.install({
+        id,
+        name: pick.name,
+        installType: pick.installType,
+        installRef: pick.installRef,
+        plan: 'pro',
+        desc: String(pick.description || '').slice(0, 120),
+        autoStart: true,
+      });
+      autoInstalledCount++;
+      const tools = (r.server && r.server.tools) || [];
+      logger.info('agent', `self-expand installed ${id} (${reg.source}), started=${r.started}`);
+      return { ok: true, started: r.started !== false, name: pick.name, id, tools, source: reg.source, error: r.error || '' };
+    })(),
+    8000,
+    null
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* 主入口                                                              */
 /* ------------------------------------------------------------------ */
 async function chat({ text, sessionId = '', deviceId = 'anonymous', careMode = false, plan = 'pro', lng, lat, ip, stream = false }) {
@@ -144,6 +207,18 @@ async function chat({ text, sessionId = '', deviceId = 'anonymous', careMode = f
   actions.push(...rule.actions);
   toolCallsLog.push(...rule.toolCalls);
 
+  // 3b) MCP 自扩展：结果不确定 / 能力缺失 / 用户点名联网时，
+  //     自动从 ModelScope MCP 广场搜索并安装最匹配的 MCP Server（限时 8s，失败静默）
+  let expandNote = '';
+  try {
+    const ex = await maybeSelfExpand({ text, rule });
+    if (ex && ex.ok) {
+      expandNote = `已自动从 MCP 广场接入「${ex.name}」${ex.tools.length ? '（工具：' + ex.tools.slice(0, 5).join('、') + '）' : ''}`;
+      toolCallsLog.push({ server: 'modelscope', tool: 'auto_install', ok: true, detail: ex.id, started: ex.started });
+      if (!ex.started) expandNote += '，但该服务启动失败，已在面板登记待排查';
+    }
+  } catch (_) {}
+
   // 4) 有模型：云端 Qwen 把工具结果润色成人性化回复（联网搜索兜底时效信息）
   if (canUseModel) {
     try {
@@ -153,6 +228,7 @@ async function chat({ text, sessionId = '', deviceId = 'anonymous', careMode = f
           content:
             '（系统注入的工具结果，非用户发言）已确定性调用以下工具：\n' +
             JSON.stringify(rule.toolData).slice(0, 6000) +
+            (expandNote ? `\n${expandNote}。可在回答末尾用一句话告知用户能力已扩展。` : '') +
             '\n回答我上一个问题的要求：\n1. 名称、距离、价格等事实只能来自以上工具结果或联网检索，禁止凭记忆编造。\n2. 工具查不到的就明说查不到，给出替代建议。\n3. 不要只说「我查一下」。',
         });
       }
@@ -170,7 +246,7 @@ async function chat({ text, sessionId = '', deviceId = 'anonymous', careMode = f
 
   // 4b) 模型不可用 / 失败：直接用规则编排的回复（免费基础版同款体验）
   if (!reply) {
-    reply = rule.reply;
+    reply = expandNote ? `${rule.reply}\n🧩 ${expandNote}。可稍后再问我一次，试试新接入的能力。` : rule.reply;
     model = model || 'local-rule-orchestrator';
   }
 

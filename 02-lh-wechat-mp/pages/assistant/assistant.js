@@ -3,6 +3,7 @@ const api = require('../../utils/api.js')
 const { getCareMode, setCareMode } = require('../../utils/token.js')
 const voice = require('../../utils/voice.js')
 const action = require('../../utils/action.js')
+const md = require('../../utils/md.js')
 
 const theme = require('../../utils/theme.js')
 let seq = 0
@@ -38,6 +39,7 @@ Page({
           id: nid(),
           role: 'assistant',
           text: '我是鲤慧。\n可以问我：\n1. 附近哪里能看病？\n2. 15 分钟生活圈缺什么？\n3. 怎么走最省时间、最省钱？\n直接输入问题即可。',
+          blocks: md.parse('我是鲤慧，你的 15 分钟生活圈助手。\n可以问我：\n1. 附近哪里能看病？\n2. 15 分钟生活圈缺什么？\n3. 怎么走最省时间、最省钱？\n直接输入问题即可。'),
           cards: [],
           actions: [],
           meta: '已联网 · 关怀模式已' + (careMode ? '开启' : '关闭')
@@ -135,11 +137,12 @@ Page({
       })
       replacePh({
         text: r.reply,
+        blocks: md.parse(r.reply),
         cards,
         actions: r.actions || [],
         meta: `${r.model} · Token ${r.usage.total} · ¥${r.usage.costCny}`
       })
-      voice.speak(r.reply, { scene: 'chat', careMode: this.data.careMode })
+      voice.speak(String(r.reply).replace(/\*\*/g, ''), { scene: 'chat', careMode: this.data.careMode })
     } catch (e) {
       const offline = e && (e.errMsg || e.code === 'ECONN')
       replacePh({
@@ -198,8 +201,8 @@ Page({
     try {
       const loc = app.globalData.location || (await app.getLocation())
       const r = await api.agentVision({ image: b64, lng: loc.lng, lat: loc.lat })
-      replacePh({ text: r.reply, meta: (r.model || '识图') + ' · 免费识图' })
-      voice.speak(r.reply, { scene: 'chat', careMode: this.data.careMode })
+      replacePh({ text: r.reply, blocks: md.parse(r.reply), meta: (r.model || '识图') + ' · 免费识图' })
+      voice.speak(String(r.reply).replace(/\*\*/g, ''), { scene: 'chat', careMode: this.data.careMode })
     } catch (e) {
       replacePh({ text: (e && e.msg) || '识图没有成功，请稍后再试一次。' })
     }
