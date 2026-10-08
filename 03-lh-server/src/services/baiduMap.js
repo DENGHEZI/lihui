@@ -15,10 +15,87 @@ const security = require('../utils/security');
 
 const cache = new Cache(800);
 const BASE = () => config.baidu.base;
-const AK = () => config.baidu.ak;
+const AK = () => akPool.current();
+
+/* ------------------------------------------------------------------ */
+/* AK 池：多钥匙自动轮换（Key「过一段时间掉」的工程化解法）              */
+/* ------------------------------------------------------------------
+ * 背景：单 AK 模式下，日配额打满（302/4）/ 被风控停用（201/210/240）/
+ * 服务禁用（3）任一发生 → 全部地图能力瘫痪，只能等百度 0 点重置或人工去控制台解锁。
+ *
+ * 方案：BAIDU_AK 支持逗号分隔多把钥匙，例如 `BAIDU_AK=ak1,ak2,ak3`。
+ *  - 正常时固定用第一把（配额集中省着用）；
+ *  - 某 AK 返回「AK 级失败」（配额/封禁/权限类错误码）→ 标记冷却 10 分钟，
+ *    立即无缝切换下一把，端上无感知；
+ *  - 冷却到期自动恢复轮询（配额 0 点重置后能自动回归）；
+ *  - 全部 AK 都在冷却时退化为「取最早解冻的」，失败总好过没有。
+ *  - /map/ak-status 诊断接口可随时查看每把钥匙的健康状态。
+ */
+const AK_COOLDOWN_MS = 10 * 60 * 1000;
+const AK_FAIL_STATUS = new Set([3, 4, 201, 210, 240, 241, 302, 401, 403]); // 权限/配额/封禁/禁用类
+const AK_FAIL_MSG_RE = /配额|超限|quota|权限|封禁|禁用|delist|APP.{0,6}(校验|不存在|被封)/i;
+
+const akPool = (() => {
+  const raw = String(config.baidu.ak || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const pool = raw.map((value) => ({
+    value,
+    mask: value.slice(0, 4) + '****' + value.slice(-4),
+    failCount: 0,
+    cooldownUntil: 0,
+    lastErr: '',
+  }));
+  let cursor = 0;
+  return {
+    size: pool.length,
+    /** 当前可用 AK：优先未冷却的，全冷却则取最早解冻的 */
+    current() {
+      if (!pool.length) return '';
+      const now = Date.now();
+      const ready = pool.filter((a) => a.cooldownUntil <= now);
+      if (ready.length) {
+        // 固定用第一把健康的（游标只在故障切换时推进，保证配额集中）
+        return ready[0].value;
+      }
+      return pool.reduce((a, b) => (a.cooldownUntil <= b.cooldownUntil ? a : b)).value;
+    },
+    /** 标记某 AK 失败并进入冷却 */
+    fail(value, reason) {
+      const a = pool.find((x) => x.value === value);
+      if (!a) return;
+      a.failCount += 1;
+      a.lastErr = String(reason || '').slice(0, 80);
+      a.cooldownUntil = Date.now() + AK_COOLDOWN_MS;
+      logger.warn('baidu', `AK ${a.mask} 进入冷却 ${AK_COOLDOWN_MS / 60000}min（${a.lastErr}）`);
+    },
+    /** 成功一次即清零失败计数 */
+    ok(value) {
+      const a = pool.find((x) => x.value === value);
+      if (a && a.failCount) {
+        a.failCount = 0;
+        a.lastErr = '';
+        a.cooldownUntil = 0;
+      }
+    },
+    health() {
+      return pool.map((a) => ({
+        ak: a.mask,
+        ok: a.cooldownUntil <= Date.now(),
+        failCount: a.failCount,
+        cooldownRemainMs: Math.max(0, a.cooldownUntil - Date.now()),
+        lastErr: a.lastErr,
+      }));
+    },
+  };
+})();
 
 /** bd09ll 拼接：百度要求 location=lat,lng */
 const LL = (lat, lng) => `${lat},${lng}`;
+
+/** 判定是否「AK 级失败」（该换钥匙了）：权限/配额/封禁类错误码或错误消息 */
+function isAkLevelFailure(status, msg) {
+  if (AK_FAIL_STATUS.has(Number(status))) return true;
+  return AK_FAIL_MSG_RE.test(String(msg || ''));
+}
 
 async function call(pathname, params, { ttl = 0, cacheKey = '' } = {}) {
   const key = cacheKey || pathname + '?' + new URLSearchParams(params).toString();
@@ -26,25 +103,48 @@ async function call(pathname, params, { ttl = 0, cacheKey = '' } = {}) {
     const hit = cache.get(key);
     if (hit !== undefined) return hit;
   }
-  const qs = new URLSearchParams({ ...params, ak: AK(), output: 'json' }).toString();
-  // 蜜罐自检:出站 key 若被污染成蜜罐值,说明配置被篡改,立即告警
-  if (security.HONEYPOTS.includes(AK())) {
-    security.securityLog('honeypot-outbound', { detail: 'BAIDU_AK 疑似被替换为蜜罐值,请检查 .env' });
-  }
   // 出站令牌桶:高并发时在此排队(保护百度配额,防瞬间打爆)
   await security.baiduBucket.take();
-  const url = `${BASE()}${pathname}?${qs}`;
-  const raw = await fetchJSON(url, { timeout: 9000, retry: 1 });
-  // 百度统一状态码：0 成功
-  if (raw && raw.status !== undefined && raw.status !== 0) {
-    const msg = raw.message || raw.msg || 'baidu api error';
-    logger.warn('baidu', `${pathname} status=${raw.status} ${msg}`);
-    const err = new Error(msg);
-    err.baiduStatus = raw.status;
-    throw err;
+  // AK 池轮换：当前钥匙失败且属 AK 级故障时自动换下一把重试
+  let lastErr = null;
+  for (let attempt = 0; attempt < Math.max(1, akPool.size); attempt++) {
+    const ak = AK();
+    // 蜜罐自检:出站 key 若被污染成蜜罐值,说明配置被篡改,立即告警
+    if (security.HONEYPOTS.includes(ak)) {
+      security.securityLog('honeypot-outbound', { detail: 'BAIDU_AK 疑似被替换为蜜罐值,请检查 .env' });
+    }
+    const qs = new URLSearchParams({ ...params, ak, output: 'json' }).toString();
+    const url = `${BASE()}${pathname}?${qs}`;
+    try {
+      const raw = await fetchJSON(url, { timeout: 9000, retry: 1 });
+      // 百度统一状态码：0 成功
+      if (raw && raw.status !== undefined && raw.status !== 0) {
+        const msg = raw.message || raw.msg || 'baidu api error';
+        logger.warn('baidu', `${pathname} status=${raw.status} ${msg}`);
+        if (attempt < akPool.size - 1 && isAkLevelFailure(raw.status, msg)) {
+          akPool.fail(ak, `status=${raw.status} ${msg}`);
+          continue; // 换下一把钥匙重试
+        }
+        const err = new Error(msg);
+        err.baiduStatus = raw.status;
+        throw err;
+      }
+      akPool.ok(ak);
+      if (ttl > 0) cache.set(key, raw, ttl);
+      return raw;
+    } catch (e) {
+      // 网络类错误（无 baiduStatus）不切钥匙：换 AK 解决不了断网
+      if (e.baiduStatus === undefined) throw e;
+      lastErr = e;
+      if (attempt >= akPool.size - 1) throw e;
+      if (isAkLevelFailure(e.baiduStatus, e.message)) {
+        akPool.fail(ak, `status=${e.baiduStatus} ${e.message}`);
+        continue;
+      }
+      throw e;
+    }
   }
-  if (ttl > 0) cache.set(key, raw, ttl);
-  return raw;
+  throw lastErr || new Error('baidu ak pool exhausted');
 }
 
 /* ------------------------------------------------------------------ */
@@ -360,5 +460,6 @@ module.exports = {
   suggest,
   fallbackLocate,
   FALLBACK_CITIES,
+  akHealth: () => akPool.health(), // AK 池健康状态（/map/ak-status 诊断用）
   _cache: cache,
 };

@@ -77,7 +77,7 @@ let KB = { docs: [] };
 try {
   KB = JSON.parse(fs.readFileSync(KB_FILE, 'utf8'));
   if (!Array.isArray(KB.docs)) KB.docs = [];
-  logger.log('standards', `国际标准知识库装载 ${KB.docs.length} 部（版本 ${KB.version || 'na'}）`);
+  logger.info('standards', `国际标准知识库装载 ${KB.docs.length} 部（版本 ${KB.version || 'na'}）`);
 } catch (e) {
   logger.warn('standards', `国际标准知识库缺失（RAG 静默降级）：${e.message}`);
 }

@@ -305,4 +305,14 @@ module.exports = {
 
   /** GET /api/v1/map/addr-fix/summary —— 管理端看板 */
   'GET /map/addr-fix/summary': async (req, res) => ok(res, addrFix.summary()),
+
+  /** GET /api/v1/map/ak-status —— AK 池健康诊断（多钥匙轮换状态） */
+  'GET /map/ak-status': async (req, res) =>
+    ok(res, {
+      poolSize: baiduMap.akHealth().length,
+      aks: baiduMap.akHealth(),
+      hint:
+        'BAIDU_AK 支持逗号分隔多把钥匙（.env 里 BAIDU_AK=ak1,ak2）。' +
+        '某把钥匙配额打满/被风控停用时自动冷却 10 分钟并切换下一把，无需人工干预。',
+    }),
 };
