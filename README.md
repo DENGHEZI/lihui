@@ -4,7 +4,7 @@
 <p align="center">一句话说清「我家周边缺什么、去哪儿最方便、怎么走最省力」。<br>真实路网算路 · 真实店铺 · 真实步行距离 —— 不玩虚的。</p>
 
 <p align="center">
-  <a href="https://github.com/DENGHEZI/lihui/releases"><img alt="最新发行版" src="https://img.shields.io/badge/%E6%9C%80%E6%96%B0%E5%8F%91%E8%A1%8C%E7%89%88-v1.0.0-2f75f0"></a>
+  <a href="https://gitee.com/deng-he-ziyan/lihui/releases"><img alt="最新发行版" src="https://img.shields.io/badge/%E6%9C%80%E6%96%B0%E5%8F%91%E8%A1%8C%E7%89%88-v1.0.0-C71D23"></a>
   <img alt="平台" src="https://img.shields.io/badge/%E5%B0%8F%E7%A8%8B%E5%BA%8F%20%C2%B7%20%E7%BD%91%E9%A1%B5%E7%89%88%20%C2%B7%20%E4%BA%91%E6%89%98%E7%AE%A1-%E4%B8%89%E7%AB%AF%E5%90%8C%E4%B8%80%E5%90%8E%E7%AB%AF-2f75f0">
   <img alt="依赖" src="https://img.shields.io/badge/Node.js-%E9%9B%B6%E4%B8%89%E6%96%B9%E4%BE%9D%E8%B5%96-00B96B">
   <img alt="MCP" src="https://img.shields.io/badge/MCP-8_Servers_%E5%8D%B3%E6%8F%92%E5%8D%B3%E7%94%A8-FF8A00">
@@ -176,24 +176,12 @@ node src/app.js        # 零依赖，无需 npm install
 | --- | --- |
 | [更新日志](CHANGELOG.md) | 按日期记录的完整演进（含每处踩坑与修复） |
 | [真机实测图集](docs/screenshots/) | 21-31 号：网页版分段截图与真机实拍 |
-| [发行版 v1.0.0](https://github.com/DENGHEZI/lihui/releases) | 小程序测试版二维码 + 29 张发行图集 |
+| [发行版 v1.0.0](https://gitee.com/deng-he-ziyan/lihui/releases) | 小程序测试版二维码 + 29 张发行图集 |
 
 ## 🤝 参与与反馈
 
-- [提交 Issue](https://github.com/DENGHEZI/lihui/issues)：请附系统/浏览器版本、复现步骤与截图。
+- [提交 Issue](https://gitee.com/deng-he-ziyan/lihui/issues)：请附系统/浏览器版本、复现步骤与截图。
 - 双仓库同步维护：[Gitee（主）](https://gitee.com/deng-he-ziyan/lihui) · [GitHub](https://github.com/DENGHEZI/lihui)，push Gitee 自动触发微信云托管构建部署。
-
-## ⭐ Star History
-
-<p align="center">
-  <a href="https://star-history.com/#DENGHEZI/lihui&Date">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=DENGHEZI/lihui&type=Date&theme=dark" />
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=DENGHEZI/lihui&type=Date" />
-      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=DENGHEZI/lihui&type=Date" />
-    </picture>
-  </a>
-</p>
 
 ---
 
