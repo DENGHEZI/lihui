@@ -60,7 +60,7 @@ setInterval(() => {
 }, 300000).unref();
 
 /* ---------------- 静态资源 ---------------- */
-const MIME = { '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.json': 'application/json', '.txt': 'text/plain' };
+const MIME = { '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.json': 'application/json', '.txt': 'text/plain', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.map': 'application/json' };
 function serveStatic(req, res, urlPath) {
   // /static/** → 03-lh-server/data/**
   const rel = urlPath.replace(/^\/static\/?/, '');
@@ -71,6 +71,22 @@ function serveStatic(req, res, urlPath) {
   fs.readFile(full, (err, buf) => {
     if (err) return json(res, { code: 4040, msg: 'not found' }, 404);
     res.writeHead(200, { 'Content-Type': MIME[path.extname(full).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'public, max-age=600' });
+    res.end(buf);
+  });
+}
+
+/* /vendor/** → src/static/vendor/**（前端本地化的第三方库，如 Leaflet。
+ * ⚠️ 不能塞 data/：那是运行时数据目录，云托管重建/备份都会被污染） */
+function serveVendor(req, res, urlPath) {
+  const rel = urlPath.replace(/^\/vendor\/?/, '');
+  const base = path.resolve(__dirname, 'static', 'vendor');
+  const full = path.resolve(base, rel);
+  if (!full.startsWith(base)) {
+    return json(res, { code: 1001, msg: 'invalid path' }, 400);
+  }
+  fs.readFile(full, (err, buf) => {
+    if (err) return json(res, { code: 4040, msg: 'not found' }, 404);
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(full).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'public, max-age=86400' });
     res.end(buf);
   });
 }
@@ -95,6 +111,7 @@ const server = http.createServer(async (req, res) => {
 
   // 静态
   if (pathname.startsWith('/static/')) return serveStatic(req, res, pathname);
+  if (pathname.startsWith('/vendor/')) return serveVendor(req, res, pathname);
 
   // 根路径 → 鲤慧网页版（绑定 lihui-tech.online 后，访问域名即得网页版；
   // API 仍走 /api/v1/*，同源无跨域。页面文件缺失时回落原 JSON 自述，不影响服务）

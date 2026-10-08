@@ -6,6 +6,8 @@
 <meta name="description" content="鲤慧 LiHui · 15分钟生活圈智能体检与规划助手（网页版）">
 <title>鲤慧 LiHui · 15分钟生活圈</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>">
+<!-- 等时圈实景地图：Leaflet 本地化（static/vendor，无 CDN 运行时依赖）+ 高德 GCJ-02 瓦片 -->
+<link rel="stylesheet" href="/vendor/leaflet.css">
 <style>
   :root {
     --primary: #1677FF;
@@ -586,6 +588,7 @@
 </div>
 </div>
 
+<script src="/vendor/leaflet.js"></script>
 <script>
 /* ================= 基础 ================= */
 const API = '/api/v1';
@@ -687,50 +690,16 @@ function gcj02ToBd09(lng, lat) {
   return { lng: z * Math.cos(theta + xPi / 180) + 0.0065, lat: z * Math.sin(theta + xPi / 180) + 0.0060 };
 }
 
-/* ================= 百度地图 JS API 加载（等时圈实景渲染用） =================
- * 与 /map-home 完全同源的方案：脚本与瓦片全走服务端 /bmap/proxy、/bmap/tile
- * （那边伪造 map.baidu.com 的 Referer），AK 由服务端注入 __AK__（浏览器端 AK，
- * Referer 白名单锁定，泄露无害）。加载失败自动回落原 SVG 示意图，绝不白屏。 */
-(function () {
-  const desc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
-  Object.defineProperty(HTMLScriptElement.prototype, 'src', {
-    configurable: true,
-    enumerable: true,
-    get: function () { return desc.get.call(this); },
-    set: function (v) {
-      if (typeof v === 'string' && v.indexOf('api.map.baidu.com') > -1) {
-        desc.set.call(this, '/bmap/proxy?u=' + encodeURIComponent(v));
-      } else {
-        desc.set.call(this, v);
-      }
-    }
-  });
-})();
-window.__bmapOK = false;
-window.webBmapReady = function () {
-  try {
-    if (typeof BMap === 'undefined') return;
-    /* 校验一遍底图可用性：TileLayer + MapType 能否实例化（异常则标记失败走 SVG） */
-    const probe = document.createElement('div');
-    new BMap.Map(probe, { enableMapClick: false });
-    window.__bmapOK = true;
-    /* 地图就绪后，若等时圈数据已到但还在等地图，补渲染一次 */
-    if (window.__isoPending) { const d = window.__isoPending; window.__isoPending = null; renderIsoMap(d); }
-  } catch (e) { window.__bmapOK = false; }
-};
-(function loadBmap() {
-  try {
-    const s = document.createElement('script');
-    s.src = 'https://api.map.baidu.com/api?v=3.0&ak=__AK__&callback=webBmapReady';
-    document.body.appendChild(s);
-  } catch (e) { /* 加载失败 → 永远走 SVG 回落 */ }
-  setTimeout(function () {
-    if (!window.__bmapOK) {
-      window.__bmapFail = true;
-      if (window.__isoPending) { const d = window.__isoPending; window.__isoPending = null; renderIsoSvg(d); }
-    }
-  }, 9000);
-})();
+/* ================= 地图库就绪判定（Leaflet 本地加载） =================
+ * 2026-10-08 起等时圈实景改用 Leaflet + 高德 GCJ-02 瓦片（见 renderIsoMap 注释）。
+ * 旧的百度 JS API 代理加载器已移除（qt=vtile 瓦片端点失效 + 默认底图强依赖浏览器端 AK）。
+ * gcj02ToBd09/bd09ToGcj02 保留：geocode（BD-09）等场景仍需要。 */
+setTimeout(function () {
+  if (typeof L === 'undefined') {
+    window.__mapFail = true;
+    if (window.__isoPending) { const d = window.__isoPending; window.__isoPending = null; renderIsoSvg(d); }
+  }
+}, 9000);
 
 /* ================= 定位 ================= */
 /* IP 定位接口返回的 city 常是「湖南省郴州市北湖区」这种带省带区的全称，
@@ -865,19 +834,20 @@ function loadIsochrone() {
     .catch((e) => { $('#isoBox').innerHTML = '<div class="empty">等时圈计算失败：' + esc(e.message) + '</div>'; });
 }
 
-/* ---------- 渲染调度：默认「百度地图实景」；JS API 未就绪先挂图框等；
- * 加载失败/渲染异常自动回落原 SVG 示意图，绝不白屏 ---------- */
+/* ---------- 渲染调度：默认「真实地图」（Leaflet + 高德 GCJ-02 瓦片）；
+ * 地图库未就绪先挂图框等；加载失败/渲染异常自动回落原 SVG 示意图，绝不白屏 ---------- */
 let isoView = 'map';
+const mapReady = () => typeof L !== 'undefined';
 function renderIsochrone(d) {
   state.isoData = d;
   if (isoView === 'map') {
-    if (window.__bmapOK) return renderIsoMap(d);
-    if (!window.__bmapFail) { /* 脚本还在路上：先挂地图框占位 */
+    if (mapReady()) return renderIsoMap(d);
+    if (!window.__mapFail) { /* 脚本还在路上：先挂地图框占位 */
       window.__isoPending = d;
       $('#isoBox').innerHTML =
         '<div class="iso-map-wrap"><div id="isoMap"></div>' +
-        '<div class="iso-map-badge">⏱ ' + esc(String(d.minutes)) + ' 分钟步行圈 · 百度地图</div>' +
-        '<div class="iso-map-loading"><div class="spin"></div>百度底图加载中…</div></div>';
+        '<div class="iso-map-badge">⏱ ' + esc(String(d.minutes)) + ' 分钟步行圈 · 真实地图</div>' +
+        '<div class="iso-map-loading"><div class="spin"></div>地图底图加载中…</div></div>';
       return;
     }
   }
@@ -1021,42 +991,39 @@ function isoStatsHtml(d) {
     '<div class="iso-bottom"><div class="iso-radar">' + radar + '</div><div class="iso-legend">' + legend + '</div></div>';
 }
 
-/* ---------- 百度地图实景渲染（与 /map-home 同源的瓦片代理方案） ---------- */
+/* ---------- 真实地图渲染：Leaflet + 高德 GCJ-02 栅格瓦片 ----------
+ * 为什么换掉百度 JS API：① qt=vtile 自定义瓦片层 2026-10-08 起对任意参数回 210
+ * 字节透明 PNG（改版/失效），默认底图又强依赖「浏览器端 AK」（未配置时蜜罐 key
+ * 被瓦片接口拒绝）→ 底图整片空白，周边建筑街道全无；
+ * ② 高德 appmaptile 栅格瓦片免 key、无 Referer 校验、长期稳定，且**瓦片网格就是
+ * GCJ-02** —— 等时圈/盲区数据（全站统一 GCJ-02）零坐标转换直接对齐，周边路网
+ * 建筑 POI 注记齐全。Leaflet 已本地化到 /static/vendor（无 CDN 运行时依赖）。 */
 let isoMapInst = null;
-function redHomeIcon() {
-  return new BMap.Icon('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><circle cx="15" cy="15" r="7.5" fill="#F53F3F" stroke="#fff" stroke-width="2.5"/></svg>'),
-    new BMap.Size(30, 30));
-}
 function renderIsoMap(d) {
   window.__isoPending = null;
   $('#isoBox').innerHTML =
     '<div class="iso-map-wrap"><div id="isoMap"></div>' +
-    '<div class="iso-map-badge">⏱ ' + esc(String(d.minutes)) + ' 分钟步行圈 · 百度地图实景</div>' +
-    '<div class="iso-map-loading" id="isoMapLoad"><div class="spin"></div>百度底图加载中…</div></div>' +
+    '<div class="iso-map-badge">⏱ ' + esc(String(d.minutes)) + ' 分钟步行圈 · 真实地图（高德影像底图）</div>' +
+    '<div class="iso-map-loading" id="isoMapLoad"><div class="spin"></div>地图底图加载中…</div></div>' +
     isoStatsHtml(d);
   try {
     const el = document.getElementById('isoMap');
-    if (!el || typeof BMap === 'undefined') throw new Error('BMap 未就绪');
-    const tl = new BMap.TileLayer();
-    tl.getTilesUrl = function (tile, zoom) {
-      return '/bmap/tile?x=' + tile.x + '&y=' + tile.y + '&z=' + zoom + '&styles=pl&scaler=1&udt=20260929&v=3.0';
-    };
-    isoMapInst = new BMap.Map(el, { enableMapClick: false });
-    /* ⚠️ 必须 centerAndZoom 先初始化（未初始化的 Map 不渲染瓦片——踩过：只 setViewport
-     * 时家点能落、底图整片灰）。先给个初值，overlays 就位后 setViewport 精调视野 */
-    const homeBd0 = gcj02ToBd09(Number(d.center.lng), Number(d.center.lat));
-    isoMapInst.centerAndZoom(new BMap.Point(homeBd0.lng, homeBd0.lat), 15);
-    isoMapInst.setMapType(new BMap.MapType('LiHuiIso', tl, { minZoom: 3, maxZoom: 19, tileSize: 256 }));
-    isoMapInst.enableScrollWheelZoom(true);
+    if (!el || typeof L === 'undefined') throw new Error('Leaflet 未就绪');
+    if (isoMapInst) { isoMapInst.remove(); isoMapInst = null; }
+    isoMapInst = L.map(el, { zoomControl: true, attributionControl: true, scrollWheelZoom: true });
+    isoMapInst.attributionControl.setPrefix('');
+    L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=7&x={x}&y={y}&z={z}', {
+      subdomains: ['1', '2', '3', '4'],
+      maxZoom: 18,
+      attribution: '© 高德地图 · 数据统一 GCJ-02',
+    }).addTo(isoMapInst);
 
-    const bd = (p) => { const c = gcj02ToBd09(Number(p.lng), Number(p.lat)); return new BMap.Point(c.lng, c.lat); };
-    const pts = (d.polygon || []).map(bd);
-    if (!pts.length) throw new Error('无多边形数据');
-    const homeBd = gcj02ToBd09(Number(d.center.lng), Number(d.center.lat));
-    const homePt = new BMap.Point(homeBd.lng, homeBd.lat);
+    const LL = (p) => [Number(p.lat), Number(p.lng)];
+    const ring = (d.polygon || []).map(LL);
+    if (!ring.length) throw new Error('无多边形数据');
+    const home = LL(d.center);
 
-    /* 盲区/覆盖网格：地图上只画盲区格（红）与正常格（淡蓝），j=0 最南 */
+    /* 盲区/覆盖网格：地图上画盲区（红）与圈内正常格（淡蓝），j=0 最南 */
     let mnLng = 1e9, mxLng = -1e9, mnLat = 1e9, mxLat = -1e9;
     (d.polygon || []).forEach((p) => {
       mnLng = Math.min(mnLng, Number(p.lng)); mxLng = Math.max(mxLng, Number(p.lng));
@@ -1068,29 +1035,30 @@ function renderIsoMap(d) {
       const l0 = mnLng + (cell.i / n) * (mxLng - mnLng), l1 = mnLng + ((cell.i + 1) / n) * (mxLng - mnLng);
       const a0 = mnLat + (cell.j / n) * (mxLat - mnLat), a1 = mnLat + ((cell.j + 1) / n) * (mxLat - mnLat);
       const blind = !!cell.blind;
-      isoMapInst.addOverlay(new BMap.Polygon(
-        [bd({ lng: l0, lat: a0 }), bd({ lng: l1, lat: a0 }), bd({ lng: l1, lat: a1 }), bd({ lng: l0, lat: a1 })],
-        {
-          strokeColor: blind ? '#F53F3F' : 'rgba(22,119,255,.45)',
-          strokeWeight: blind ? 1.2 : .6, strokeOpacity: .8,
-          fillColor: blind ? 'rgba(245,63,63,.30)' : 'rgba(22,119,255,.08)', fillOpacity: 1,
-        }
-      ));
+      L.rectangle([[a0, l0], [a1, l1]], {
+        color: blind ? '#F53F3F' : 'rgba(22,119,255,.55)',
+        weight: blind ? 1.2 : .6,
+        opacity: .8,
+        fillColor: blind ? '#F53F3F' : '#1677FF',
+        fillOpacity: blind ? .30 : .08,
+      }).addTo(isoMapInst);
     });
 
-    /* 等时圈多边形（半透明蓝面）+ 家 */
-    isoMapInst.addOverlay(new BMap.Polygon(pts, {
-      strokeColor: '#1677FF', strokeWeight: 2.5, strokeOpacity: .95,
-      fillColor: '#1677FF', fillOpacity: .10,
-    }));
-    isoMapInst.addOverlay(new BMap.Marker(homePt, { icon: redHomeIcon() }));
+    /* 等时圈多边形（半透明蓝面 + 描边）+ 家 */
+    const poly = L.polygon(ring, {
+      color: '#1677FF', weight: 2.5, opacity: .95, fillColor: '#1677FF', fillOpacity: .10,
+    }).addTo(isoMapInst);
+    L.circleMarker(home, { radius: 7, color: '#fff', weight: 2.5, fillColor: '#F53F3F', fillOpacity: 1 })
+      .addTo(isoMapInst)
+      .bindTooltip('🏠 家', { direction: 'bottom', offset: [0, 8] });
 
-    isoMapInst.setViewport(pts.concat([homePt]), { margins: [46, 46, 46, 46] });
-    const offLoad = () => { const l = document.getElementById('isoMapLoad'); if (l) l.classList.add('off'); };
-    isoMapInst.addEventListener('tilesloaded', offLoad);
-    setTimeout(offLoad, 4000); /* tilesloaded 万一不触发（缓存瓦片瞬间完成前已错过）也兜底 */
+    isoMapInst.fitBounds(poly.getBounds(), { padding: [42, 42] });
+    isoMapInst.whenReady(() => {
+      const l = document.getElementById('isoMapLoad');
+      if (l) l.classList.add('off');
+    });
   } catch (e) {
-    renderIsoSvg(state.isoData === d ? d : state.isoData || d); /* 任何异常 → 示意图兜底 */
+    renderIsoSvg(state.isoData || d); /* 任何异常 → 示意图兜底 */
   }
 }
 
