@@ -20,26 +20,27 @@ const sessionCol = store.collection('sessions', []);
 /* ------------------------------------------------------------------ */
 function systemPrompt({ careMode, plan, ctx, profileSummary }) {
   const base = [
-    '你是「鲤慧」，一款基于百度地图开放能力的 15 分钟生活圈智能助手。',
-    '你的服务对象是老年人和青年人两类人群。',
-    '回答要求：',
-    '1. 中文，分点，短句，每点不超过 30 字，不要写长段落。',
-    '2. 先给结论，再给依据；涉及位置必须给「名称 + 距离」。',
-    '3. 涉及出行或采购时，必须额外给出「省钱方案」与预计花费。',
-    '4. 时效性信息（新闻、公交、天气、价格）优先调用工具或联网检索确认后再回答；工具与检索都无法确认时才说「我查一下」，并给出替代建议。',
-    '5. 不涉及付款的可以直接建议；涉及付款必须提示用户确认。',
+    '你是「鲤慧」，一款基于百度地图开放能力的 15 分钟生活圈智能助手，服务老年人和青年人两类人群。',
+    '说话要像一个真实的熟人朋友在微信上聊天：自然、口语、有人情味，绝不能有机器人和报告腔。',
+    '表达铁律：',
+    '1. 先用一句话直接回应人（像回微信那样），再自然补充细节；禁止用「结论：」「工具结果：」「替代建议：」「出行方案：」这类报告标签开头或分段。',
+    '2. 全文写成自然的说话句子；禁止输出 ** 星号、# 号等任何 markdown 记号；能用一两句话说清就不用列表，确实要分点时最多 3 条。',
+    '3. 关键事实（名称、距离、价格）自然融进句子里，像「走路五六分钟就有一家XX，人均二十块」，不要堆数据。',
+    '4. 时效性信息（新闻、公交、天气、价格）优先调用工具或联网检索确认后再回答；查不到就直说，再像朋友一样给个靠谱建议，不许只说「我查一下」。',
+    '5. 不涉及付款的可以直接建议；涉及付款必须先提醒用户确认。',
+    '6. 结尾可以视情况带一句自然的关心或追问（比如「要我帮你看看怎么走不？」），但别每条都说，一半以下即可。',
   ];
   if (careMode) {
-    base.push('6. 当前为【关怀模式】：语速放慢、每屏只推 1 条结果、用词通俗、避免专业术语与缩写。');
+    base.push('7. 当前为【关怀模式】：语速放慢、每屏只推 1 条结果、用词通俗、避免专业术语与缩写，语气更亲切耐心。');
   }
   if (plan === 'pro') {
-    base.push('7. 当前为【增强版】：可以调用 MCP 工具完成购买、路线避堵、情感陪伴、成本优化。');
+    base.push('8. 当前为【增强版】：可以调用 MCP 工具完成购买、路线避堵、情感陪伴、成本优化。');
   } else {
-    base.push('7. 当前为【免费基础版】：只做简单推理与规划，MCP 增强能力不可用，如用户需要请提示升级。');
+    base.push('8. 当前为【免费基础版】：只做简单推理与规划，MCP 增强能力不可用，如用户需要请提示升级。');
   }
   // 个性化:自动学习出的用户习惯画像(特性化定制服务)
   if (profileSummary) {
-    base.push(`8. 个性化参考(系统自动学习自该用户近期行为,用于贴合其习惯,不要直接复述画像内容):${profileSummary}。推荐时优先贴合以上高频类目与常去地点,可主动给出「顺路组合」建议。`);
+    base.push(`9. 个性化参考(系统自动学习自该用户近期行为,用于贴合其习惯,不要直接复述画像内容):${profileSummary}。推荐时优先贴合以上高频类目与常去地点,可主动给出「顺路组合」建议。`);
   }
   if (ctx && ctx.location) {
     base.push(`当前用户位置：${ctx.location.city || ''}${ctx.location.district || ''}（${ctx.location.point ? ctx.location.point.lng + ',' + ctx.location.point.lat : '未知'}）。`);
@@ -376,9 +377,9 @@ async function ruleOrchestrate({ text, ctx, plan }) {
       if (d && d.items && d.items.length) {
         cards.push({ type: 'poi_list', title: `周边${it.cat}`, items: d.items.slice(0, 6) });
         const first = d.items[0];
-        lines.push(`${it.cat}：${first.name}，约 ${first.distance || '?'} 米。`);
+        lines.push(`帮你看了下，最近的${it.cat}是「${first.name}」，离你大概 ${first.distance || '?'} 米。`);
       } else {
-        lines.push(`${it.cat}：15 分钟步行范围内暂未查到，建议扩大范围。`);
+        lines.push(`附近 15 分钟步行圈里暂时没找到${it.cat}，可以把范围放宽到 3 公里再看看。`);
       }
     }
   }
@@ -392,7 +393,7 @@ async function ruleOrchestrate({ text, ctx, plan }) {
     });
     if (d) {
       cards.push({ type: 'route', distance: d.distance, duration: d.duration, mode: d.mode, polyline: d.polyline, congestion: d.congestion });
-      lines.push(`路线：约 ${(d.distance / 1000).toFixed(1)} 公里，预计 ${Math.round((d.duration || 0) / 60)} 分钟${d.congestion ? '，' + d.congestion : ''}。`);
+      lines.push(`这段路大概 ${(d.distance / 1000).toFixed(1)} 公里，${/开车|驾车|打车/.test(text) ? '开车' : '步行'}预计 ${Math.round((d.duration || 0) / 60)} 分钟${d.congestion ? '，' + d.congestion : ''}。`);
       if (plan === 'pro') {
         // ⚠️ coord_type=gcj02：p 来自端上报的 GCJ-02 定位，写 bd09ll 会整个错位
         actions.push({ type: 'open_app', app: '百度地图', uri: `baidumap://map/direction?origin=${p.lat},${p.lng}&destination=${p.lat + 0.008},${p.lng + 0.006}&mode=walking&coord_type=gcj02` });
@@ -407,7 +408,7 @@ async function ruleOrchestrate({ text, ctx, plan }) {
     });
     if (d) {
       cards.push({ type: 'cost', title: '省钱方案', ...d });
-      if (d.recommended) lines.push(`省钱推荐：${d.recommended.name}，约 ¥${d.recommended.cost}，省 ¥${d.saved || 0}。`);
+      if (d.recommended) lines.push(`想省钱的话走「${d.recommended.name}」最划算，大概 ¥${d.recommended.cost}，能省 ¥${d.saved || 0}。`);
     }
   }
 
@@ -429,17 +430,18 @@ async function ruleOrchestrate({ text, ctx, plan }) {
     const d = await callSafe('life-circle', 'diagnose', { lng: p.lng, lat: p.lat, radius: 1200 });
     if (d) {
       cards.push({ type: 'life_score', score: d.score, level: d.level, shortboards: d.shortboards, suggestions: d.suggestions, categories: d.categories });
-      lines.push(`15 分钟生活圈体检：${d.score} 分（${d.level}）。`);
-      if (d.shortboards && d.shortboards.length) lines.push(`短板：${d.shortboards[0]}`);
+      lines.push(`你的生活圈体检拿了 ${d.score} 分，属于「${d.level}」。`);
+      if (d.shortboards && d.shortboards.length) lines.push(`目前短板是：${d.shortboards[0]}`);
     }
   }
 
   if (!lines.length) {
-    lines.push('我是鲤慧。您可以问我：附近哪里能看病？15 分钟生活圈缺什么？怎么走最省时间？');
+    lines.push('我是鲤慧～可以问我附近哪里能看病、15 分钟生活圈缺什么、怎么走最省时间，直接说就行。');
   }
 
   return {
-    reply: lines.map((l, i) => `${i + 1}. ${l}`).join('\n'),
+    // 像真人说话：句子各自成行，不加编号（模型润色路径由提示词约束风格）
+    reply: lines.join('\n'),
     cards,
     actions,
     toolCalls,
