@@ -74,12 +74,14 @@ Page({
       this.setData({ playingId: '' })
       return
     }
-    voice.stopSpeak() // 打断上一条
+    voice.stopSpeak() // 打断上一条（speakToken 作废所有在途播报，晚到的旧结果不会再顶掉这条）
     this.setData({ playingId: id })
+    // 剥掉 ** / # 等 markdown 记号再合成，TTS 不念符号
     voice
-      .speak(m.text, { force: true, scene: 'chat', careMode: this.data.careMode })
+      .speak(String(m.text).replace(/\*\*/g, '').replace(/^#+\s*/gm, ''), { force: true, scene: 'chat', careMode: this.data.careMode })
       .then((ok) => {
-        if (!ok) wx.showToast({ title: '播报没成功，请稍后再试', icon: 'none', duration: 2200 })
+        // ok===false 才是真失败；'aborted'（被更新的播报抢占）静默，不误报
+        if (ok === false) wx.showToast({ title: '播报没成功，请稍后再试', icon: 'none', duration: 2200 })
         if (this.data.playingId === id) this.setData({ playingId: '' })
       })
       .catch(() => {

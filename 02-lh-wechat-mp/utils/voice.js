@@ -37,11 +37,22 @@ function getCached() {
   return voiceCfg
 }
 
-/* ---------------- 播报（服务端 TTS） ---------------- */
+/* ---------------- 播报（服务端 TTS） ----------------
+ * ⚠️ 播放会话令牌（speakToken）：任何时刻只有「最后一次 speak」有权出声——
+ *    自动播报和手动点播并发时，晚到的旧 TTS 结果直接作废（resolve 'aborted'），
+ *    绝不覆盖正在播的内容。修复历史 Bug：playB64 固定写 lihui_tts.mp3，
+ *    两条播报并发写同一文件 → 播着 A 的播放器读到 B 的音频（「读上面的/读错」）。
+ */
+let speakToken = 0
+let fileSeq = 0
+
 function speak(text, opts) {
   opts = opts || {}
   if (!text) return Promise.resolve(false)
+  stopSpeak() // 先打断正在播的 + 作废所有在途旧播报
+  const token = ++speakToken
   return loadVoiceConfig().then((cfg) => {
+    if (token !== speakToken) return 'aborted' // 等配置期间又有新播报接管
     // 自动播报开关（设置页可关；opts.force 用于「试听」强制播报）
     if (cfg.autoSpeak === false && !opts.force) return false
     const careMode = opts.careMode !== undefined ? opts.careMode : cfg.careMode
@@ -50,33 +61,41 @@ function speak(text, opts) {
     return api
       .tts(text, { scene: opts.scene || 'chat' })
       .then((r) => {
+        if (token !== speakToken) return 'aborted' // TTS 在途期间被新播报抢占，本轮作废
         // 优先 base64 本地播放：真机上音频 URL 会被「downloadFile 合法域名」拦截，
         // 而 base64 走 callContainer JSON 通道（内网免校验），写本地文件播放 100% 可用
         if (r && r.mode === 'server-audio' && r.audioB64) {
-          return playB64(r.audioB64, volume)
+          return playB64(r.audioB64, volume, token)
         }
         if (r && r.mode === 'server-audio' && r.audioUrl) {
           const base = config.BASE_URL.replace('/api/v1', '')
           const url = /^https?:\/\//.test(r.audioUrl) ? r.audioUrl : base + r.audioUrl
-          return play(url, volume)
+          return play(url, volume, token)
         }
         return false
       })
-      .catch(() => false)
+      .catch(() => (token === speakToken ? false : 'aborted'))
   })
 }
 
-/** base64 → 本地文件 → 播放（开发工具与真机均可用） */
-function playB64(b64, volume) {
+/** base64 → 独立临时文件 → 播放（开发工具与真机均可用）
+ *  每次播放用独立文件名，绝不复用同一路径——杜绝并发写文件互相覆盖读错内容。
+ *  播完/失败后立即删临时文件，不残留垃圾。 */
+function playB64(b64, volume, token) {
   return new Promise((resolve) => {
     try {
       const fsm = wx.getFileSystemManager()
-      const path = wx.env.USER_DATA_PATH + '/lihui_tts.mp3'
+      const path = wx.env.USER_DATA_PATH + '/lihui_tts_' + ++fileSeq + '.mp3'
       fsm.writeFile({
         filePath: path,
         data: b64,
         encoding: 'base64',
-        success: () => play(path, volume).then(resolve),
+        success: () => {
+          play(path, volume, token).then((ok) => {
+            try { fsm.unlink({ filePath: path, fail: () => {} }) } catch (e) {}
+            resolve(ok)
+          })
+        },
         fail: () => resolve(false)
       })
     } catch (e) {
@@ -85,7 +104,7 @@ function playB64(b64, volume) {
   })
 }
 
-function play(url, volume) {
+function play(url, volume, token) {
   return new Promise((resolve) => {
     try {
       if (audio) {
@@ -96,8 +115,8 @@ function play(url, volume) {
       audio = wx.createInnerAudioContext()
       audio.src = url
       audio.volume = Math.min(1, volume || 1)
-      audio.onEnded(() => resolve(true))
-      audio.onError(() => resolve(false))
+      audio.onEnded(() => resolve(token === undefined || token === speakToken ? true : 'aborted'))
+      audio.onError(() => resolve(token === undefined || token === speakToken ? false : 'aborted'))
       audio.play()
     } catch (e) {
       resolve(false)
@@ -106,6 +125,7 @@ function play(url, volume) {
 }
 
 function stopSpeak() {
+  speakToken++ // 在途 TTS 结果到达后一律判为 aborted，不再开播
   try {
     if (audio) {
       audio.stop()
