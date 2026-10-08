@@ -22,6 +22,7 @@ const store = require('./store');
 const logger = require('../utils/logger');
 const baiduMap = require('./baiduMap');
 const supplier = require('./supplier');
+const { walkMatrixBatch } = require('./isochrone');
 const { cache } = require('../utils/cache');
 
 const CATALOG = 'catalog'; // 兼容旧单文件（已弃用读写，仅保留常量）
@@ -45,19 +46,27 @@ const META = {
 
 /**
  * 检索关键词表。
- * 每类目最多 2 个词 —— 实测 place/v2/search 一次 5 条、8 次检索刚好够填一屏，
- * 再多就白白烧百度配额了；真想要更多再往上加。
+ * 2026-10 覆盖度扩充：每类目 2 词 → 3~5 词（补大学/奶茶/小吃/洗衣/健身等高频生活场景），
+ * pageSize 6 → 10。代价是单次同步的 place 检索次数变多（8 → 14 次左右），
+ * 但有「结果落盘 1h + 内存缓存 + 去重」三道闸，同步频率不变的前提下配额依然可控。
  */
 const QUERIES = {
   near: [
     { category: 'hotel', keyword: '酒店' },
     { category: 'hotel', keyword: '民宿' },
     { category: 'ticket', keyword: '公园' },
-    { category: 'ticket', keyword: '旅游度假' },
+    { category: 'ticket', keyword: '风景区' },
+    { category: 'ticket', keyword: '广场' },
     { category: 'food', keyword: '餐厅' },
     { category: 'food', keyword: '火锅' },
+    { category: 'food', keyword: '奶茶' },
+    { category: 'food', keyword: '小吃' },
     { category: 'service', keyword: '家政服务' },
     { category: 'service', keyword: '汽车养护' },
+    { category: 'service', keyword: '洗衣店' },
+    { category: 'service', keyword: '健身房' },
+    // 用户反馈「大学没覆盖」：高校也是 15 分钟生活圈的重要目的地（运动场/食堂/自习室）
+    { category: 'service', keyword: '大学' },
   ],
   // hot 两套词表：HOT_CITY 是通用高频词（配合用户坐标=所在城市的热门）；
   // HOT_FALLBACK 是郴州写死词（用户完全没坐标时兜底——比赛主场，保证有数据）。
@@ -78,10 +87,15 @@ const HOT_CITY = [
   { category: 'hotel', keyword: '民宿' },
   { category: 'ticket', keyword: '公园' },
   { category: 'ticket', keyword: '风景区' },
+  { category: 'ticket', keyword: '广场' },
   { category: 'food', keyword: '餐厅' },
   { category: 'food', keyword: '美食' },
+  { category: 'food', keyword: '奶茶' },
+  { category: 'food', keyword: '小吃' },
   { category: 'service', keyword: '家政服务' },
   { category: 'service', keyword: '汽车养护' },
+  { category: 'service', keyword: '洗衣店' },
+  { category: 'service', keyword: '大学' },
 ];
 
 /** 类目兜底：某些 mode 下某类目没命中，用这个补一条通用词 */
@@ -131,7 +145,22 @@ function mapPoi(r, category) {
       keyword: r.name || '',
       appId: m.platform === 'ctrip' ? 'wx0e6ed4f51db9d078' : 'wx2c348cf579062e56',
     },
-    tags: [m.name],
+    tags: (() => {
+      // 2026-10 详情补全：百度 scope=2 的 detail_info.tag（如「美食:中餐厅」）拆成搜索标签，
+      // 用户在商城搜「中餐」「面馆」也能命中 —— 相当于免费的数据补全，不用碰爬虫
+      const extra = String(r.tag || '')
+        .split(/[:：,，、/\s]+/)
+        .filter((t) => t && t.length <= 8)
+        .slice(0, 4);
+      return [m.name, ...extra];
+    })(),
+    // ★ scope=2 详情透传：评分（overall_rating）/ 品类标签 / 地址精度标记。
+    //   这是「地址/店铺信息不全」的合规解法 —— 用百度已有的 detail 数据补全，
+    //   而不是去爬美团（爬取违反robots+用户协议，小程序审核也过不了）。
+    rating: Number(r.rating) > 0 ? Number(r.rating) : null,
+    poiTag: r.tag || '',
+    poiType: r.type || '',
+    addressEstimated: !!r.addressEstimated, // true = 行政区级兜底地址（省市区），非门牌
     desc: r.address || '',
     active: true,
   };
@@ -148,6 +177,67 @@ function distanceOf(lng1, lat1, lng2, lat2) {
 }
 
 const fmtDist = (d) => (d >= 1000 ? (d / 1000).toFixed(1) + 'km' : d + 'm');
+
+/* ---------------- 真实步行距离（批量矩阵算路 + 进程内缓存） ----------------
+ * 用户反馈：「商城距离要真实」—— 直线距离（haversine）是鸟飞的，
+ * 隔条河/高架/围墙的店直线 300m 实际要走 1.2km。这里复用体检引擎的
+ * walkMatrixBatch（百度 routematrix/v2/walking，GCJ-02，isochrone.js 已实测调通），
+ * 把「直线最近的前 N 家」升级为真实步行距离 + 步行时长。
+ * 配额防线：
+ *  · 只实测前 WALK_TOP_N 家（远店本来就用不上）
+ *  · (uid + 量化圆心) 缓存 2h，刷新页面/切 tab 不重算
+ *  · 矩阵算路与 place 检索配额池独立（isochrone.js 实测），place 超限不影响这里
+ */
+const WALK_TOP_N = 40;
+const WALK_MAX_STRAIGHT = 8000; // 直线 8km 以上就不值得走路了：不实测（跨城旧数据混进来会把整批 routematrix 打成「距离超限」）
+const WALK_CHUNK = 20; // 一次 1×20，单批别太大（routematrix 对 destinations 数量有限制）
+const WALK_TTL = 2 * 60 * 60 * 1000;
+const walkCache = new Map();
+
+const walkKey = (uid, lng, lat) =>
+  `${uid}@${Number(lat).toFixed(3)},${Number(lng).toFixed(3)}`; // 圆心量化 ~110m，定位漂一点也算同一次算路
+
+const WALK_SPEED = 80; // m/min，常速步行（与体检引擎盲区口径一致）
+
+async function walkDistances(origin, items) {
+  const now = Date.now();
+  const out = new Map();
+  const need = [];
+  for (const it of items) {
+    if (!it || !it.poiUid || !isFinite(Number(it.lng)) || !isFinite(Number(it.lat))) continue;
+    const k = walkKey(it.poiUid, origin.lng, origin.lat);
+    const hit = walkCache.get(k);
+    if (hit && now - hit.at < WALK_TTL) out.set(it.poiUid, hit);
+    else need.push({ it, k });
+  }
+  let failed = 0;
+  for (let i = 0; i < need.length; i += WALK_CHUNK) {
+    const slice = need.slice(i, i + WALK_CHUNK);
+    try {
+      const arr = await walkMatrixBatch(
+        { lat: Number(origin.lat), lng: Number(origin.lng) },
+        slice.map((x) => ({ lat: Number(x.it.lat), lng: Number(x.it.lng) }))
+      );
+      arr.forEach((r, j) => {
+        const { it, k } = slice[j];
+        if (r && r.distance > 0) {
+          const rec = { distance: r.distance, duration: r.duration || 0, at: now };
+          walkCache.set(k, rec);
+          out.set(it.poiUid, rec);
+        } else {
+          failed++;
+        }
+      });
+    } catch (e) {
+      // 配额熔断（302/401）时整批都拿不到，别逐条重试，直接回落直线距离
+      logger.warn('catalog', `步行距离批量算路失败（该批回落直线距离）：${e.message}`);
+      failed += slice.length;
+      if (e.baiduStatus === 302 || e.baiduStatus === 401) break;
+    }
+  }
+  if (walkCache.size > 4000) walkCache.clear(); // 简易防膨胀（缓存miss重算即可，无伤大雅）
+  return { out, realCount: out.size, failed };
+}
 
 /**
  * 构建 / 读取目录
@@ -196,37 +286,50 @@ async function build(mode = 'near', q = {}) {
   const lng = withLoc ? lngQ : 0;
   const lat = withLoc ? latQ : 0;
 
-  const ran = queries.concat(fillMissing(mode, hits));
-  // ⚠️ 百度 place 是【日配额】计费的（超限直接 302，当天后续全部拿不到数据）。
-  //    这里把每次检索的错误收集起来，若命中配额就在返回里明确标出来，
-  //    好让前端/用户知道"不是没店，是百度额度用完了"，而不是白屏。
+  // ⚠️ 顺序 bug 修复（2026-10）：原来 fillMissing(mode, hits) 在检索前就 concat 进去，
+  //    而 hits 那时还是空对象 → 兜底词每次都跑（白烧配额）。改成：先跑主词表，
+  //    统计命中类目后，真正缺类目再补一轮兜底词。
+  const ran = queries.slice();
   const quotaHit = { value: false, sample: '' };
-  const results = await Promise.all(
-    ran.map((x) =>
-      baiduMap
-        .poiSearch({ query: x.keyword, lng: withLoc ? lng : 0, lat: withLoc ? lat : 0, radius, pageSize: 6 })
-        .catch((e) => {
-          const msg = String(e && e.message || '');
-          if (/配额|超限|302|quota/i.test(msg)) {
-            quotaHit.value = true;
-            if (!quotaHit.sample) quotaHit.sample = msg;
-          }
-          return { items: [] };
-        })
-    )
-  );
+  const runQueries = (arr) =>
+    Promise.all(
+      arr.map((x) =>
+        baiduMap
+          .poiSearch({ query: x.keyword, lng: withLoc ? lng : 0, lat: withLoc ? lat : 0, radius, pageSize: 10 })
+          .catch((e) => {
+            const msg = String(e && e.message || '');
+            if (/配额|超限|302|quota/i.test(msg)) {
+              quotaHit.value = true;
+              if (!quotaHit.sample) quotaHit.sample = msg;
+            }
+            return { items: [] };
+          })
+      )
+    );
+
+  let results = await runQueries(ran);
 
   const seen = new Set();
   const items = [];
-  results.forEach((r, i) => {
-    const cat = (ran[i] && ran[i].category) || 'hotel';
-    hits[cat] = true;
-    (r.items || []).forEach((poi) => {
-      if (!poi || !poi.uid || seen.has(poi.uid)) return;
-      seen.add(poi.uid);
-      items.push(mapPoi(poi, cat));
+  const collect = (rs) => {
+    rs.forEach((r, i) => {
+      const cat = (ran[i] && ran[i].category) || 'hotel';
+      hits[cat] = true;
+      (r.items || []).forEach((poi) => {
+        if (!poi || !poi.uid || seen.has(poi.uid)) return;
+        seen.add(poi.uid);
+        items.push(mapPoi(poi, cat));
+      });
     });
-  });
+  };
+  collect(results);
+
+  // 某个类目一个都没命中（词太窄/POI 稀疏）才用兜底词补一轮
+  const missing = fillMissing(mode, hits);
+  if (missing.length && !quotaHit.value) {
+    ran.push(...missing);
+    collect(await runQueries(missing));
+  }
 
   // 按类目稳定排序，避免每次刷新顺序乱跳
   const order = ['hotel', 'ticket', 'food', 'service'];
@@ -264,8 +367,8 @@ async function build(mode = 'near', q = {}) {
   return { ...out, from: 'baidu' };
 }
 
-/** 列表：类目 / 关键词过滤 + 距离排序 + 距离文案 */
-function list(mode, q = {}) {
+/** 列表：类目 / 关键词过滤 + 真实步行距离排序 + 距离文案（async：要批量算路） */
+async function list(mode, q = {}) {
   const items = (store.read(fileOf(mode), { items: [] }).items || []).filter((x) => x && x.active !== false && x.id);
   let list = items;
   if (q.category) list = list.filter((x) => x.category === q.category);
@@ -282,18 +385,36 @@ function list(mode, q = {}) {
   });
 
   const hasLoc = isFinite(Number(q.lng)) && isFinite(Number(q.lat));
-  if (hasLoc) {
-    const lng = Number(q.lng);
-    const lat = Number(q.lat);
+  if (!hasLoc) return { items: withEst, total: withEst.length };
+
+  const lng = Number(q.lng);
+  const lat = Number(q.lat);
+  // 直线距离只用来「定谁值得实测」：先按直线排序，取 8km 内前 N 家
+  const lined = withEst
+    .map((x) => ({ ...x, distance: distanceOf(lng, lat, Number(x.lng), Number(x.lat)) }))
+    .sort((a, b) => (a.distance || 9e9) - (b.distance || 9e9));
+
+  const candidates = lined.filter((x) => (x.distance || 9e9) <= WALK_MAX_STRAIGHT).slice(0, WALK_TOP_N);
+  const { out: walkMap, realCount } = await walkDistances({ lng, lat }, candidates).catch(
+    () => ({ out: new Map(), realCount: 0 })
+  );
+
+  const merged = lined.map((x) => {
+    const w = walkMap.get(x.poiUid);
+    if (!w) return { ...x, distText: fmtDist(x.distance) }; // 没实测到的（远处/算路失败）保持直线距离
+    const sec = w.duration && w.duration > 0 ? w.duration : (w.distance / WALK_SPEED) * 60;
+    const min = Math.max(1, Math.round(sec / 60));
     return {
-      items: withEst
-        .map((x) => ({ ...x, distance: distanceOf(lng, lat, Number(x.lng), Number(x.lat)) }))
-        .sort((a, b) => (a.distance || 9e9) - (b.distance || 9e9))
-        .map((x) => ({ ...x, distText: fmtDist(x.distance) })),
-      total: withEst.length,
+      ...x,
+      distance: w.distance,
+      walkMin: min,
+      distanceReal: true, // 端上可据此显示「真实步行」徽章
+      distText: `步行 ${fmtDist(w.distance)}·约${min}分钟`,
     };
-  }
-  return { items: withEst, total: withEst.length };
+  });
+  // 实测后按步行距离重排：隔河/高架的店直线近走路远，直线序会骗人
+  merged.sort((a, b) => (a.distance || 9e9) - (b.distance || 9e9));
+  return { items: merged, total: lined.length, walkRealCount: realCount };
 }
 
 function get(id) {

@@ -18,13 +18,19 @@ module.exports = {
   /** GET /api/v1/shop/categories —— 类目（带数量） */
   'GET /shop/categories': async (req, res) => ok(res, { items: shop.categories() }),
 
-  /** GET /api/v1/shop/item?id=hotel-wlg-001 */
+  /** GET /api/v1/shop/item?id=b_xxx&lng=&lat= —— 详情；带坐标时附距离 */
   'GET /shop/item': async (req, res, q) => {
     if (!q.id) return fail(res, 1001, 'id 必填');
     // 两类商品：b_ 开头是百度实时构建的真实 POI，其余是 data/shop.json 里的示例目录
     const item = q.id.startsWith('b_') ? catalog.get(q.id) : shop.get(q.id);
     if (!item) return fail(res, 1004, '商品不存在或已下架');
-    return ok(res, item);
+    let out = item;
+    const lo = Number(q.lng), la = Number(q.lat);
+    if (isFinite(lo) && isFinite(la) && isFinite(Number(item.lng)) && isFinite(Number(item.lat))) {
+      const d = catalog.distanceOf(lo, la, Number(item.lng), Number(item.lat));
+      out = { ...item, distance: d, distText: d >= 1000 ? (d / 1000).toFixed(1) + 'km' : d + 'm' };
+    }
+    return ok(res, out);
   },
 
   /** GET /api/v1/shop/hot?lng=&lat= —— 首页推荐：距离最近且最便宜的 4 个 */
@@ -54,7 +60,8 @@ module.exports = {
     const mode = q.mode === 'hot' ? 'hot' : 'near';
     try {
       const built = await catalog.build(mode, { lng: q.lng, lat: q.lat, radius: q.radius });
-      const list = catalog.list(mode, q);
+      // list 是 async（内含批量步行算路），必须 await
+      const list = await catalog.list(mode, q);
       // quotaHit / quotaMessage / center 必须透传：
       //  · quotaHit —— 百度配额挂了，端上要知道"是没店还是没额度"
       //  · center   —— 目录实际同步圆心；端上拿它和用户当前定位比对，
