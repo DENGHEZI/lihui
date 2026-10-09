@@ -5,6 +5,24 @@
 
 ---
 
+## [V1.0.7] · 2026-10-09 · 外卖平台「联网识别」（美团 / 饿了么 / 抖音）
+
+### 🥡 门店维度外卖平台识别（`services/supplier.js` / `services/catalog.js` / `routes/shop.js`）
+- 用户诉求：每个附近门店要能识别「在不在美团 / 饿了么 / 抖音、什么价、什么评分」。
+- **硬约束（合规）**：美团 / 饿了么 / 抖音【没有】公开 POI / 店铺检索 API（无商户 / 渠道资质调不了，爬取违反 robots + 小程序审核过不了，见 `06-真实价格接口接入指南.md`）。因此**不能靠逐店自动拉取真实在架状态**——任何「自动识别」都只能来自你自配的 `*_URL` 真实接口。
+- **两层设计（诚实不造假）**：
+  - ① **静态层（零网络，构建期落库）**：`mapPoi` 给每个门店挂 `platforms` 字段 = 美团 / 饿了么 / 抖音按店名的【搜这家店】公开深链（`verified:false` / `onShelf:null`）。前端展示「去美团 / 饿了么 / 抖音看看这家店」，用户点开即见平台实时在架 / 价格 / 评分——把用户接到平台去亲眼确认，**不编造数据**。
+  - ② **实时层（按需 `/shop/identify`，配了 `*_URL` 才联网）**：拉到真实 `onShelf/price/rating` → 标 `verified:true`；接口通但查无此店 → `verified:true`+`onShelf:false`（明确「未上架」）；没配 key → 回落深链（`verified:false`）。**绝不返回假在架 / 假价格**。
+- `PLATFORMS` 新增 `eleme`（饿了么）、`douyin`（抖音），各带 `kind:'delivery'` 与公开 `searchUrl` 模板（env 可覆盖为 `*_SEARCH_URL`）；`ctrip` 标 `kind:'travel'`（不参与外卖识别）；`status()` 透出 `kind` 供前端区分。
+- 新增 `searchUrlOf` / `platformsOf`（同步链接）/ `identifyPlatforms`（异步核实）三函数；导出 `DELIVERY_PLATFORMS`。
+- 新端点 `GET /api/v1/shop/identify?id=b_xxx`：返回该店各外卖平台 `{ onShelf, price, rating, url, verified, searchUrl }`。`/shop/sync`、`/shop/source`、`/shop/item` 返回条目的 `platforms` 字段已含三平台深链。
+
+### ⚠️ 说明
+- 无商户 / 渠道 API 时，本能力是「引导式识别」（深链到平台自查），而非「服务端自动识别」。要自动核实，需在 `.env` 配 `MEITUAN_URL` / `ELEME_URL` / `DOUYIN_URL`（及可选 `RATING_PATH`），请求模板仍完全由环境变量驱动、不改代码。
+- `/shop/identify` 不在 `ROUTE_ROLE` 表里 → 默认 `guest` 可匿名调用（与 `/shop/price` 一致）。
+
+---
+
 ## [V1.0.6] · 2026-10-09 · 店源覆盖度补齐（学校食堂 / 零食很忙 等）
 
 ### 🛒 店源检索词表扩充（`services/catalog.js` / `services/shop.js`）

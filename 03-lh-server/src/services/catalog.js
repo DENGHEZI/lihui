@@ -130,7 +130,7 @@ function mapPoi(r, category) {
   //    不是百度的原始 { location: { lng, lat } }。早先这里误写 r.location.lng → NaN → JSON 里变 null，
   //    结果 30 条真实店铺的距离排序、地图打点、跳转导航全部失效（接口不报错，只是 inexplicably 空）。
   const m = META[category] || { name: '其他', icon: '📦', unit: '份', platform: 'ctrip', platformName: '携程' };
-  return {
+  const item = {
     id: 'b_' + r.uid,
     source: 'baidu',
     poiUid: r.uid,
@@ -179,6 +179,11 @@ function mapPoi(r, category) {
     desc: r.address || '',
     active: true,
   };
+  // ★ 外卖平台「联网识别」：用真实店名给每个门店挂美团/饿了么/抖音的【搜这家店】公开深链。
+  //   同步、零网络（build 期落库）；verified:false / onShelf:null = 引导式识别，
+  //   用户点开即看到平台实时的在架/价格/评分（不编造数据）。真核实走按需 /shop/identify。
+  item.platforms = supplier.platformsOf(item);
+  return item;
 }
 
 /** 球面距离（米） */

@@ -83,4 +83,22 @@ module.exports = {
 
   /** GET /api/v1/shop/suppliers —— 各渠道真实价格接口接入状态（前端用来显示"已接/未接"） */
   'GET /shop/suppliers': async (req, res) => ok(res, { items: supplier.status() }),
+
+  /**
+   * GET /api/v1/shop/identify?id=b_xxx —— 联网识别门店在各外卖平台的在架 / 价格 / 评分
+   *  · 配了 *_URL（真实接口）→ 真联网核实，返回 verified:true + onShelf/price/rating
+   *  · 没配 key → 回落【搜这家店】公开深链（verified:false / onShelf:null），引导用户去平台自查
+   * 绝不编造在架状态或价格。本端点按需调用，不在目录构建/列表里批量跑（省第三方配额）。
+   */
+  'GET /shop/identify': async (req, res, q) => {
+    if (!q.id) return fail(res, 1001, 'id 必填');
+    const item = catalog.get(q.id) || shop.get(q.id);
+    if (!item) return fail(res, 1004, '商品不存在');
+    try {
+      const platforms = await supplier.identifyPlatforms(item);
+      return ok(res, { id: item.id, name: item.name, platforms });
+    } catch (e) {
+      return fail(res, 5000, '外卖平台识别失败：' + (e.message || ''));
+    }
+  },
 };

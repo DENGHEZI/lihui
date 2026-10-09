@@ -15,7 +15,7 @@
  *    所以换成携程、美团、飞猪、自建中台、甚至你自己搭的代理都行，
  *    【不用改代码】，见 00-设计文档/真实价格接口接入指南.md。
  *
- * 环境变量（以 ctrip 为例，meituan 把前缀换成 MEITUAN_ 即可）：
+ * 环境变量（以 ctrip 为例，meituan / eleme / douyin 把前缀换成对应平台前缀即可）：
  *    CTROP_APP_ID      应用 ID
  *    CTROP_APP_KEY     应用密钥
  *    CTROP_URL         真实价格查询接口地址（必填，填了才算启用）
@@ -26,7 +26,17 @@
  *    CTROP_PRICE_PATH  返回里价格的 JSON 路径，默认 data.price
  *    CTROP_TITLE_PATH  返回里标题的 JSON 路径（可选）
  *    CTROP_URL_PATH    返回里商品链接的 JSON 路径（可选，拿到就能直接跳真实商品页）
+ *    CTROP_RATING_PATH 返回里评分的 JSON 路径（可选，外卖平台识别用）
  *    CTROP_TTL         结果缓存毫秒，默认 5 分钟（防止刷爆第三方配额）
+ *    CTROP_SEARCH_URL  平台「搜这家店」的公开网页深链模板（无商户号时也能用，仅做跳转，非 API）
+ *
+ * ── 外卖平台「联网识别」能力（2026-10）──
+ * 美团 / 饿了么 / 抖音【没有】公开的店铺检索 API（要商户/渠道资质；爬取违反 robots + 小程序审核过不了）。
+ * 因此本层对「门店在不在外卖平台、什么价、什么评分」采用两层设计：
+ *  ① 静态层（零网络，catalog 构建期落库）：给每个门店挂 platforms 字段 = 各外卖平台的【搜这家店】公开深链，
+ *     verified:false / onShelf:null —— 前端显示「去美团/饿了么/抖音看看」，用户点开即看到平台实时在架/价格/评分。
+ *  ② 实时层（按需 /shop/identify，配了 *_URL 才联网）：拉到真实 onShelf/price/rating → verified:true；
+ *     没配 key 时则只回深链（verified:false），绝不编造在架状态或价格。
  */
 const crypto = require('crypto');
 const config = require('../config');
@@ -34,11 +44,17 @@ const logger = require('../utils/logger');
 const { cache } = require('../utils/cache');
 const { fetchJSON } = require('../utils/http');
 
-/* ---------------- 平台元信息（名字、配色、申请入口，只做展示用） ---------------- */
+/* ---------------- 平台元信息（名字、配色、申请入口，只做展示用） ----------------
+ * kind: 'delivery' = 外卖 / 本地生活平台（门店维度「联网识别在架/价格/评分」的对象）
+ *       'travel'   = 酒旅 / 门票（按类目给参考价，不参与外卖识别）
+ * searchUrl: 平台「搜这家店」的【公开网页】深链模板（非 API，仅做跳转；
+ *            无商户号时也能用，env 可覆盖为 *_SEARCH_URL）。关键词变量 {{keyword}}/{{name}}/{{city}}/{{lng}}/{{lat}}。
+ */
 const PLATFORMS = {
   ctrip: {
     name: '携程',
     color: '#3ab0ff',
+    kind: 'travel',
     envPrefix: 'CTROP',
     envKeys: ['CTROP_APP_ID', 'CTROP_APP_KEY', 'CTROP_URL'],
     docs: 'https://open.ctrip.com/',
@@ -47,12 +63,37 @@ const PLATFORMS = {
   meituan: {
     name: '美团',
     color: '#ffc300',
+    kind: 'delivery',
     envPrefix: 'MEITUAN',
     envKeys: ['MEITUAN_APP_ID', 'MEITUAN_APP_KEY', 'MEITUAN_URL'],
     docs: 'https://open.meituan.com/',
-    note: '到店餐饮 / 团购 / 上门服务价格，需商户号；没有商户号时建议走「搜索页跳转」。',
+    note: '到店餐饮 / 团购 / 外卖，需商户号；没有商户号时走「搜这家店」公开深链。',
+    searchUrl: 'https://www.meituan.com/search/?query={{keyword}}',
+  },
+  eleme: {
+    name: '饿了么',
+    color: '#0085ff',
+    kind: 'delivery',
+    envPrefix: 'ELEME',
+    envKeys: ['ELEME_APP_ID', 'ELEME_APP_KEY', 'ELEME_URL'],
+    docs: 'https://open-api.ele.me/',
+    note: '外卖到店 / 到家，需商户号；没有商户号时走「搜这家店」公开深链。',
+    searchUrl: 'https://www.ele.me/search/?keyword={{keyword}}',
+  },
+  douyin: {
+    name: '抖音',
+    color: '#161823',
+    kind: 'delivery',
+    envPrefix: 'DOUYIN',
+    envKeys: ['DOUYIN_APP_ID', 'DOUIN_APP_KEY', 'DOUYIN_URL'],
+    docs: 'https://open.douyin.com/',
+    note: '本地生活到店团购，需商家 / 机构资质；没有资质时走「搜这家店」公开深链。',
+    searchUrl: 'https://www.douyin.com/search/{{keyword}}?type=poi',
   },
 };
+
+/** 仅外卖 / 本地生活类平台（参与门店维度「联网识别」的集合） */
+const DELIVERY_PLATFORMS = Object.keys(PLATFORMS).filter((k) => PLATFORMS[k].kind === 'delivery');
 
 /* ---------------- 小工具 ---------------- */
 function cfg(platform, key, d = '') {
@@ -131,9 +172,11 @@ function status(platformKey) {
       platform: k,
       name: p.name,
       color: p.color,
+      kind: p.kind || 'travel',
       enabled,
       missing,
       endpoint: cfg(k, 'URL', ''),
+      searchUrl: searchUrlOf(k, { supplier: {}, name: '', city: '' }),
       note: p.note,
       docs: p.docs,
     };
@@ -255,4 +298,128 @@ function pickPlatform(item = {}) {
   return { platform: want, platformName: (PLATFORMS[want] || { name: want }).name };
 }
 
-module.exports = { PLATFORMS, status, isEnabled, lookup, priceOf, estimate, pickPlatform, jsonPath, render };
+/* ---------------- 外卖平台「联网识别」 ----------------
+ * 约束：美团/饿了么/抖音没有公开的店铺检索 API（无商户/渠道资质调用不了，爬取违规）。
+ * 所以「门店在不在外卖平台、什么价、什么评分」不能靠逐店自动拉数，而是两层：
+ *  ① platformsOf  —— 同步、零网络：给门店挂各外卖平台「搜这家店」公开深链（引导式识别）。
+ *  ② identifyPlatforms —— 异步、按需：配了 *_URL 才真联网核实 onShelf/price/rating。
+ */
+
+/** 平台「搜这家店」的公开网页深链（非 API，仅做跳转；合规可用） */
+function searchUrlOf(platform, item = {}) {
+  const p = PLATFORMS[platform];
+  if (!p) return '';
+  const tpl = cfg(platform, 'SEARCH_URL', '') || p.searchUrl || '';
+  if (!tpl) return '';
+  const keyword = (item.supplier && item.supplier.keyword) || item.name || '';
+  const vars = {
+    keyword: encodeURIComponent(keyword),
+    name: encodeURIComponent(item.name || ''),
+    city: encodeURIComponent(item.city || (item.district) || ''),
+    lng: item.lng !== undefined ? String(item.lng) : '',
+    lat: item.lat !== undefined ? String(item.lat) : '',
+  };
+  return String(tpl).replace(/\{\{(\w+)\}\}/g, (m, k) => (vars[k] === undefined ? '' : vars[k]));
+}
+
+/**
+ * 同步、零网络：返回门店在各外卖平台的「引导式识别」描述（深链 + 未核实标记）。
+ * 这是 catalog 构建期落库用的，绝不触发任何网络请求 / 第三方配额。
+ */
+function platformsOf(item = {}) {
+  const out = {};
+  for (const k of DELIVERY_PLATFORMS) {
+    const p = PLATFORMS[k];
+    const searchUrl = searchUrlOf(k, item);
+    out[k] = {
+      platform: k,
+      name: p.name,
+      color: p.color,
+      searchUrl,
+      url: searchUrl, // 未核实前，跳转目标 = 平台搜这家店
+      verified: false, // 是否经真实接口核实过在架状态
+      onShelf: null, // true/false/null（null=未核实，前端别显示「已上架/未上架」）
+      price: null,
+      rating: null,
+      source: 'link', // 仅深链引导，非真实数据
+      note: p.note,
+    };
+  }
+  return out;
+}
+
+/**
+ * 异步、按需：联网识别门店在各外卖平台的在架 / 价格 / 评分。
+ *  · 配了 *_URL（真实接口）→ 真的去拉，拉到标 verified:true + onShelf:true + price/rating；
+ *    接口通但查不到 → verified:true + onShelf:false（明确「没上架」，不造假）。
+ *  · 没配 key → 回落深链（verified:false / onShelf:null），前端引导用户去平台自查。
+ * 注意：本函数会触发第三方请求，只在用户主动「识别」时调用，绝不在 catalog.build / list 里批量跑。
+ */
+async function identifyPlatforms(item = {}) {
+  const out = {};
+  await Promise.all(
+    DELIVERY_PLATFORMS.map(async (k) => {
+      const p = PLATFORMS[k];
+      const searchUrl = searchUrlOf(k, item);
+      const rec = {
+        platform: k,
+        name: p.name,
+        color: p.color,
+        searchUrl,
+        verified: false,
+        onShelf: null,
+        price: null,
+        rating: null,
+        url: searchUrl,
+        source: 'link',
+        note: p.note,
+      };
+      if (isEnabled(k)) {
+        try {
+          const real = await lookup(item, k);
+          if (real && real.available) {
+            rec.verified = true;
+            rec.onShelf = true;
+            rec.price = real.price || null;
+            rec.url = (real.url && String(real.url).startsWith('http')) ? real.url : searchUrl;
+            const rp = cfg(k, 'RATING_PATH', '');
+            const rating = rp ? jsonPath(real.raw, rp) : null;
+            rec.rating = Number(rating) > 0 ? Number(rating) : null;
+            rec.source = 'api';
+            rec.note = `${p.name}已联网核实（接口返回）`;
+          } else if (real && real.reason === 'bad_price') {
+            // 接口通了但没返回有效价格 = 查无此店 → 明确「未上架」
+            rec.verified = true;
+            rec.onShelf = false;
+            rec.note = (real && real.message) || `${p.name}未返回此店（可能未上架）`;
+          } else {
+            // 接口配了但请求失败（网络/鉴权）→ 无法判定，回落深链
+            rec.verified = false;
+            rec.note = '联网核实失败（' + ((real && real.message) || '未知') + '），可点链接去平台自查';
+          }
+        } catch (e) {
+          rec.verified = false;
+          rec.note = '联网核实异常（' + e.message + '），可点链接去平台自查';
+        }
+      }
+      out[k] = rec;
+    })
+  );
+  return out;
+}
+
+module.exports = {
+  PLATFORMS,
+  DELIVERY_PLATFORMS,
+  status,
+  isEnabled,
+  lookup,
+  priceOf,
+  estimate,
+  pickPlatform,
+  searchUrlOf,
+  platformsOf,
+  identifyPlatforms,
+  jsonPath,
+  render,
+};
