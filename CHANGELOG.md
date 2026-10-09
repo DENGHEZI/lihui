@@ -5,6 +5,17 @@
 
 ---
 
+## [V1.0.9] · 2026-10-09 · 项目落地页（仿 AI Helper 版式，明暗 + 中英双语）
+
+### 🌐 落地页（`docs/landing/index.html`，单文件零依赖）
+- 仿 [ai-helper](https://xiweicheng.github.io/ai-helper/) 版式：深色默认 + 紫→粉渐变主视觉，顶部导航（核心能力 / 亮点对比 / 典型场景 / 系统预览 / 架构 / 快速开始）+ GitHub / Gitee 入口 + 中文 / English + 🌙 / ☀️ 切换。
+- 区块：Hero（徽章 + 渐变大标题 + 数据指标）→ 为什么选鲤慧（传统地图 vs 鲤慧 对比卡）→ 核心能力（12 张能力卡）→ 典型场景（6 张用例卡）→ 系统预览（4 张 GIF，引用 `../readme/{hero,isochrone,shop,assistant}-zh.gif`，加载失败自动回落占位）→ 系统架构（3 张架构卡）→ 快速开始（3 步代码块）→ 页脚。
+- **明暗主题**：CSS 变量驱动，`html[data-theme]` 切换，localStorage 持久化（`lh_theme`）。
+- **中英双语**：`data-zh` / `data-en` 双属性 + `setLang()` 注入（用 `innerHTML` 以保留条目内嵌 `<code>` 标记），localStorage 持久化（`lh_lang`）。
+- 直接双击在浏览器打开即可，无需构建；图片相对路径引用仓库内既有 GIF 资源。
+
+---
+
 ## [V1.0.8] · 2026-10-09 · 个人资料：自定义昵称与头像（对接 RBAC 账号体系）
 
 ### 👤 服务端（`services/auth.js` / `routes/auth.js` / `app.js`）
