@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,32 +8,9 @@
 <style>
 /* ============================================================
    鲤慧 LiHui · 项目落地页（仿 AI Helper 版式）
-   设计系统：暗色默认 + 明暗切换；中文默认 + 中英切换
+   设计系统：白色默认 + 明暗切换；中文默认 + 中英切换
    ============================================================ */
 :root {
-  --bg: #09090b;
-  --bg-card: #12121a;
-  --bg-card-hover: #1a1a28;
-  --nav-bg: rgba(9, 9, 11, 0.72);
-  --text: #f4f4f5;
-  --text-sub: #a1a1aa;
-  --text-weak: #71717a;
-  --border: #1e1e30;
-  --border-soft: rgba(148, 163, 184, 0.16);
-  --accent: #6366f1;
-  --accent2: #8b5cf6;
-  --accent3: #ec4899;
-  --accent-glow: rgba(99, 102, 241, 0.18);
-  --badge-bg: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.08));
-  --badge-border: rgba(99, 102, 241, 0.3);
-  --glow-1: rgba(99, 102, 241, 0.12);
-  --glow-2: rgba(236, 72, 153, 0.10);
-  --glow-3: rgba(139, 92, 246, 0.08);
-  --code-bg: #0d0d14;
-  --success: #34d399;
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-}
-html[data-theme="light"] {
   --bg: #f7f7fa;
   --bg-card: #ffffff;
   --bg-card-hover: #f1f5f9;
@@ -43,6 +20,9 @@ html[data-theme="light"] {
   --text-weak: #a1a1aa;
   --border: #e4e4e7;
   --border-soft: rgba(148, 163, 184, 0.3);
+  --accent: #6366f1;
+  --accent2: #8b5cf6;
+  --accent3: #ec4899;
   --accent-glow: rgba(99, 102, 241, 0.10);
   --badge-bg: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.06));
   --badge-border: rgba(99, 102, 241, 0.25);
@@ -50,7 +30,27 @@ html[data-theme="light"] {
   --glow-2: rgba(236, 72, 153, 0.06);
   --glow-3: rgba(139, 92, 246, 0.06);
   --code-bg: #18181b;
+  --success: #34d399;
   --shadow: 0 8px 32px rgba(15, 23, 42, 0.08);
+}
+html[data-theme="dark"] {
+  --bg: #09090b;
+  --bg-card: #12121a;
+  --bg-card-hover: #1a1a28;
+  --nav-bg: rgba(9, 9, 11, 0.72);
+  --text: #f4f4f5;
+  --text-sub: #a1a1aa;
+  --text-weak: #71717a;
+  --border: #1e1e30;
+  --border-soft: rgba(148, 163, 184, 0.16);
+  --accent-glow: rgba(99, 102, 241, 0.18);
+  --badge-bg: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.08));
+  --badge-border: rgba(99, 102, 241, 0.3);
+  --glow-1: rgba(99, 102, 241, 0.12);
+  --glow-2: rgba(236, 72, 153, 0.10);
+  --glow-3: rgba(139, 92, 246, 0.08);
+  --code-bg: #0d0d14;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -478,8 +478,8 @@ function setTheme(t) {
   try { localStorage.setItem('lh_theme', t); } catch (e) {}
 }
 (function initTheme() {
-  var t = 'dark';
-  try { t = localStorage.getItem('lh_theme') || 'dark'; } catch (e) {}
+  var t = 'light';
+  try { t = localStorage.getItem('lh_theme') || 'light'; } catch (e) {}
   setTheme(t);
 })();
 
