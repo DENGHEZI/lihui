@@ -42,6 +42,7 @@ const META = {
   ticket: { name: '门票玩乐', icon: '🎫', unit: '张', platform: 'ctrip', platformName: '携程' },
   food: { name: '吃饭喝酒', icon: '🍜', unit: '份', platform: 'meituan', platformName: '美团' },
   service: { name: '本地服务', icon: '🧰', unit: '次', platform: 'meituan', platformName: '美团' },
+  market: { name: '便利店超市', icon: '🛒', unit: '件', platform: 'meituan', platformName: '美团' },
 };
 
 /**
@@ -67,6 +68,16 @@ const QUERIES = {
     { category: 'service', keyword: '健身房' },
     // 用户反馈「大学没覆盖」：高校也是 15 分钟生活圈的重要目的地（运动场/食堂/自习室）
     { category: 'service', keyword: '大学' },
+    // 2026-10-09 用户反馈补齐：学校食堂 / 零食很忙 等高频生活场景此前未覆盖
+    { category: 'food', keyword: '食堂' }, // 学校/园区食堂
+    { category: 'food', keyword: '早餐' },
+    { category: 'food', keyword: '咖啡' },
+    { category: 'service', keyword: '药店' }, // 24h 药急送也是生活圈刚需
+    // 新增「便利店超市」类目：零食很忙/便利蜂/超市/水果店 这类零售此前完全缺位
+    { category: 'market', keyword: '便利店' },
+    { category: 'market', keyword: '超市' },
+    { category: 'market', keyword: '零食' }, // 零食很忙、零食有鸣等折扣零食店
+    { category: 'market', keyword: '水果店' },
   ],
   // hot 两套词表：HOT_CITY 是通用高频词（配合用户坐标=所在城市的热门）；
   // HOT_FALLBACK 是郴州写死词（用户完全没坐标时兜底——比赛主场，保证有数据）。
@@ -96,13 +107,17 @@ const HOT_CITY = [
   { category: 'service', keyword: '汽车养护' },
   { category: 'service', keyword: '洗衣店' },
   { category: 'service', keyword: '大学' },
+  { category: 'market', keyword: '便利店' },
+  { category: 'market', keyword: '超市' },
+  { category: 'market', keyword: '零食' },
+  { category: 'market', keyword: '水果店' },
 ];
 
 /** 类目兜底：某些 mode 下某类目没命中，用这个补一条通用词 */
 function fillMissing(mode, hits) {
   const extra = {
-    near: { food: '小吃', service: '体检' },
-    hot: { ticket: '公园', food: '小吃' },
+    near: { food: '小吃', service: '体检', market: '便利店' },
+    hot: { ticket: '公园', food: '小吃', market: '便利店' },
   }[mode] || {};
   return Object.keys(extra)
     .filter((c) => !hits[c])
@@ -332,7 +347,7 @@ async function build(mode = 'near', q = {}) {
   }
 
   // 按类目稳定排序，避免每次刷新顺序乱跳
-  const order = ['hotel', 'ticket', 'food', 'service'];
+  const order = ['hotel', 'ticket', 'food', 'service', 'market'];
   items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || a.name.localeCompare(b.name, 'zh'));
 
   // ⚠️ 配额超限时【禁止用空结果覆盖旧缓存】——

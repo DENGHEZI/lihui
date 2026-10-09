@@ -15,6 +15,7 @@ const CATEGORIES = [
   { key: 'ticket', name: '门票玩乐', icon: '🎫' },
   { key: 'food', name: '吃饭喝酒', icon: '🍜' },
   { key: 'service', name: '本地服务', icon: '🧰' },
+  { key: 'market', name: '便利店超市', icon: '🛒' },
 ];
 
 let warnedCatalog = false;
