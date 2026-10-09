@@ -85,17 +85,49 @@ async function localDiagnose({ lng, lat, radius = 1200 }) {
  *  同一量化圆心 10 分钟内直接复用整份体检报告（重复访问 <50ms）；
  *  并发同参请求共享同一计算（多端同页不雪崩）。 */
 const REPORT_TTL = 10 * 60 * 1000;
+const REPORT_GRACE = 30 * 60 * 1000; // stale-while-revalidate 宽限期：TTL 过期后先回旧值、后台重建
 const reportCache = new Map(); // key → { at, val }
 const reportInflight = new Map(); // key → Promise
 function reportCacheKey(lng, lat, radius) {
   return `rep:${lng.toFixed(4)},${lat.toFixed(4)}:${Math.round(radius)}`;
 }
 
+/** 体检重建作业（本地引擎优先 → MCP 兜底），成功后写缓存 */
+function buildReportJob(lng, lat, radius, ck) {
+  const job = (async () => {
+    // ① 本地引擎（六类并行 + 类间错峰 + 共享 POI 缓存）
+    try {
+      const data = await localDiagnose({ lng, lat, radius });
+      if (reportCache.size >= 64) reportCache.delete(reportCache.keys().next().value);
+      reportCache.set(ck, { at: Date.now(), val: data });
+      return data;
+    } catch (e1) {
+      logger.warn('life', `local diagnose failed: ${e1.message}`);
+    }
+    // ② 本地异常 → MCP 兜底（限时 6s，质量校验后采用）
+    if (!isQuotaBlocked()) {
+      const r = await withTimeout(hub.callByQualifiedName('life-circle__diagnose', { lng, lat, radius }), 6000, null);
+      const data = r && r.data && (r.data.result || r.data);
+      const suspicious = data && Array.isArray(data.categories) && data.categories.filter((c) => !c.count).length >= 4;
+      if (data && !suspicious) {
+        reportCache.set(ck, { at: Date.now(), val: data });
+        return data;
+      }
+    }
+    throw new Error('all engines failed');
+  })().finally(() => reportInflight.delete(ck));
+  reportInflight.set(ck, job);
+  return job;
+}
+
 module.exports = {
   /** GET /api/v1/life/report?lng=&lat=&radius=
    *  提速改造（2026-10-08）：原架构「MCP 先行(8s 限时)→失败才本地」纯串行，最坏 10s+。
    *  新架构：报告缓存 → 并发去重 → **本地引擎优先**（与等时圈共享 POI 5min 缓存，
-   *  等时圈刚算过则体检近乎零延迟）→ MCP 降级为本地异常时的兜底。 */
+   *  等时圈刚算过则体检近乎零延迟）→ MCP 降级为本地异常时的兜底。
+   *  提速二段（2026-10-09 stale-while-revalidate）：TTL 过期后的宽限期内**立即返回旧值
+   *  并后台静默重建**（stale:true 标注）——冷启动 1.3s 从用户路径上整体摘除，
+   *  只有连宽限期也超了才真正同步等待重建。 */
   'GET /life/report': async (req, res, q) => {
     const lng = numOr(q.lng, NaN);
     const lat = numOr(q.lat, NaN);
@@ -104,7 +136,15 @@ module.exports = {
     const ck = reportCacheKey(lng, lat, radius);
 
     const hit = reportCache.get(ck);
-    if (hit && Date.now() - hit.at < REPORT_TTL) return ok(res, hit.val);
+    if (hit) {
+      const age = Date.now() - hit.at;
+      if (age < REPORT_TTL) return ok(res, hit.val);
+      // stale-while-revalidate：宽限期内回旧值 + 后台重建（不阻塞响应）
+      if (age < REPORT_TTL + REPORT_GRACE) {
+        if (!reportInflight.has(ck)) buildReportJob(lng, lat, radius, ck);
+        return ok(res, { ...hit.val, stale: true });
+      }
+    }
 
     if (reportInflight.has(ck)) {
       try {
@@ -114,32 +154,8 @@ module.exports = {
       }
     }
 
-    const job = (async () => {
-      // ① 本地引擎（六类并行 + 类间错峰 + 共享 POI 缓存）
-      try {
-        const data = await localDiagnose({ lng, lat, radius });
-        if (reportCache.size >= 64) reportCache.delete(reportCache.keys().next().value);
-        reportCache.set(ck, { at: Date.now(), val: data });
-        return data;
-      } catch (e1) {
-        logger.warn('life', `local diagnose failed: ${e1.message}`);
-      }
-      // ② 本地异常 → MCP 兜底（限时 6s，质量校验后采用）
-      if (!isQuotaBlocked()) {
-        const r = await withTimeout(hub.callByQualifiedName('life-circle__diagnose', { lng, lat, radius }), 6000, null);
-        const data = r && r.data && (r.data.result || r.data);
-        const suspicious = data && Array.isArray(data.categories) && data.categories.filter((c) => !c.count).length >= 4;
-        if (data && !suspicious) {
-          reportCache.set(ck, { at: Date.now(), val: data });
-          return data;
-        }
-      }
-      throw new Error('all engines failed');
-    })().finally(() => reportInflight.delete(ck));
-
-    reportInflight.set(ck, job);
     try {
-      return ok(res, await job);
+      return ok(res, await buildReportJob(lng, lat, radius, ck));
     } catch (e) {
       return fail(res, 5003, '体检引擎繁忙，请稍后再试');
     }

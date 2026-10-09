@@ -61,6 +61,32 @@ setInterval(() => {
 
 /* ---------------- 静态资源 ---------------- */
 const MIME = { '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.json': 'application/json', '.txt': 'text/plain', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.map': 'application/json' };
+
+/* 浏览器沙箱隔离（2026-10-09）：
+ * CSP 限定脚本/样式/连接只能同源+内联，外域注入脚本/iframe 嵌套全部被浏览器拒绝；
+ * img-src 只放行高德瓦片（等时圈底图）与 data:，第三方追踪像素进不来。
+ * frame-ancestors 'none' + X-Frame-Options DENY = 防点击劫持（页面不可被任何站点内嵌）。
+ * 注意：页面含内联 script/style，故 'unsafe-inline' 保留（无 nonce 机制下的务实取衡），
+ * 外域脚本仍被 default-src 'self' 挡死。 */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: https://*.is.autonavi.com",
+  "connect-src 'self'",
+  "font-src 'self' data:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ');
+const SANDBOX_HEADERS = {
+  'Content-Security-Policy': CSP,
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'geolocation=(self), camera=(), microphone=()',
+};
+
 function serveStatic(req, res, urlPath) {
   // /static/** → 03-lh-server/data/**
   const rel = urlPath.replace(/^\/static\/?/, '');
@@ -70,7 +96,7 @@ function serveStatic(req, res, urlPath) {
   }
   fs.readFile(full, (err, buf) => {
     if (err) return json(res, { code: 4040, msg: 'not found' }, 404);
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(full).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'public, max-age=600' });
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(full).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'public, max-age=600', ...SANDBOX_HEADERS });
     res.end(buf);
   });
 }
@@ -86,7 +112,7 @@ function serveVendor(req, res, urlPath) {
   }
   fs.readFile(full, (err, buf) => {
     if (err) return json(res, { code: 4040, msg: 'not found' }, 404);
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(full).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'public, max-age=86400' });
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(full).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'public, max-age=86400', ...SANDBOX_HEADERS });
     res.end(buf);
   });
 }
@@ -124,7 +150,7 @@ const server = http.createServer(async (req, res) => {
       //   未配置时注入蜜罐 AK —— 扒页面的人拿到废钥匙，一打接口 security.log 立刻记下。
       const akBrowser = (bmapSite && config.baidu.akBrowser) ? config.baidu.akBrowser : security.webHoneypot();
       html = html.replace(/__AK__/g, akBrowser);
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', ...SANDBOX_HEADERS });
       return res.end(html);
     } catch (e) {
       return json(res, {

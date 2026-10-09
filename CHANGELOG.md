@@ -20,6 +20,25 @@
 
 ---
 
+## [V1.0.4] · 2026-10-09 · LLMWiki 图扩展 + E2E 安全测试 + 浏览器沙箱 + 体检 SWR 提速
+
+### 🧠 RAG 升级 LLMWiki：词条图 + 一跳扩展检索（`services/standards.js` / `data/standards-kb.json`）
+- 知识库从「扁平段落检索」升级为**维基式词条图**：14 部标准互为词条页，`related` 互链成图（知识库版本 `+wiki1`）；
+- 检索命中后沿 related **一跳扩展**，把相关标准词条的 TL;DR（summary）作「参见」块注入 LLM 上下文——问 ISO 37120 自动带出 SDG 11 / ISO 37122 关联口径，单次检索跨标准联想；
+- 注入块使用要求追加第 4 条（参见条目仅确有关联时简述，防过度引用）；
+- 调试接口 `GET /agent/standards` 返回体新增 `wikiSeeAlso`（图扩展结果可视化）；
+- 扩词条零代码：kb json 加一条 docs + related 即自动入图。
+
+### 🛡 安全升级：浏览器沙箱隔离 + 海量 E2E 安全测试（`app.js` / `tests/security-e2e.mjs`）
+- **浏览器沙箱响应头**（根 HTML / 静态资源 / vendor 三路生效）：CSP（default-src 'self'、img-src 仅放行高德瓦片与 data:、frame-ancestors 'none'）+ `X-Frame-Options: DENY`（防点击劫持）+ `X-Content-Type-Options: nosniff` + `Referrer-Policy` + `Permissions-Policy`（geolocation 仅同源，摄像头/麦克风全禁）——外域注入脚本、iframe 嵌套、追踪像素全部被浏览器侧拒绝；
+- **海量 E2E 安全测试套件**（零依赖 `node tests/security-e2e.mjs`）：payload 字典 45 条（SQLi/NoSQLi/XSS/SSTI/路径穿越/命令注入/SSRF/CRLF/原型污染/超长溢出/蜜罐假 key）× 8 端点 × query/body/path 三注入位自动展开 **459 用例**，并发 12 实测 247ms 跑完；断言五条铁律「不 5xx、不泄露密钥、无 XSS 回显、无 CRLF 头污染、蜜罐封禁生效」；溢出类被 Node 头大小限制 RST 拒收识别为预期防护。首跑 **459/459 全绿**。
+
+### ⚡ 生活圈体检二段提速：stale-while-revalidate（`routes/life.js`）
+- TTL（10min）过期后的 **30min 宽限期**内命中：**立即返回旧值**（`stale:true` 标注）并后台静默重建——冷启动 1.3s 从用户路径整体摘除；仅宽限期也超时才同步等待重建；
+- 重建作业提取为 `buildReportJob`，与并发去重（reportInflight）复用同一函数，双端同页共享一次重建。
+
+---
+
 ## [V1.0.3] · 2026-10-08 · 网页版实景化 + RAG 标准库 + AK 池自愈
 
 **本版概要（小程序测试版已上传 1.0.3；服务端同 commit 随 Gitee push 自动部署云托管）：**

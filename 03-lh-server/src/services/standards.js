@@ -202,11 +202,15 @@ function maybeRetrieve(text) {
     const c = h.chunk;
     return `[${i + 1}] ${c.code}《${c.title}》（${c.org}，${c.year}，${c.region}）— ${c.h}\n${c.text}`;
   });
+  // LLMWiki 图扩展：沿词条互链补「参见」块（跨标准关联口径）
+  const seeAlso = wikiSeeAlso(hits);
+  if (seeAlso.length) lines.push('【参见 · 相关标准词条（TL;DR）】\n' + seeAlso.map((s) => `→ ${s}`).join('\n'));
   return (
-    '（系统注入的标准知识库检索结果，RRF 三通道融合排序，非用户发言）\n' +
+    '（系统注入的标准知识库检索结果，RRF 三通道融合 + LLMWiki 词条图扩展，非用户发言）\n' +
     lines.join('\n---\n') +
     '\n使用要求：1) 引用标准必须给出编号与名称（如 GB 50180-2018、ISO 37120:2018）；' +
-    '2) 指标数值只能来自以上原文，禁止凭记忆编造；3) 与问题无关的条目不要提。'
+    '2) 指标数值只能来自以上原文，禁止凭记忆编造；3) 与问题无关的条目不要提；' +
+    '4) 「参见」条目仅在确有关联时简述，不确定就略去。'
   );
 }
 
@@ -215,4 +219,49 @@ function lastSources(hits) {
   return (hits || []).map((h) => ({ code: h.chunk.code, title: h.chunk.title, org: h.chunk.org, year: h.chunk.year }));
 }
 
-module.exports.rag = { search, maybeRetrieve, lastSources, STANDARDS_RE };
+/* ------------------------------------------------------------------ */
+/* LLMWiki：维基式知识图谱检索（2026-10-09 升级）                       */
+/* ------------------------------------------------------------------
+ * 从「扁平段落检索」升级为「wiki 词条图 + 图扩展检索」：
+ *  1. 知识库每部标准是一个词条页（doc），页间 related 互链（data/standards-kb.json）；
+ *  2. 命中词条后沿 related **一跳扩展**，把相关词条的 TL;DR（summary）作
+ *     「参见」块注入 LLM 上下文——单次检索获得跨标准的关联口径，
+ *     如问 ISO 37120 自动带出 SDG 11 / ISO 37122 的相关条目；
+ *  3. TL;DR 取 doc.summary（LLM 时代人工精炼要点，零额外 token 成本）；
+ *  4. 扩词条 = 在 kb json 加一条 docs + related 即自动入图，无需改代码。
+ */
+const WIKI_SEE_ALSO_MAX = 3;
+function docById(id) {
+  return (KB.docs || []).find((d) => d.id === id) || null;
+}
+
+/** 维基图扩展：从命中 docId 出发一跳 related，返回「参见」行数组 */
+function wikiSeeAlso(picked) {
+  const hitDocIds = new Set(picked.map((h) => h.chunk.docId));
+  const seen = new Set();
+  const rows = [];
+  for (const h of picked) {
+    const doc = docById(h.chunk.docId);
+    for (const rid of (doc && doc.related) || []) {
+      if (hitDocIds.has(rid) || seen.has(rid)) continue;
+      seen.add(rid);
+      const rd = docById(rid);
+      if (rd) rows.push(`${rd.code}《${rd.title}》— ${rd.summary}`);
+      if (rows.length >= WIKI_SEE_ALSO_MAX) return rows;
+    }
+  }
+  return rows;
+}
+
+/** 词条图概览（调试 /agent/standards?wiki=1 用） */
+function wiki() {
+  return (KB.docs || []).map((d) => ({
+    id: d.id,
+    code: d.code,
+    title: d.title,
+    sections: Array.isArray(d.sections) ? d.sections.length : 0,
+    related: d.related || [],
+  }));
+}
+
+module.exports.rag = { search, maybeRetrieve, lastSources, STANDARDS_RE, wikiSeeAlso, wiki };

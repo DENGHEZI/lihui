@@ -96,6 +96,8 @@ module.exports = {
         excerpt: h.chunk.text.slice(0, 160) + (h.chunk.text.length > 160 ? '…' : ''),
         rrfScore: h.rrfScore,
       })),
+      // LLMWiki 图扩展：命中词条沿 related 互链带出的「参见」相关标准（TL;DR）
+      wikiSeeAlso: standards.rag ? standards.rag.wikiSeeAlso(hits) : [],
     });
   },
 };
