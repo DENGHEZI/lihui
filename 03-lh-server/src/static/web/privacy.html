@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>隐私政策 · 鲤慧 LiHui</title>
+<style>
+  :root { --brand:#0fa693; --gold:#b98629; --text:#18181b; --muted:#6b7280; --line:#e5e7eb; --bg:#ffffff; --card:#ffffff; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.75; padding:0 16px 64px; }
+  .wrap { max-width:720px; margin:0 auto; }
+  header { padding:40px 0 8px; }
+  h1 { font-size:26px; letter-spacing:.5px; }
+  .meta { color:var(--muted); font-size:13px; margin-top:6px; }
+  .meta b { color:var(--brand); }
+  .card { border:1px solid var(--line); border-radius:14px; padding:20px 22px; margin:18px 0; background:var(--card); }
+  h2 { font-size:17px; margin-bottom:10px; padding-left:10px; border-left:3px solid var(--brand); }
+  p, li { font-size:14.5px; color:#3f3f46; }
+  ul { padding-left:20px; }
+  li { margin:6px 0; }
+  .tag { display:inline-block; font-size:12px; color:var(--brand); border:1px solid var(--brand); border-radius:99px; padding:1px 10px; margin-right:6px; }
+  .req { color:var(--gold); }
+  .btns { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+  button { border:1px solid var(--line); background:#fff; color:var(--text); border-radius:10px; padding:9px 16px; font-size:14px; cursor:pointer; transition:.15s; }
+  button:hover { border-color:var(--brand); color:var(--brand); }
+  button.primary { background:var(--brand); border-color:var(--brand); color:#fff; }
+  button.primary:hover { filter:brightness(1.06); color:#fff; }
+  button.danger:hover { border-color:#dc2626; color:#dc2626; }
+  input { border:1px solid var(--line); border-radius:10px; padding:9px 12px; font-size:14px; width:220px; }
+  #out { margin-top:12px; font-size:13px; color:var(--muted); white-space:pre-wrap; word-break:break-all; }
+  footer { color:var(--muted); font-size:12.5px; text-align:center; margin-top:36px; }
+  code { background:#f4f4f5; border-radius:6px; padding:1px 6px; font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>隐私政策</h1>
+    <div class="meta">版本 <b id="ver">2026-10-09</b> ｜ 生效日期 2026-10-09 ｜ 联系我们：privacy@lihui-tech.online</div>
+  </header>
+
+  <div class="card">
+    <h2>一句话说清</h2>
+    <p>鲤慧在你<b>同意后</b>才会记录用于「个性化推荐」的行为数据（搜过什么、聊过什么话题、点过哪些店、发起过导航）；<b>未同意时功能照常可用</b>，只是不做个性化。你可随时导出或删除你的全部数据。</p>
+  </div>
+
+  <div class="card">
+    <h2>我们收集什么、为什么</h2>
+    <ul>
+      <li><span class="tag">必需</span><b>设备标识（Device ID）</b>——在同一设备上记住你的偏好与同意状态。由端上随机生成并本地持久化，<span class="req">不含姓名、手机号等身份信息</span>。</li>
+      <li><span class="tag">必需</span><b>位置信息（经纬度）</b>——周边搜索、路线规划、15 分钟生活圈体检。仅用于当次请求的计算，<span class="req">不落库、不形成轨迹历史</span>。</li>
+      <li><span class="tag">需同意</span><b>搜索关键词与对话主题类目</b>——个性化排序与回复。只存离散关键词与类目计数，带时间衰减自动遗忘（约 30 天半衰期）。</li>
+      <li><span class="tag">需同意</span><b>点店 / 导航行为（POI 名称与坐标）</b>——「常去地点」加权推荐。最多保留 30 条，随时间衰减自动清理。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>我们不收集</h2>
+    <ul>
+      <li>姓名、手机号、身份证等实名信息（未登录时）；</li>
+      <li>精确轨迹 / 历史位置序列；</li>
+      <li>通讯录、相册、剪贴板。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>如何存储</h2>
+    <p>行为画像存于服务端数据目录（profiles），可随时导出或彻底删除；对话会话默认保留最近 40 条用于上下文。</p>
+  </div>
+
+  <div class="card">
+    <h2>你的权利（自助操作）</h2>
+    <ul>
+      <li><b>同意 / 撤回</b>：网页版底部横幅可同意；下方「撤回同意」立即停采并删除画像；</li>
+      <li><b>数据导出</b>（可携权）：导出你的画像、同意记录与 Token 用量；</li>
+      <li><b>数据删除</b>（被遗忘权）：删除你的画像、同意记录与 Token 记录。</li>
+    </ul>
+    <div class="btns">
+      <button id="agree" class="primary">同意并记录</button>
+      <button id="withdraw">撤回同意</button>
+      <button id="export">导出我的数据</button>
+      <input id="confirm" placeholder='输入 DELETE 确认删除' />
+      <button id="del" class="danger">删除我的数据</button>
+    </div>
+    <div id="out"></div>
+  </div>
+
+  <footer>鲤慧 LiHui · 15 分钟生活圈智能助手 · 本页仅说明服务端采集范围，端上 SDK（如地图）另有其自身政策</footer>
+</div>
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var out = function (t) { $('#out').textContent = t; };
+  function deviceId() {
+    var id = '';
+    try { id = localStorage.getItem('lh_device_id') || ''; } catch (e) {}
+    if (!id) {
+      id = 'web_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      try { localStorage.setItem('lh_device_id', id); } catch (e) {}
+    }
+    return id;
+  }
+  function post(path, body) {
+    return fetch('/api/v1' + path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId() }, body: JSON.stringify(body || {}) })
+      .then(function (r) { return r.json(); });
+  }
+  function get(path) {
+    return fetch('/api/v1' + path, { headers: { 'X-Device-Id': deviceId() } }).then(function (r) { return r.json(); });
+  }
+  $('#agree').onclick = function () {
+    post('/privacy/consent', { deviceId: deviceId() }).then(function (b) {
+      try { localStorage.setItem('lh_privacy_consent', '1'); } catch (e) {}
+      out(b.code === 0 ? '✅ 已记录你的同意（版本 ' + (b.data && b.data.version) + '）' : '❌ ' + b.msg);
+    });
+  };
+  $('#withdraw').onclick = function () {
+    post('/privacy/withdraw', { deviceId: deviceId() }).then(function (b) {
+      try { localStorage.removeItem('lh_privacy_consent'); } catch (e) {}
+      out(b.code === 0 ? '✅ 已撤回同意并删除画像数据' : '❌ ' + b.msg);
+    });
+  };
+  $('#export').onclick = function () {
+    get('/privacy/export?deviceId=' + encodeURIComponent(deviceId())).then(function (b) {
+      out(b.code === 0 ? JSON.stringify(b.data, null, 2) : '❌ ' + b.msg);
+    });
+  };
+  $('#del').onclick = function () {
+    var c = $('#confirm').value.trim();
+    if (c !== 'DELETE') return out('⚠️ 请先在输入框输入 DELETE 确认（删除不可恢复）');
+    post('/privacy/delete', { deviceId: deviceId(), confirm: 'DELETE' }).then(function (b) {
+      out(b.code === 0 ? '🗑️ 已删除 ' + (b.data && b.data.deleted) + ' 项数据' : '❌ ' + b.msg);
+    });
+  };
+  get('/privacy/policy').then(function (b) { if (b.code === 0 && b.data && b.data.version) $('#ver').textContent = b.data.version; }).catch(function () {});
+})();
+</script>
+</body>
+</html>

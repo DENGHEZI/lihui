@@ -5,6 +5,32 @@
 
 ---
 
+## [V1.0.10] · 2026-10-09 · 网页版助手下线 + 监控告警/备份恢复/隐私合规 + 业务单测
+
+### 🌐 网页版（`src/static/web/index.html`）
+- **智能助手卡片下线**（地图数据源配额受限期间对话质量不达标）：`#aiCard` 与能力卡隐藏，后端 Agent 接口保留，恢复后移除隐藏即可。
+- 生活圈体检渲染补上服务端配额提示（`r.hint`）：配额受限时明确显示「今日百度地图检索配额已用完（每日 0 点自动恢复）」，不再让用户对着 0 分困惑。
+
+### 📊 监控告警（`services/monitor.js`，零依赖）
+- 主动巡检闭环：CPU/内存（RSS+heap）/MCP 进程存活/Token 配额/HTTPS 证书到期 → 阈值判定（纯函数）→ 告警落库（同 key 去重、自动恢复）→ `ALERT_WEBHOOK_URL` 外发。
+- 端点：`GET /system/metrics`、`GET /system/alerts`、`POST /system/alerts/check`（admin）。阈值/间隔全部环境变量可调（`LH_ALERT_*`、`MONITOR_CERT_HOST`）。
+
+### 💾 备份恢复（`services/backup.js` + `scripts/{backup,restore}.js` + `docs/backup-recovery.md`）
+- 定期备份（`LH_BACKUP_INTERVAL_H`，默认 24h）gzip + sha256 manifest，轮转保留 `LH_BACKUP_KEEP` 份（默认 14）；恢复逐文件校验 sha256、只覆盖清单内文件。
+- 管理端点 `GET/POST /system/backups`、`POST /system/backups/restore`（admin，需 `confirm:"RESTORE"`）；CLI 脚本配合 cron 与每月恢复演练（手册含演练清单）。
+
+### 🔐 隐私合规（`services/privacy.js` + `routes/privacy.js` + `/privacy` 政策页 + 网页版同意横幅）
+- 版本化隐私政策（`/api/v1/privacy/policy` + 自包含静态页 `/privacy`，含自助「同意/撤回/导出/删除」按钮）。
+- **画像采集前置同意门控**：未同意不采集（`LH_PRIVACY_REQUIRE_CONSENT=false` 可关）；同意/撤回版本化落库。
+- 个人权利端点：`POST /privacy/consent`、`POST /privacy/withdraw`、`GET /privacy/export`（可携权）、`POST /privacy/delete`（被遗忘权，需 `confirm:"DELETE"`）。
+
+### 🧪 业务单元测试（零依赖，`node tests/*.test.js`）
+- 新增：坐标系换算（GCJ↔BD09 往返闭合/境外直通/脏数据）、RRF 融合检索（k=60 分数数学/多通道融合/脏输入）、生活圈评分纯函数（单类评分/加权归一/等级边界）。
+- 生活圈评分逻辑从 `routes/life.js` 抽出为 `lifeShared.scoreCategory / scoreSummary` 纯函数（行为不变），业务口径与单测共用一份实现。
+- `.gitignore` 补：`00-设计文档/05-需求对照与交付清单.md`（内部交付文档不入库）与新运行时数据（alerts/consents/backups）。
+
+---
+
 ## [V1.0.9] · 2026-10-09 · 项目落地页（仿 AI Helper 版式，明暗 + 中英双语）
 
 ### 🌐 落地页（`docs/landing/index.html`，单文件零依赖）

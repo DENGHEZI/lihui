@@ -51,6 +51,14 @@ Thumbs.db
 # 用户画像运行时数据（自动学习的用户习惯，云端自行生成，不入库）
 03-lh-server/data/profiles.json
 
+# 内部交付文档（需求对照清单，仅本地留存，不入库不上传）
+00-设计文档/05-需求对照与交付清单.md
+
+# 监控告警 / 隐私同意 / 定期备份 运行时数据（2026-10-09 新增，不入库）
+03-lh-server/data/alerts.json
+03-lh-server/data/consents.json
+03-lh-server/data/backups/
+
 # README 录帧原始文件（仅 f02-life/f12-memory 被 README 引用入库，其余帧不入库）
 docs/readme/frames/*
 !docs/readme/frames/f02-life.png

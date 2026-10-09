@@ -23,6 +23,8 @@ const expect = (cond, msg) => {
 
 const driver = (process.env.LH_STORE || 'json').toLowerCase();
 const dataDir = process.env.LH_DATA_DIR || path.resolve(__dirname, '..', 'data');
+// 本测试聚焦存储层：关闭隐私同意门控（同意门控本身由 tests/privacy.test.js 覆盖）
+process.env.LH_PRIVACY_REQUIRE_CONSENT = 'false';
 
 console.log(`[store.test] driver=${driver} dataDir=${dataDir}`);
 

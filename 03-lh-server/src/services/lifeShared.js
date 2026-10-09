@@ -94,4 +94,42 @@ async function fetchCategory(c, lng, lat, radius, stagger = 0) {
   return { items: [], failed: true, quota: isQuotaBlocked() };
 }
 
-module.exports = { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, fetchCategory };
+/* ------------------------------------------------------------------ */
+/* 评分纯函数（从 life.js localDiagnose 抽出，便于单元测试与口径统一）    */
+/* ------------------------------------------------------------------ */
+/**
+ * 单类设施评分（纯函数，不发请求）：
+ *  - 数量达标度 ratio   = min(1, 命中数 / need)        权重 0.6
+ *  - 类型覆盖度 typeRatio = 命中关键词数 / 关键词总数    权重 0.4
+ *  - 检索失败(failed)返回 null —— 该类不参与总分（区别于「确实没有」）
+ * @returns {{ hitTypes:string[], score:number|null }}
+ */
+function scoreCategory(c, items, failed) {
+  const list = Array.isArray(items) ? items : [];
+  const hitTypes = (c.keywords || []).filter((k) =>
+    list.some((i) => String((i && i.name) || '') + String((i && i.tag) || '') + String((i && i.type) || '') .includes(k))
+  );
+  if (failed) return { hitTypes, score: null };
+  const ratio = Math.min(1, list.length / Math.max(c.need, 1));
+  const typeRatio = hitTypes.length / Math.max((c.keywords || []).length, 1);
+  return { hitTypes, score: Math.round((ratio * 0.6 + typeRatio * 0.4) * 100) };
+}
+
+/**
+ * 加权总分（纯函数）：只用「成功检索」的类做加权，权重归一化，
+ * 杜绝偶发故障导致的评分跳水。
+ * @param {Array<{name:string,weight:number,need:number,score:number|null,count:number}>} cats
+ * @returns {{ score:number, level:string, shortboards:string[] }}
+ */
+function scoreSummary(cats) {
+  const valid = (cats || []).filter((c) => c.score !== null && c.score !== undefined);
+  const weightSum = valid.reduce((a, b) => a + b.weight, 0) || 1;
+  const score = Math.round(valid.reduce((a, b) => a + b.score * (b.weight / weightSum), 0));
+  const level = score >= 85 ? '优秀' : score >= 60 ? '良好' : score >= 40 ? '一般' : '较差';
+  const shortboards = valid
+    .filter((c) => c.score < 60)
+    .map((c) => `${c.name}：15 分钟步行可达 ${c.count} 处，达标线 ${c.need} 类`);
+  return { score, level, shortboards };
+}
+
+module.exports = { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, fetchCategory, scoreCategory, scoreSummary };

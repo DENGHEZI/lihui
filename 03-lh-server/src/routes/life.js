@@ -6,7 +6,7 @@
 const { ok, fail } = require('../utils/http');
 const hub = require('../mcp/hub');
 const logger = require('../utils/logger');
-const { CATEGORIES, isQuotaBlocked, noteQuotaError, fetchCategory } = require('../services/lifeShared');
+const { CATEGORIES, isQuotaBlocked, noteQuotaError, fetchCategory, scoreCategory, scoreSummary } = require('../services/lifeShared');
 const { buildIsochrone } = require('../services/isochrone');
 const standards = require('../services/standards');
 
@@ -28,34 +28,25 @@ async function localDiagnose({ lng, lat, radius = 1200 }) {
   const cats = await Promise.all(
     CATEGORIES.map(async (c, i) => {
       const { items, failed } = await fetchCategory(c, lng, lat, radius, i * 200);
-      const hitTypes = c.keywords.filter((k) => items.some((i) => (i.name + i.tag + i.type).includes(k)));
       // 检索失败的类不参与计分（区别于"确实没有"），避免偶发网络错误把总分拉穿
-      const ratio = failed ? null : Math.min(1, items.length / Math.max(c.need, 1));
-      const typeRatio = failed ? null : hitTypes.length / c.keywords.length;
-      const score = failed ? null : Math.round((ratio * 0.6 + typeRatio * 0.4) * 100);
+      const { hitTypes, score } = scoreCategory(c, items, failed);
       return {
         key: c.key,
         name: c.name,
         weight: c.weight,
         need: c.need,
         score,
-        count: items.length,
+        count: (items || []).length,
         failed,
         types: hitTypes,
         nearest: items[0] ? { name: items[0].name, distance: items[0].distance } : null,
-        samples: items.slice(0, 5).map((i) => ({ name: i.name, distance: i.distance, address: i.address })),
+        samples: (items || []).slice(0, 5).map((i) => ({ name: i.name, distance: i.distance, address: i.address })),
       };
     })
   );
 
   // 只用"成功检索"的类做加权（权重归一化），杜绝偶发故障导致的评分跳水
-  const valid = cats.filter((c) => c.score !== null);
-  const weightSum = valid.reduce((a, b) => a + b.weight, 0) || 1;
-  const score = Math.round(valid.reduce((a, b) => a + b.score * (b.weight / weightSum), 0));
-  const level = score >= 85 ? '优秀' : score >= 60 ? '良好' : score >= 40 ? '一般' : '较差';
-  const shortboards = valid
-    .filter((c) => c.score < 60)
-    .map((c) => `${c.name}：15 分钟步行可达 ${c.count} 处，达标线 ${c.need} 类`);
+  const { score, level, shortboards } = scoreSummary(cats);
   const suggestions = shortboards.map((s) => {
     const name = s.split('：')[0];
     return `${name}是短板，建议沿主干道方向步行扩大搜索半径，或考虑使用共享单车将出行半径扩展到 3 公里。`;

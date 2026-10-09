@@ -76,6 +76,11 @@ function catsOf(text) {
 /* ---------------- 行为埋点 ---------------- */
 function track(deviceId, event, payload = {}) {
   if (!deviceId || deviceId === 'anonymous') return;
+  // 隐私门控（2026-10-09）：未同意「个性化推荐」时不做任何画像采集。
+  // 懒加载 require 避免模块装载顺序问题；privacy 模块自身不反向依赖本文件。
+  try {
+    if (!require('./privacy').hasConsent(deviceId)) return;
+  } catch (_) {}
   const okWrite = store.update(
     'profiles',
     (all) => {

@@ -30,7 +30,7 @@ try {
 }
 
 /* ---------------- 路由表 ---------------- */
-const modules = ['./routes/system', './routes/ip', './routes/map', './routes/life', './routes/agent', './routes/mcp', './routes/model', './routes/voice', './routes/token', './routes/feedback', './routes/action', './routes/shop', './routes/order', './routes/profile', './routes/security', './routes/memory', './routes/auth'];
+const modules = ['./routes/system', './routes/ip', './routes/map', './routes/life', './routes/agent', './routes/mcp', './routes/model', './routes/voice', './routes/token', './routes/feedback', './routes/action', './routes/shop', './routes/order', './routes/profile', './routes/security', './routes/memory', './routes/privacy', './routes/auth'];
 const ROUTES = {};
 for (const m of modules) {
   try {
@@ -62,6 +62,14 @@ const ROUTE_ROLE = {
   'POST /mcp/remove': auth.ROLE.admin,
   'POST /voice/config': auth.ROLE.admin,
   'GET /stats': auth.ROLE.admin,
+  // 监控告警 / 备份恢复（运维面，admin 专属）
+  'GET /system/metrics': auth.ROLE.admin,
+  'GET /system/alerts': auth.ROLE.admin,
+  'POST /system/alerts/check': auth.ROLE.admin,
+  'GET /system/backups': auth.ROLE.admin,
+  'POST /system/backups': auth.ROLE.admin,
+  'POST /system/backups/restore': auth.ROLE.admin,
+  // 隐私合规：同意/导出/删除是用户对自己的权利，保持 guest 可用（设备维度自证）
   'GET /auth/me': auth.ROLE.user,
   'POST /auth/profile': auth.ROLE.user,
 };
@@ -211,6 +219,18 @@ const server = http.createServer(async (req, res) => {
         },
         traceId,
       });
+    }
+  }
+
+  // 隐私政策页（自包含静态页；缺失时回落 JSON 版政策全文，页面挂了合规也不缺位）
+  if (pathname === '/privacy' || pathname === '/privacy.html') {
+    const page = path.join(__dirname, 'static', 'web', 'privacy.html');
+    try {
+      const html = fs.readFileSync(page, 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', ...SANDBOX_HEADERS });
+      return res.end(html);
+    } catch (_) {
+      return json(res, { code: 0, msg: 'ok', data: require('./services/privacy').POLICY });
     }
   }
 
@@ -367,6 +387,14 @@ async function bootstrap() {
       const p = path.join(config.dataDir, f);
       if (fs.existsSync(p)) continue;
       logger.warn('app', `缺少静态数据 ${f}（期望 ${p}）→ 对应接口会返回空。容器环境请确认 Dockerfile 里有 COPY 这一行。`);
+    }
+
+    // 监控主动巡检 + 定期备份（零依赖闭环；任一失败不影响主服务）
+    try {
+      require('./services/monitor').start();
+      require('./services/backup').start();
+    } catch (e) {
+      logger.warn('app', `监控/备份调度启动失败（不影响服务）: ${e.message}`);
     }
 
     if (config.mcp.autostart) {

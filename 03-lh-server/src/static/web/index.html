@@ -515,7 +515,8 @@
   </section>
 
   <!-- 🐟 智能助手（网页版）：同一 agent 后端，文字对话 -->
-  <div class="card" id="aiCard">
+  <!-- 2026-10-09 下线网页版智能助手（地图数据源配额受限期间对话质量不达标），后端 Agent 接口保留，恢复后移除本隐藏即可 -->
+  <div class="card" id="aiCard" style="display:none">
     <h2>🐟 智能助手 <span class="sub">生活圈问答 · 找店 / 出行 / 体检解读 · 同一小程序 Agent 后端</span></h2>
     <div class="ai-chat">
       <div class="ai-msgs" id="aiMsgs"></div>
@@ -556,7 +557,7 @@
     <div class="cap-grid">
       <div class="cap"><div class="ic">🩺</div><div class="nm">生活圈体检</div><div class="ds">六类设施加权评分 · 最近距离 · 短板提示</div><span class="st ok">✅ 网页版已支持</span></div>
       <div class="cap"><div class="ic">⏱</div><div class="nm">步行等时圈</div><div class="ds">真实路网算路 · 百度地图实景渲染 · 盲区网格</div><span class="st ok">✅ 网页版已支持</span></div>
-      <div class="cap"><div class="ic">🐟</div><div class="nm">智能助手</div><div class="ds">生活圈问答 · 找店 / 出行 / 体检解读</div><span class="st ok">✅ 网页版已支持</span></div>
+      <div class="cap" style="display:none"><div class="ic">🐟</div><div class="nm">智能助手</div><div class="ds">生活圈问答 · 找店 / 出行 / 体检解读</div><span class="st ok">✅ 网页版已支持</span></div>
       <div class="cap"><div class="ic">🧭</div><div class="nm">便民速查</div><div class="ds">吃饭 / 买菜 / 看病 / 公交 / 公园 1.5km POI</div><span class="st ok">✅ 网页版已支持</span></div>
       <div class="cap"><div class="ic">🛒</div><div class="nm">真实店源</div><div class="ds">百度真实门店 + 参考价 · 附近 / 本城热门</div><span class="st ok">✅ 网页版已支持</span></div>
       <div class="cap"><div class="ic">🗺️</div><div class="nm">地图主页</div><div class="ds">地图打点 · 路线规划 · 实时天气</div><span class="st mp">小程序端</span></div>
@@ -803,11 +804,13 @@ async function loadLife() {
     }).join('');
     const sb = (r.shortboards || []).length
       ? '<div class="shortboards">⚠️ 短板：' + (r.shortboards || []).map(esc).join('；') + '</div>' : '';
+    const hint = r.hint
+      ? '<div class="shortboards" style="color:#AD6800;background:rgba(255,199,0,.08)">ℹ️ ' + esc(r.hint) + '</div>' : '';
     $('#lifeBox').innerHTML =
       '<div class="score-row"><div class="ring" style="--pct:' + (r.score || 0) + '"><div class="in"><b>' +
       (r.score == null ? '--' : r.score) + '</b><span>总分</span></div></div>' +
       '<div><div class="level">' + esc(r.level || '—') + '</div>' +
-      '<div class="muted" style="margin-top:8px;font-size:12.5px">六类设施加权评分<br>满分 100 · 达标线 60</div></div></div>' + sb +
+      '<div class="muted" style="margin-top:8px;font-size:12.5px">六类设施加权评分<br>满分 100 · 达标线 60</div></div></div>' + hint + sb +
       '<div class="cats">' + cats + '</div>';
     const hs = document.getElementById('hScore');
     if (hs) hs.textContent = (r.score == null ? '--' : r.score) + ' 分';
@@ -1387,5 +1390,27 @@ document.documentElement.classList.add('js');
   if (!ok) { loadShop(); } /* 定位失败也至少看热门店源 */
 })();
 </script>
+/* ===== 隐私同意横幅（合规：画像采集需同意；同意状态本地+服务端双记） ===== */
+(function () {
+  var agreed = false;
+  try { agreed = localStorage.getItem('lh_privacy_consent') === '1'; } catch (e) {}
+  function askServer() {
+    try { fetch('/api/v1/privacy/consent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId() }, body: JSON.stringify({ deviceId: deviceId() }) }); } catch (e) {}
+  }
+  if (agreed) { askServer(); return; } // 本地已同意 → 静默补登服务端（幂等）
+  var bar = document.createElement('div');
+  bar.setAttribute('style', 'position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#ffffff;border-top:1px solid #e5e7eb;box-shadow:0 -4px 16px rgba(0,0,0,.06);padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13.5px;color:#3f3f46;');
+  bar.innerHTML = '<span style="flex:1;min-width:220px">为了「常去地点 / 个性化推荐」体验，我们会（在你同意后）记录搜索与点店偏好。<a href="/privacy" style="color:#0fa693;text-decoration:none" target="_blank">了解隐私政策</a></span>' +
+    '<button id="lh-py-reject" style="border:1px solid #e5e7eb;background:#fff;border-radius:10px;padding:8px 14px;cursor:pointer">仅使用基础功能</button>' +
+    '<button id="lh-py-agree" style="border:none;background:#0fa693;color:#fff;border-radius:10px;padding:8px 16px;cursor:pointer">同意并继续</button>';
+  document.body.appendChild(bar);
+  var done = function (v) {
+    try { localStorage.setItem('lh_privacy_consent', v ? '1' : '0'); } catch (e) {}
+    if (v) askServer();
+    bar.remove();
+  };
+  bar.querySelector('#lh-py-agree').onclick = function () { done(true); };
+  bar.querySelector('#lh-py-reject').onclick = function () { done(false); };
+})();
 </body>
 </html>
