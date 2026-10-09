@@ -1422,12 +1422,20 @@ document.documentElement.classList.add('js');
   if (!ok) { loadShop(); } /* 定位失败也至少看热门店源 */
 })();
 </script>
-/* ===== 隐私同意横幅（合规：画像采集需同意；同意状态本地+服务端双记） ===== */
+<script>
+/* ===== 隐私同意横幅（合规：画像采集需同意；同意状态本地+服务端双记）
+   2026-10-09 修复：此前本段代码未包裹在脚本标签内，浏览器将其当 HTML 文本
+   渲染——页面底部出现代码原文、按钮被解析成真实元素但无任何事件绑定，
+   表现为「横幅无法交互」。现补回脚本包裹并加绑定判空。
+   （注意：本注释不得出现 script 开/闭标签字面量，否则 HTML 解析器会提前断块。） ===== */
 (function () {
   var agreed = false;
   try { agreed = localStorage.getItem('lh_privacy_consent') === '1'; } catch (e) {}
   function askServer() {
-    try { fetch('/api/v1/privacy/consent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId() }, body: JSON.stringify({ deviceId: deviceId() }) }); } catch (e) {}
+    try {
+      if (typeof deviceId !== 'function') return;
+      fetch('/api/v1/privacy/consent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId() }, body: JSON.stringify({ deviceId: deviceId() }) });
+    } catch (e) {}
   }
   if (agreed) { askServer(); return; } // 本地已同意 → 静默补登服务端（幂等）
   var bar = document.createElement('div');
@@ -1441,8 +1449,10 @@ document.documentElement.classList.add('js');
     if (v) askServer();
     bar.remove();
   };
-  bar.querySelector('#lh-py-agree').onclick = function () { done(true); };
-  bar.querySelector('#lh-py-reject').onclick = function () { done(false); };
+  var bA = bar.querySelector('#lh-py-agree'), bR = bar.querySelector('#lh-py-reject');
+  if (bA) bA.onclick = function () { done(true); };
+  if (bR) bR.onclick = function () { done(false); };
 })();
+</script>
 </body>
 </html>
