@@ -39,6 +39,7 @@
 - 🏪 **Real shop data**: Baidu POI retrieved live; walking distance + duration measured, not offline simulation.
 - 🤖 **AI assistant**: RRF three-channel retrieval + LLMWiki term graph; standard texts injected with numbered citations.
 - 🧪 **E2E security + browser sandbox**: 459 attack cases all green; CSP sandbox headers effective on three response paths.
+- 🔐 **RBAC auth + role-aware rate limiting**: least-privilege 3 roles (guest<user<admin); admin/ops endpoints enforced. scrypt passwords + HMAC-signed stateless tokens; token-bucket rate limit by identity with standard `X-RateLimit-*` headers.
 - 🔑 **AK pool self-healing**: Baidu Map multi-key rotation; auto cooldown switch on quota exhaustion/disable — zero manual intervention when a key dies.
 - ⚡ **Faster checkups**: report-level cache + concurrent dedup + local engine priority; hot start 5.6ms / cold start 1.34s.
 - 📦 **Zero third-party dependencies**: pure Node.js standard-library server, localized Leaflet frontend, deploy-on-push to Gitee.
@@ -136,7 +137,8 @@ Human-machine collaboration: honeypot trapping, IP ban, AI analysis (real keys d
 | 🧩 **Multi-agent orchestration** | Orchestrator + parallel expert agents + strongly-typed contracts + trust-based dispatch; rules call MCP tools directly (no function-calling tool-name guessing); MCP self-extends — when unsure, it auto-searches and installs a new MCP Server from ModelScope (8s cap, 3-process install limit). |
 | ⚡ **Three performance gates** | Report-level cache (quantized center, 10-min TTL) → concurrent dedup (multi-client share one computation) → local engine first (shares POI cache with isochrones). Checkup hot 5.6ms, cold 1.34s. |
 | 🔐 **Zero key to client** | Honeypot fake keys trap attackers, egress desensitization, server-side proxy, AK never reaches frontend; scrapers get dead keys, and any API hit is instantly logged and banned. |
-| 🧪 **E2E security + browser sandbox** | 459 automated attack cases (SQLi/XSS/traversal/CRLF/overflow/honeypot…) all green on first run; CSP sandbox headers effective on three response paths — external scripts, iframe nesting, and tracking pixels are rejected by the browser. |
+| 🔐 **RBAC auth + rate limiting** | Least-privilege 3 roles (guest<user<admin); admin/ops endpoints enforced per the `ROUTE_ROLE` table. Tokens: scrypt passwords + HMAC-SHA256 signed stateless tokens (JWT-like, zero third-party libs). Token-bucket rate limit by identity (admin 2000rpm / user 300 / guest 60) + per-IP floor against spoofed device-id; standard `X-RateLimit-Limit/Remaining/Reset` headers + 429 `Retry-After`. |
+| 🧪 **E2E security + browser sandbox** | 459 automated attack cases (SQLi/XSS/traversal/CRLF/overflow/honeypot/RBAC/rate-limit…) all green on first run; CSP sandbox headers effective on three response paths — external scripts, iframe nesting, and tracking pixels are rejected by the browser. |
 | 🔑 **AK pool self-healing** | Baidu Map AK supports multi-key rotation: auto cooldown switch on quota exhaustion/disable, auto return at quota reset (00:00) — a dead key needs no manual intervention. |
 | 📦 **Zero third-party dependencies** | Pure Node standard-library server (`node src/app.js` to start, no npm install); localized Leaflet frontend, no CDN runtime dependency; Gitee push → cloud hosting auto-builds and deploys. |
 | 🗺 **Coordinate discipline** | Site-wide GCJ-02 (location / search / routing / tiles consistent); the 500–900m offset trap from mixing systems is documented in code comments. |
@@ -159,11 +161,39 @@ node src/app.js        # zero dependencies, no npm install
 
 **API self-doc**: visit `/server-info` for all endpoints; server logs are in `data/logs`.
 
+**Admin login & protected endpoints**
+
+Admin/ops endpoints enforce RBAC (`guest<user<admin`). A default admin is seeded on first boot (only when the user store is empty). Change the password and disable self-registration before going live:
+
+```bash
+# 1) Log in as the default admin to get a stateless token
+curl -X POST http://localhost:8809/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"lihui-admin-2026"}'
+# → {"code":0,"data":{"token":"<JWT-like signed token>","user":{"role":"admin"}}}
+
+# 2) Call a protected endpoint with the token
+curl http://localhost:8809/api/v1/security/events \
+  -H 'Authorization: Bearer <token from step 1>'
+
+# 3) Insufficient role / no token → 403 / 401; rate exceeded → 429 (with X-RateLimit-* headers)
+```
+
+Key environment variables (`.env` or export before start):
+
+| Var | Default | Notes |
+| --- | --- | --- |
+| `LH_AUTH_SECRET` | empty (fallback key) | Token signing secret, **≥16 chars**; required in prod or tokens die on restart |
+| `LH_ADMIN_USER` / `LH_ADMIN_PASS` | `admin` / `lihui-admin-2026` | Default admin; not re-seeded if users already exist |
+| `LH_AUTH_ALLOW_REGISTER` | `true` | Public self-registration; **set `false` in prod** |
+| `LH_AUTH_ALLOW_LOOPBACK_ADMIN` | `false` | Treat loopback as admin (local no-token debugging only; off by default) |
+| `LH_AUTH_TOKEN_TTL_MS` | 7 days | Token lifetime |
+
 **Security self-check** (with the server running, in another terminal):
 
 ```bash
 cd 03-lh-server
-node tests/security-e2e.mjs   # 459 attack cases, five iron-law assertions, ~250ms
+node tests/security-e2e.mjs   # 459 attack cases (incl. RBAC/rate-limit), five iron-law assertions
 ```
 
 ## 5. ❓ FAQ
@@ -198,6 +228,16 @@ Standard questions first retrieve the local standards knowledge base (RRF three-
 Playback uses the built-in free Microsoft Edge synthesis engine, zero key required; with Baidu voice keys configured it auto-switches to Baidu timbre. Speech recognition goes through the server-side ASR proxy; keys are likewise never sent to the client.
 </details>
 
+<details>
+<summary><b>A protected endpoint returns 401/403, or I want to change the admin password?</b></summary>
+
+Admin/ops endpoints (security events, Memory analysis, MCP management, feedback handling, etc.) require `Authorization: Bearer <token>`. Get a token via `POST /api/v1/auth/login`.
+
+- **Change admin password**: set `LH_ADMIN_PASS=<new>` then restart; or log in and use `POST /auth/register` to create a new account as admin (disable public registration via `LH_AUTH_ALLOW_REGISTER=false`).
+- **Production hardening**: always set `LH_AUTH_SECRET` (≥16 chars), disable self-registration, keep loopback-admin off (`LH_AUTH_ALLOW_LOOPBACK_ADMIN=false`, already default).
+- Insufficient role → 403, no token → 401, rate exceeded → 429 (with `X-RateLimit-*` headers).
+</details>
+
 ## 6. 📚 Docs
 
 | Doc | Content |
@@ -222,7 +262,7 @@ LiHui is built on the following open capabilities and in-house modules:
 | 🧠 Knowledge retrieval | RRF three-channel fusion (BM25 × tag × category prior) + LLMWiki 14-standard term graph; zero-dependency local vectors |
 | 🖥 Server | Pure Node.js standard library (`node src/app.js` to start, no npm install); report cache + concurrent dedup |
 | 🌐 Frontend | Localized Leaflet (no CDN runtime dependency); web + WeChat Mini Program, same backend |
-| 🔒 Security | Honeypot trapping + IP ban + egress desensitization + CSP browser sandbox + 459 E2E attack cases |
+| 🔒 Security | Honeypot trapping + IP ban + egress desensitization + CSP browser sandbox + RBAC auth + role-aware rate limiting + 459 E2E attack cases |
 
 Sibling product lines: WenTu AI Transcoding · Death & Life FPS · LiHui Research Agent (LiyuAgent).
 

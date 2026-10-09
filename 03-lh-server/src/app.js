@@ -14,6 +14,7 @@ const store = require('./services/store');
 const { json, fail, readBody, clientIp, TRACE } = require('./utils/http');
 const security = require('./utils/security');
 const hub = require('./mcp/hub');
+const auth = require('./services/auth');
 
 // ★ 可选模块：百度底图站点（/map-home、瓦片代理、JS API 代理）。
 //   早先这里是直接 require，而这个 service 一度【没提交进 Gitee】——
@@ -29,7 +30,7 @@ try {
 }
 
 /* ---------------- 路由表 ---------------- */
-const modules = ['./routes/system', './routes/ip', './routes/map', './routes/life', './routes/agent', './routes/mcp', './routes/model', './routes/voice', './routes/token', './routes/feedback', './routes/action', './routes/shop', './routes/order', './routes/profile', './routes/security', './routes/memory'];
+const modules = ['./routes/system', './routes/ip', './routes/map', './routes/life', './routes/agent', './routes/mcp', './routes/model', './routes/voice', './routes/token', './routes/feedback', './routes/action', './routes/shop', './routes/order', './routes/profile', './routes/security', './routes/memory', './routes/auth'];
 const ROUTES = {};
 for (const m of modules) {
   try {
@@ -41,23 +42,67 @@ for (const m of modules) {
 
 const API_PREFIX = '/api/v1';
 
-/* ---------------- 简易限流：60 次/分钟/设备 ---------------- */
-const RATE = { windowMs: 60000, max: 60 };
-const rateMap = new Map();
-function rateLimited(key) {
+/* ---------------- RBAC 路由→最低角色（省略即 guest 公开） ----------------
+ * 受保护的多为「管理/运维/写」端点；面向 C 端的体检/地图/助手/商城保持匿名可用，
+ * 以不破坏小程序与网页版的既有调用。改一行即可收紧任意路由。 */
+const ROUTE_ROLE = {
+  'GET /security/events': auth.ROLE.admin,
+  'POST /token/quota': auth.ROLE.admin,
+  'POST /memory/analyze': auth.ROLE.admin,
+  'POST /memory/verify': auth.ROLE.admin,
+  'POST /memory/decide': auth.ROLE.admin,
+  'GET /feedback/list': auth.ROLE.admin,
+  'GET /feedback/detail': auth.ROLE.admin,
+  'POST /feedback/handle': auth.ROLE.admin,
+  'GET /feedback/summary': auth.ROLE.admin,
+  'POST /mcp/toggle': auth.ROLE.admin,
+  'POST /mcp/restart': auth.ROLE.admin,
+  'POST /mcp/call': auth.ROLE.admin,
+  'POST /mcp/install': auth.ROLE.admin,
+  'POST /mcp/remove': auth.ROLE.admin,
+  'POST /voice/config': auth.ROLE.admin,
+  'GET /stats': auth.ROLE.admin,
+  'GET /auth/me': auth.ROLE.user,
+};
+
+/* ---------------- 限流：角色感知令牌桶 + 标准响应头（2026-10-09 升级） ----------------
+ *  - 身份维度：匿名设备/账号按身份限速，管理员更高；
+ *  - IP 地板：仅对非回环来源生效（防客户端伪造 x-device-id 绕过）；回环=本机可信，免地板；
+ *  - 响应头：X-RateLimit-Limit / Remaining / Reset，429 时附 Retry-After。 */
+const RL = {
+  guest: { rpm: 60, burst: 10 },
+  user: { rpm: 300, burst: 40 },
+  admin: { rpm: 2000, burst: 200 },
+  ipFloor: { rpm: 120, burst: 20 }, // 单 IP 硬上限（防 deviceId 伪造绕过），仅非回环
+};
+const RATE_WINDOW = 60000;
+const rateBuckets = new Map();
+function rateBucket(key, rpm, burst) {
   const now = Date.now();
-  const rec = rateMap.get(key);
-  if (!rec || now - rec.start > RATE.windowMs) {
-    rateMap.set(key, { start: now, count: 1 });
-    return false;
+  let b = rateBuckets.get(key);
+  if (!b || b.rpm !== rpm || b.burst !== burst) {
+    b = { tok: burst, ts: now, rpm, burst };
+    rateBuckets.set(key, b);
   }
-  rec.count += 1;
-  return rec.count > RATE.max;
+  const perMs = rpm / RATE_WINDOW;
+  b.tok = Math.min(b.burst, b.tok + (now - b.ts) * perMs);
+  b.ts = now;
+  return b;
+}
+function rateCheck(key, rpm, burst) {
+  const b = rateBucket(key, rpm, burst);
+  if (b.tok >= 1) {
+    b.tok -= 1;
+    const resetMs = Math.ceil((1 - b.tok) / (rpm / RATE_WINDOW));
+    return { limited: false, remaining: Math.max(0, Math.floor(b.tok)), limit: burst, reset: Math.ceil((Date.now() + Math.max(0, resetMs)) / 1000) };
+  }
+  const retryAfter = Math.max(1, Math.ceil((1 - b.tok) / (rpm / RATE_WINDOW) / 1000));
+  return { limited: true, remaining: 0, limit: burst, reset: Math.ceil((Date.now() + retryAfter * 1000) / 1000), retryAfter };
 }
 setInterval(() => {
   const now = Date.now();
-  for (const [k, v] of rateMap) if (now - v.start > RATE.windowMs * 2) rateMap.delete(k);
-}, 300000).unref();
+  for (const [k, v] of rateBuckets) if (now - v.ts > RATE_WINDOW * 2) rateBuckets.delete(k);
+}, 120000).unref();
 
 /* ---------------- 静态资源 ---------------- */
 const MIME = { '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.json': 'application/json', '.txt': 'text/plain', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.map': 'application/json' };
@@ -224,10 +269,49 @@ const server = http.createServer(async (req, res) => {
     return fail(res, 4040, `接口不存在: ${req.method} ${pathname}`, 404, { traceId });
   }
 
-  // 限流（探活与静态不限）
-  const deviceId = req.headers['x-device-id'] || clientIp(req).ip || 'anonymous';
-  if (rateLimited(deviceId)) {
-    return fail(res, 1003, '请求过于频繁（60 次/分钟），请稍后再试', 429, { traceId });
+  // ===== RBAC 鉴权(2026-10-09) =====
+  const reqAuth = auth.fromRequest(req);
+  req.auth = reqAuth;
+  const routeKey = `${req.method} ${key}`;
+  const needRole =
+    ROUTE_ROLE[routeKey] !== undefined ? ROUTE_ROLE[routeKey] : ROUTE_ROLE[key] || auth.ROLE.guest;
+  if (needRole > auth.ROLE.guest) {
+    const isLoop = clientIp(req).local;
+    const loopAdminOk = isLoop && config.auth && config.auth.allowLoopbackAdmin === true;
+    if (reqAuth && reqAuth.role >= needRole) {
+      // 已登录且角色满足 → 放行
+    } else if (!reqAuth && loopAdminOk) {
+      // 本机回环匿名 → 视为 admin（本地开发便利，保留 memory 旧行为）
+      req.auth = { uid: 'loopback', username: 'loopback', role: auth.ROLE.admin, rank: auth.ROLE.admin };
+    } else if (!reqAuth) {
+      return fail(res, 4010, '未登录或令牌无效（请带 Authorization: Bearer <token>）', 401, { traceId });
+    } else {
+      return fail(res, 4031, `权限不足（需要 ${auth.ROLE_NAME[needRole] || '更高'} 角色）`, 403, { traceId });
+    }
+  }
+
+  // ===== 限流（角色感知令牌桶 + 标准响应头；探活与静态不限） =====
+  if (!isPlainHealth) {
+    const roleRank = (req.auth && req.auth.role) || auth.ROLE.guest;
+    const lim = roleRank >= auth.ROLE.admin ? RL.admin : roleRank >= auth.ROLE.user ? RL.user : RL.guest;
+    const idKey =
+      req.auth && req.auth.uid && req.auth.uid !== 'loopback'
+        ? `u:${req.auth.uid}`
+        : req.headers['x-device-id'] || clientIp(req).ip || 'anonymous';
+    const rc = rateCheck(idKey, lim.rpm, lim.burst);
+    let chosen = rc;
+    // IP 地板：仅非回环来源生效（防伪造 deviceId 绕过）；回环免地板
+    if (!clientIp(req).local) {
+      const ipc = rateCheck(`ip:${clientIp(req).ip || 'unknown'}`, RL.ipFloor.rpm, RL.ipFloor.burst);
+      if (ipc.limited) chosen = ipc;
+    }
+    res.setHeader('X-RateLimit-Limit', String(chosen.limit));
+    res.setHeader('X-RateLimit-Remaining', String(chosen.remaining));
+    res.setHeader('X-RateLimit-Reset', String(chosen.reset));
+    if (chosen.limited) {
+      res.setHeader('Retry-After', String(chosen.retryAfter || 1));
+      return fail(res, 1003, '请求过于频繁，请稍后再试', 429, { traceId });
+    }
   }
 
   // (q 已在上方安全防护段解析)
@@ -247,10 +331,14 @@ const server = http.createServer(async (req, res) => {
     if (result === undefined && !res.writableEnded) {
       return fail(res, 5000, 'handler 未返回响应', 500, { traceId });
     }
-    logger.info('http', `${req.method} ${pathname}`, { ms: Date.now() - t0, device: deviceId.slice(0, 24), traceId });
+    logger.info('http', `${req.method} ${pathname}`, { ms: Date.now() - t0, device: (req.headers['x-device-id'] || clientIp(req).ip || 'anonymous').slice(0, 24), traceId });
   } catch (e) {
     logger.error('http', `${req.method} ${pathname} 异常: ${e.message}`, { stack: (e.stack || '').split('\n').slice(0, 4).join(' | '), traceId });
-    if (!res.writableEnded) fail(res, 5000, `服务端内部错误：${e.message}`, 500, { traceId });
+    if (!res.writableEnded) {
+      // 请求体错误（坏 JSON / 超限）属客户端问题 → 400；其余才是 500
+      const isClient = /invalid json body|body too large/i.test(e.message);
+      fail(res, isClient ? 4000 : 5000, isClient ? `请求体错误：${e.message}` : `服务端内部错误：${e.message}`, isClient ? 400 : 500, { traceId });
+    }
   }
 });
 
@@ -265,6 +353,12 @@ async function bootstrap() {
     logger.info('app', `存储驱动：${st.driver}${st.driver === 'sqlite' ? `（${st.dbPath}${st.docs !== undefined ? `，${st.docs} docs` : ''}）` : '（data/*.json 单文件）'}`);
     logger.info('app', `进程模型：${cluster.isWorker ? `worker（主进程 ${process.ppid}，LH_WORKERS=${process.env.LH_WORKERS}）` : '单进程（设 LH_WORKERS>1 开启集群）'}`);
     logger.info('app', `路由数量：${Object.keys(ROUTES).length}`);
+    // RBAC：首次启动播种默认管理员（库内已有用户则跳过）
+    try {
+      auth.bootstrapSeed();
+    } catch (e) {
+      logger.warn('app', `RBAC 播种失败（不影响启动）: ${e.message}`);
+    }
 
     // ★ 启动自检：静态数据文件必须在镜像里，否则接口会「静默返回空」，
     //   本地跑得好好的、一上云就空白（典型：商品列表打不开）。

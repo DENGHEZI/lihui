@@ -312,7 +312,7 @@ module.exports = {
       poolSize: baiduMap.akHealth().length,
       aks: baiduMap.akHealth(),
       hint:
-        'BAIDU_AK 支持逗号分隔多把钥匙（.env 里 BAIDU_AK=ak1,ak2）。' +
+        'BAIDU_AK 支持逗号分隔多把钥匙（.env 中配置该项，形如 ak1,ak2 逗号分隔）。' +
         '某把钥匙配额打满/被风控停用时自动冷却 10 分钟并切换下一把，无需人工干预。',
     }),
 };

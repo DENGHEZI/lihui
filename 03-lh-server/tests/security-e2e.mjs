@@ -58,12 +58,15 @@ const TARGETS = [
 function request(pathname, { method = 'GET', body, headers = {}, timeout = 8000 } = {}) {
   return new Promise((resolve) => {
     const data = body === undefined ? null : Buffer.isBuffer(body) ? body : Buffer.from(JSON.stringify(body));
+    // 每发请求携带唯一 device-id（避免误触「单设备 60/min」限流，使注入套件真正打到处理器）
+    const devId = 'e2e-' + Math.random().toString(36).slice(2, 10);
     const req = http.request(
       `${BASE}${pathname}`,
       {
         method,
         headers: {
           ...(data ? { 'Content-Type': 'application/json', 'Content-Length': data.length } : {}),
+          'X-Device-Id': devId,
           ...headers,
         },
         timeout,
@@ -93,8 +96,9 @@ function assertSafe(caseName, r, payload, kind) {
   if (r.status >= 500) problems.push(`5xx: ${r.status}`);
   // 密钥泄露（无论什么攻击向量，响应里出现 .env 特征即失败）
   if (SECRETS_RE.test(r.text)) problems.push('响应含密钥特征（疑似 .env 泄露/穿越成功）');
-  // XSS 原样回显（未转义）
-  if (payload && /<script|onerror=/i.test(payload) && r.text.includes(payload.slice(0, 24))) {
+  // XSS 原样回显（未转义）—— 仅在 HTML 语境有意义；JSON API 回显用户输入非 XSS 漏洞
+  const ct = (r.head && r.head['content-type']) || '';
+  if (payload && /<script|onerror=/i.test(payload) && /text\/html/i.test(ct) && r.text.includes(payload.slice(0, 24))) {
     problems.push('XSS payload 原样回显（未转义）');
   }
   // CRLF 注入成功（响应头被污染）
@@ -167,14 +171,60 @@ async function run() {
   const queue = [...cases];
   await Promise.all(Array.from({ length: CONCURRENCY }, () => worker(queue)));
 
-  /* 蜜罐封禁（最后）：塞入已知蜜罐 key → 期望 4xx 且安全日志记下 */
+  /* ---------------- RBAC 鉴权 + 限流（2026-10-09） ---------------- */
+  // 错误密码 → 401
+  const loginBad = await request('/api/v1/auth/login', { method: 'POST', body: { username: 'admin', password: 'wrong' } });
+  if (loginBad.status !== 401) fails.push({ name: '登录错误密码应 401', problems: [`实得 ${loginBad.status}`], status: loginBad.status, sample: loginBad.text.slice(0, 120) });
+
+  // 无令牌访问 /auth/me → 401
+  const meNoToken = await request('/api/v1/auth/me', { method: 'GET' });
+  if (meNoToken.status !== 401) fails.push({ name: 'GET /auth/me 无令牌应 401', problems: [`实得 ${meNoToken.status}`], status: meNoToken.status, sample: meNoToken.text.slice(0, 120) });
+
+  // 默认管理员登录 → 200 + token
+  const adminU = process.env.LH_ADMIN_USER || 'admin';
+  const adminP = process.env.LH_ADMIN_PASS || 'lihui-admin-2026';
+  const loginOk = await request('/api/v1/auth/login', { method: 'POST', body: { username: adminU, password: adminP } });
+  let adminToken = '';
+  if (loginOk.status === 200) { try { adminToken = JSON.parse(loginOk.text).data.token; } catch (_) {} }
+  if (loginOk.status !== 200 || !adminToken) fails.push({ name: '默认管理员登录应 200', problems: [`实得 ${loginOk.status}`], status: loginOk.status, sample: loginOk.text.slice(0, 120) });
+  else {
+    const meOk = await request('/api/v1/auth/me', { method: 'GET', headers: { Authorization: `Bearer ${adminToken}` } });
+    if (meOk.status !== 200) fails.push({ name: 'GET /auth/me 带令牌应 200', problems: [`实得 ${meOk.status}`], status: meOk.status, sample: meOk.text.slice(0, 120) });
+    const secOk = await request('/api/v1/security/events', { method: 'GET', headers: { Authorization: `Bearer ${adminToken}` } });
+    if (secOk.status !== 200) fails.push({ name: 'admin 令牌访问 /security/events 应 200', problems: [`实得 ${secOk.status}`], status: secOk.status, sample: secOk.text.slice(0, 120) });
+  }
+
+  // 公开注册 user → 200 + token；user 令牌访问 admin 端点 → 403（回环豁免只在「无令牌」时生效）
+  const reg = await request('/api/v1/auth/register', { method: 'POST', body: { username: 'e2euser_' + Date.now(), password: 'e2epass123' } });
+  let userToken = '';
+  if (reg.status === 200) { try { userToken = JSON.parse(reg.text).data.token; } catch (_) {} }
+  if (reg.status !== 200 || !userToken) fails.push({ name: '公开注册应 200', problems: [`实得 ${reg.status}`], status: reg.status, sample: reg.text.slice(0, 120) });
+  else {
+    const userAdmin = await request('/api/v1/security/events', { method: 'GET', headers: { Authorization: `Bearer ${userToken}` } });
+    if (userAdmin.status !== 403) fails.push({ name: 'user 令牌访问 admin 端点应 403', problems: [`实得 ${userAdmin.status}`], status: userAdmin.status, sample: userAdmin.text.slice(0, 120) });
+  }
+
+  // 响应头含 X-RateLimit-*
+  const hdr = await request('/api/v1/config/public', { method: 'GET' });
+  if (!hdr.head['x-ratelimit-limit']) fails.push({ name: '响应应含 X-RateLimit-Limit 头', problems: ['缺失'], status: hdr.status, sample: '' });
+
+  // 限流：固定 device-id 打满单设备 60/min → 应出现 429
+  let got429 = false;
+  const shots = await Promise.all(
+    Array.from({ length: 130 }, () => request('/api/v1/config/public', { method: 'GET', headers: { 'X-Device-Id': 'rate-fixed-device' } }))
+  );
+  for (const s of shots) if (s.status === 429) got429 = true;
+  if (!got429) fails.push({ name: '限流应触发 429（单设备 60/min）', problems: ['未出现 429'], status: 0, sample: '' });
+
+  /* 蜜罐封禁（最后执行）：塞入已知蜜罐 key → 期望 4xx 且安全日志记下。
+   * 放在所有其他断言之后，是因为命中蜜罐会封禁本机 IP（loopback），
+   * 若提前跑会让后续 RBAC/限流请求被 403 连带失败。 */
   const pot = PAYLOADS.honeypot[0];
   const potRes = await request(`/api/v1/agent/standards?q=${encodeURIComponent('测试')}&ak=${pot}`);
   const potBlocked = potRes.status === 403 || potRes.status === 429 || /honeypot|forbidden|封禁/i.test(potRes.text);
   if (!potBlocked) fails.push({ name: '蜜罐假 key 封禁', problems: [`期望 403/429，实得 ${potRes.status}`], status: potRes.status, sample: potRes.text.slice(0, 120) });
 
-  /* 报告 */
-  const pass = cases.length + 1 - fails.length;
+  /* 报告 */  const pass = cases.length + 1 - fails.length;
   console.log('\n──────── E2E 安全测试报告 ────────');
   console.log(`总用例: ${cases.length + 1}   通过: ${pass}   其中溢出拒绝(预期): ${rejected}   失败: ${fails.length}   耗时: ${Date.now() - t0}ms`);
   if (fails.length) {

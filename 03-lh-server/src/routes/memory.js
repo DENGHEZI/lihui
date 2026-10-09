@@ -12,6 +12,7 @@
 const { ok, fail } = require('../utils/http');
 const config = require('../config');
 const memory = require('../services/memory');
+const auth = require('../services/auth');
 const logger = require('../utils/logger');
 
 function isLoopback(req) {
@@ -19,8 +20,11 @@ function isLoopback(req) {
   return r === '127.0.0.1' || r === '::1' || r === '::ffff:127.0.0.1';
 }
 function isAdmin(req) {
+  // 统一 RBAC：Bearer 令牌解析出的 admin 角色（由 app.js 中间件注入 req.auth）
+  if (req.auth && req.auth.role >= auth.ROLE.admin) return true;
+  // 兼容旧令牌：X-Admin-Token（env MEMORY_ADMIN_TOKEN）；未配置时仅本机回环可写
   const t = config.memory.adminToken;
-  if (!t) return isLoopback(req); // 未配置令牌:仅本机可写
+  if (!t) return isLoopback(req);
   return (req.headers['x-admin-token'] || '') === t;
 }
 function guard(req, res, traceId) {

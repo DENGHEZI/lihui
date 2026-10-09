@@ -117,6 +117,23 @@ const config = {
     },
   },
 
+  // RBAC 鉴权（2026-10-09 补齐）
+  // secret: 令牌签名密钥（env LH_AUTH_SECRET，≥16 位；缺失则进程内退化密钥，重启失效，仅本地/dev）
+  // adminUser/adminPass: 首次启动播种的默认管理员账号（env LH_ADMIN_USER / LH_ADMIN_PASS）
+  // allowRegister: 是否开放公开自注册（默认 true；生产建议 false，仅由管理员创建账号）
+  // allowLoopbackAdmin: 本机回环是否视为 admin（默认 false=安全；仅本地单进程调试且无令牌时设 true）
+  //   默认关闭，否则 127.0.0.1 上任意匿名请求=admin（含平台健康检查），RBAC 形同虚设。
+  //   memory.js 另有 X-Admin-Token 兜底，关闭回环豁免不影响本地运维。
+  // tokenTtlMs: 令牌有效期（默认 7 天）
+  auth: {
+    secret: env('LH_AUTH_SECRET', ''),
+    adminUser: env('LH_ADMIN_USER', 'admin'),
+    adminPass: env('LH_ADMIN_PASS', 'lihui-admin-2026'),
+    allowRegister: bool('LH_AUTH_ALLOW_REGISTER', true),
+    allowLoopbackAdmin: bool('LH_AUTH_ALLOW_LOOPBACK_ADMIN', false),
+    tokenTtlMs: num('LH_AUTH_TOKEN_TTL_MS', 7 * 24 * 3600 * 1000),
+  },
+
   // 缓存 TTL（毫秒）
   cache: {
     ip: 30 * 60 * 1000,

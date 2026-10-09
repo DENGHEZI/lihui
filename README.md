@@ -39,6 +39,7 @@
 - 🏪 **真实店源数据**：百度 POI 实时检索，步行距离 + 时长实测，非离线模拟。
 - 🤖 **AI 智能助手**：RRF 三通道检索 + LLMWiki 词条图，标准原文注入、引用带编号出处。
 - 🧪 **E2E 安全 + 浏览器沙箱**：459 条攻击用例全绿，CSP 沙箱响应头三路生效。
+- 🔐 **RBAC 鉴权 + 角色感知限流**：三角色最小权限（guest<user<admin），管理/运维端点强制鉴权；scrypt 口令 + HMAC 签名无状态令牌，令牌桶按身份限速并下發标准 `X-RateLimit-*` 响应头。
 - 🔑 **AK 池自愈**：百度地图多钥匙轮换，配额打满自动冷却切换，Key 掉线零人工干预。
 - ⚡ **体检提速**：报告级缓存 + 并发去重 + 本地引擎优先，热启动 5.6ms / 冷启动 1.34s。
 - 📦 **零第三方依赖**：服务端纯 Node 标准库，前端 Leaflet 本地化，Gitee 推送即部署。
@@ -136,7 +137,8 @@
 | 🧩 **多 Agent 编排** | Orchestrator + 并行专家 Agent + 强类型契约 + 信任分派；规则直调 MCP 工具（杜绝 function-calling 猜工具名）；MCP 自扩展——不确定时自动从 ModelScope 检索并安装新 MCP Server（8s 限时、进程装 3 个上限）。 |
 | ⚡ **三道性能闸** | 报告级缓存（量化圆心 10min TTL）→ 并发去重（多端同页共享一次计算）→ 本地引擎优先（与等时圈共享 POI 缓存）。体检热启动 5.6ms、冷启动 1.34s。 |
 | 🔐 **密钥零下发** | 蜜罐假密钥诱捕、出网脱敏、服务端代理、AK 不进前端；扒页面的人拿到废钥匙，一打接口安全日志立刻记下并封禁。 |
-| 🧪 **E2E 安全 + 浏览器沙箱** | 459 条自动化攻击用例（SQLi/XSS/穿越/CRLF/溢出/蜜罐…）首跑全绿；CSP 沙箱响应头三路生效——外域脚本、iframe 嵌套、追踪像素被浏览器直接拒绝。 |
+| 🔐 **RBAC 鉴权 + 限流** | 三角色最小权限（guest<user<admin），管理/运维端点按 `ROUTE_ROLE` 表强制鉴权；令牌：scrypt 口令 + HMAC-SHA256 签名无状态令牌（类 JWT，零三方库）。令牌桶按身份限速（admin 2000rpm / user 300 / guest 60）+ 单 IP 地板防伪造 device-id，标准 `X-RateLimit-Limit/Remaining/Reset` 头 + 429 `Retry-After`。 |
+| 🧪 **E2E 安全 + 浏览器沙箱** | 459 条自动化攻击用例（SQLi/XSS/穿越/CRLF/溢出/蜜罐/RBAC/限流…）首跑全绿；CSP 沙箱响应头三路生效——外域脚本、iframe 嵌套、追踪像素被浏览器直接拒绝。 |
 | 🔑 **AK 池自愈** | 百度地图 AK 支持多钥匙轮换：配额打满/被停用自动冷却切换，0 点重置自动回归——Key 掉线不再需要人工干预。 |
 | 📦 **零第三方依赖** | 服务端纯 Node 标准库（`node src/app.js` 即起，无需 npm install）；前端 Leaflet 本地化，无 CDN 运行时依赖；Gitee push → 云托管自动构建部署。 |
 | 🗺 **坐标系纪律** | 全站统一 GCJ-02（定位 / 检索 / 算路 / 瓦片一致），混用偏移 500-900m 的坑在代码注释里都有案底。 |
@@ -159,11 +161,39 @@ node src/app.js        # 零依赖，无需 npm install
 
 **接口自述**：访问 `/server-info` 查看全部端点；服务端日志在 `data/logs`。
 
+**管理员登录与受保护接口**
+
+服务端对管理/运维端点强制 RBAC 鉴权（`guest<user<admin`）。首启自动播种默认管理员（仅库内无用户时），建议上线即改口令并关自注册：
+
+```bash
+# 1) 用默认管理员登录，拿到无状态令牌
+curl -X POST http://localhost:8809/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"lihui-admin-2026"}'
+# → {"code":0,"data":{"token":"<JWT 式签名令牌>","user":{"role":"admin"}}}
+
+# 2) 带令牌访问受保护端点（如安全事件看板）
+curl http://localhost:8809/api/v1/security/events \
+  -H 'Authorization: Bearer <上一步的 token>'
+
+# 3) 角色不足 / 未登录 → 403 / 401；打满速率 → 429（响应含 X-RateLimit-* 头）
+```
+
+关键环境变量（`.env` 或启动前 export）：
+
+| 变量 | 默认 | 说明 |
+| --- | --- | --- |
+| `LH_AUTH_SECRET` | 空（退化密钥） | 令牌签名密钥，**≥16 位**，生产必配，否则重启即失效 |
+| `LH_ADMIN_USER` / `LH_ADMIN_PASS` | `admin` / `lihui-admin-2026` | 默认管理员账号；库内已有用户则不再播种 |
+| `LH_AUTH_ALLOW_REGISTER` | `true` | 公开自注册开关，**生产建议 `false`** |
+| `LH_AUTH_ALLOW_LOOPBACK_ADMIN` | `false` | 本机回环是否视为 admin（仅本地无令牌调试用，默认关） |
+| `LH_AUTH_TOKEN_TTL_MS` | 7 天 | 令牌有效期 |
+
 **安全自检**（服务起着时另开终端）：
 
 ```bash
 cd 03-lh-server
-node tests/security-e2e.mjs   # 459 条攻击用例，五条铁律断言，~250ms 跑完
+node tests/security-e2e.mjs   # 459 条攻击用例（含 RBAC/限流），五条铁律断言
 ```
 
 ## 5. ❓ 常见问题
@@ -198,6 +228,16 @@ node tests/security-e2e.mjs   # 459 条攻击用例，五条铁律断言，~250m
 播报内置微软 Edge 免费合成引擎，零密钥可用；配百度语音密钥后自动切百度音色。语音识别走服务端 ASR 代理，密钥同样不下发端上。
 </details>
 
+<details>
+<summary><b>受保护接口返回 401/403，或想改管理员口令？</b></summary>
+
+管理/运维端点（安全事件、Memory 分析、MCP 管理、反馈处理等）需 `Authorization: Bearer <token>`。登录拿令牌：`POST /api/v1/auth/login`。
+
+- **改管理员口令**：设 `LH_ADMIN_PASS=新口令` 后重启；或登录后用 `POST /auth/register` 由管理员创建新账号（公开自注册请设 `LH_AUTH_ALLOW_REGISTER=false`）。
+- **生产加固**：务必配 `LH_AUTH_SECRET`（≥16 位）、关自注册、关回环豁免（`LH_AUTH_ALLOW_LOOPBACK_ADMIN=false` 默认已关）。
+- 角色不足返回 403、未登录 401、打满速率 429（响应含 `X-RateLimit-*` 头）。
+</details>
+
 ## 6. 📚 文档
 
 | 文档 | 内容 |
@@ -222,7 +262,7 @@ node tests/security-e2e.mjs   # 459 条攻击用例，五条铁律断言，~250m
 | 🧠 知识检索 | RRF 三通道融合（BM25 × 标签 × 类目先验）+ LLMWiki 14 部标准词条图；零依赖本地向量 |
 | 🖥 服务端 | 纯 Node.js 标准库（`node src/app.js` 即起，无 npm install）；report 缓存 + 并发去重 |
 | 🌐 前端 | Leaflet 本地化（无 CDN 运行时依赖）；网页版 + 微信小程序同源后端 |
-| 🔒 安全 | 蜜罐诱捕 + IP 封禁 + 出网脱敏 + CSP 浏览器沙箱 + 459 条 E2E 攻击用例 |
+| 🔒 安全 | 蜜罐诱捕 + IP 封禁 + 出网脱敏 + CSP 浏览器沙箱 + RBAC 鉴权 + 角色感知限流 + 459 条 E2E 攻击用例 |
 
 同源作品线：文途 AI 转码 · 死与生 FPS · 鲤慧科研 Agent（LiyuAgent）。
 

@@ -5,6 +5,31 @@
 
 ---
 
+## [V1.0.5] · 2026-10-09 · RBAC 用户鉴权 + 角色感知限流
+
+### 🔐 RBAC 用户鉴权（零三方依赖，`services/auth.js` / `routes/auth.js` / `app.js`）
+- **三角色最小权限**：`guest(0) < user(1) < admin(2)`；`ROUTE_ROLE` 表对管理/运维端点（安全事件、Memory 分析/核验/决策、MCP 管理、反馈处理、语音配置、统计等）施加最低角色，改一行即可收紧任意路由，C 端（体检/地图/助手/商城）保持匿名可用不破坏既有调用；
+- **登录/注册/我**：`POST /auth/login`、`POST /auth/register`（公开仅 user；申请 admin 须已登录管理员；`LH_AUTH_ALLOW_REGISTER=false` 时整体 403）、`GET /auth/me`（需 user）；
+- **口令安全**：`crypto.scryptSync` 加盐哈希 + `crypto.timingSafeEqual` 防时序攻击，无明文落盘；
+- **无状态令牌**：HMAC-SHA256 签名的不透明 token（类 JWT，载荷含 `iat/exp`，零三方库），`LH_AUTH_SECRET` 作密钥；缺失则退化进程内密钥并告警（重启失效，仅本地开发）；
+- **默认管理员播种**：首次启动（`store.collection('users')` 为空）从 `LH_ADMIN_USER/LH_ADMIN_PASS` 播种默认 admin，库内已有用户即跳过，凭据不入库（已由 `.gitignore` 排除 `data/users.json`）；
+- **回环豁免默认关闭**：`LH_AUTH_ALLOW_LOOPBACK_ADMIN` 默认 `false`（原默认 true 会让 127.0.0.1 任意匿名=admin，RBAC 形同虚设）；本地无令牌调试才显式开启。Memory 另有 `X-Admin-Token` 兜底，不受影响。
+
+### ⚡ 角色感知限流：令牌桶 + 标准响应头（`app.js`）
+- **按身份限速**：`admin 2000rpm/200burst`、`user 300/40`、`guest 60/10` + **单 IP 地板** `120/20` 仅对非回环来源生效（防客户端伪造 `x-device-id` 绕过）；
+- **标准头**：每个非探活响应携带 `X-RateLimit-Limit / Remaining / Reset`，超限返回 `429` + `Retry-After`；令牌桶平滑突发，桶过期自动回收；
+- **限流与鉴权解耦**：限流键优先用已登录 `uid`，匿名回退 `x-device-id`/IP，回环免 IP 地板。
+
+### 🧪 E2E 安全套件收尾（`tests/security-e2e.mjs`）
+- 新增 RBAC/限流断言块：错误密码→401、无令牌→401、默认管理员→200+token、注册 user→200+token、user 令牌访问 admin 端点→403、响应含 `X-RateLimit-*`、固定 device-id 打满→429；
+- 修复既有误报：蜜罐用例原本在 RBAC 断言前把 loopback 自封导致后续全 403，已移至套件末尾；`/map/ak-status` 提示文案去掉字面 `BAIDU_AK=` 避免命中密钥正则；XSS 回显断言收窄到 `text/html` 语境（JSON API 回显用户输入非漏洞）；坏 JSON 由 500 改为 400；
+- 现状：**459/459 全绿**（含 RBAC/限流，五条铁律）。
+
+### 📝 文档
+- README（中/英）核心特性、架构亮点、安全生态补充 RBAC + 限流；快速上手加管理员登录示例与关键环境变量表；常见问题加 RBAC 条目。
+
+---
+
 ## [V1.0.0] · 2026-10-07 · 首个正式发行版
 
 **发行版内容（自 V1.0.0 起按语义化版本发布）：**

@@ -23,3 +23,11 @@ data/models.json
 data/*.db
 data/*.db-wal
 data/*.db-shm
+
+# RBAC 运行时数据（首启自动播种默认管理员，无需入库；含凭据，禁止提交）
+data/users.json
+# 蜜罐/IP 封禁运行时状态（重启即清，禁止提交）
+data/security-bans.json
+# Memory 人机协同运行时产出（非仓库根 memory/ 的正式记忆）
+data/memory-learnings.json
+data/memory-suggestions.json
