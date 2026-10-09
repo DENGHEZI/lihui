@@ -1,0 +1,35 @@
+# 鲤慧 LiHui · 落地页部署到 GitHub Pages
+# 作用：把 docs/landing 下的静态站点（index.html + 预览 GIF）发布到 gh-pages 分支。
+# 启用后访问地址：https://denghezi.github.io/lihui/
+# 启用步骤（推上去之后在 GitHub 仓库操作一次）：
+#   Settings → Pages → Build and deployment → Source 选 “Deploy from a branch”
+#   Branch 选 gh-pages，folder 选 /(root)，Save。
+# 之后每次 push master 且 docs/landing 有改动，本工作流自动重新部署。
+
+name: Deploy Landing Page
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'docs/landing/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 发布 docs/landing 到 gh-pages 分支
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/landing
+          # 落地页 GIF 使用同目录 ./ 引用，发布到 gh-pages 根目录后链接自动正确
+          # 线上地址：https://denghezi.github.io/lihui/
