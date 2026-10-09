@@ -10,6 +10,7 @@
  *    deviceId 为安装时随机生成的匿名 ID（utils/token.js）
  */
 const { post } = require('./request.js')
+const privacy = require('./privacy.js')
 
 const STORE_KEY = 'lh_personalize'
 const THROTTLE_MS = 5000
@@ -38,6 +39,7 @@ function setEnabled(v) {
  */
 function track(event, payload) {
   if (!isEnabled()) return
+  if (!privacy.hasAgreed()) return // 隐私同意门控：未同意端上直接不采集（服务端 V1.0.10 同步门控兜底）
   if (!event) return
   let sig = ''
   try { sig = event + '|' + JSON.stringify(payload || {}) } catch (e) { return }

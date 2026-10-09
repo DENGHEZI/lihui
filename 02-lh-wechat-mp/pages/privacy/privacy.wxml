@@ -1,0 +1,80 @@
+<!-- 鲤慧 LiHui · 隐私中心：政策全文 + 同意状态 + 自助权（同意/撤回/导出/删除） -->
+<view class="wrap">
+
+  <!-- 同意状态卡 -->
+  <view class="lh-card status-card">
+    <view class="status-row">
+      <view class="status-left">
+        <text class="lh-cap">个性化采集同意状态</text>
+        <text class="status-v {{agreed ? 'ok' : decided ? 'off' : 'unknown'}}">
+          {{agreed ? '✓ 已同意' : decided ? '✕ 未同意（仅基础功能）' : '· 尚未选择'}}
+        </text>
+      </view>
+      <button wx:if="{{agreed}}" class="btn-warn" size="mini" disabled="{{busy}}" bindtap="onWithdraw">撤回同意</button>
+      <button wx:else class="btn-main" size="mini" disabled="{{busy}}" bindtap="onAgree">同意并开启</button>
+    </view>
+    <text class="lh-mini">同意后记录搜索 / 点店 / 导航偏好用于个性化推荐；拒绝不影响基础功能。服务端状态：{{serverConsented === null ? '未知' : serverConsented ? '已记录同意' : '未记录'}}。</text>
+  </view>
+
+  <!-- 自助权 -->
+  <view class="lh-card">
+    <text class="lh-cap">你的数据权利</text>
+    <view class="right-row" bindtap="onExport">
+      <text class="r-ico">📤</text>
+      <view class="r-main">
+        <text class="r-t">导出我的数据</text>
+        <text class="lh-mini">画像 + 同意记录 + 用量，JSON 复制到剪贴板</text>
+      </view>
+      <text class="m-arrow">›</text>
+    </view>
+    <view class="right-row" bindtap="onDelete">
+      <text class="r-ico">🗑️</text>
+      <view class="r-main">
+        <text class="r-t danger">删除我的全部数据</text>
+        <text class="lh-mini">永久删除行为画像与同意记录，不可恢复</text>
+      </view>
+      <text class="m-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 政策全文 -->
+  <view class="lh-card">
+    <view class="p-head">
+      <text class="lh-cap">隐私政策</text>
+      <text class="p-ver" wx:if="{{policy}}">v{{policy.version}} · {{policy.effectiveAt}}</text>
+    </view>
+    <text class="p-summary">{{policy.summary || '加载中…'}}</text>
+
+    <block wx:if="{{policy.collected && policy.collected.length}}">
+      <text class="p-sec">我们收集什么</text>
+      <view class="p-item" wx:for="{{policy.collected}}" wx:key="item">
+        <text class="p-i-t">· {{item.item}}{{item.required ? '' : '（可选）'}}</text>
+        <text class="lh-mini">用途：{{item.purpose}}</text>
+        <text class="lh-mini" wx:if="{{item.note}}">{{item.note}}</text>
+      </view>
+    </block>
+
+    <block wx:if="{{policy.notCollected && policy.notCollected.length}}">
+      <text class="p-sec">我们不收集什么</text>
+      <view class="p-item" wx:for="{{policy.notCollected}}" wx:key="*this">
+        <text class="p-i-t">· {{item}}</text>
+      </view>
+    </block>
+
+    <block wx:if="{{policy.storage}}">
+      <text class="p-sec">存储与安全</text>
+      <text class="p-item">{{policy.storage}}</text>
+    </block>
+
+    <block wx:if="{{policy.rights && policy.rights.length}}">
+      <text class="p-sec">你的权利</text>
+      <view class="p-item" wx:for="{{policy.rights}}" wx:key="*this">
+        <text class="p-i-t">· {{item}}</text>
+      </view>
+    </block>
+
+    <text class="lh-mini" wx:if="{{policy.contact}}">联系邮箱：{{policy.contact}}</text>
+  </view>
+
+  <view style="height: 64rpx"></view>
+</view>

@@ -4,6 +4,7 @@
 const { ensureDeviceId } = require('./utils/token.js')
 const { getCareMode } = require('./utils/care.js')
 const { safeGcj02 } = require('./utils/coord.js')
+const privacy = require('./utils/privacy.js')
 
 /** 定位结果复用时长：3 分钟内直接复用，避免反复弹权限；过期后静默刷新 */
 const LOC_TTL = 3 * 60 * 1000
@@ -41,6 +42,8 @@ App({
     this.globalData.deviceId = ensureDeviceId()
     this.globalData.careMode = getCareMode()
     console.log('[鲤慧] 小程序启动，deviceId =', this.globalData.deviceId)
+    // 隐私合规：首次启动征求画像采集同意（未选择过才弹；已同意则静默补登服务端）
+    try { privacy.ensureFirstRun(this) } catch (e) { console.warn('[鲤慧] 隐私弹窗异常', e) }
   },
 
   onShow() {

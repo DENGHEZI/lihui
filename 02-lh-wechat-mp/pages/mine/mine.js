@@ -262,6 +262,9 @@ Page({
   goSettings() {
     wx.navigateTo({ url: '/pages/settings/settings' })
   },
+  goPrivacy() {
+    wx.navigateTo({ url: '/pages/privacy/privacy' })
+  },
   goShop() {
     wx.navigateTo({ url: '/pages/shop/shop' })
   },

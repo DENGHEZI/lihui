@@ -83,6 +83,11 @@
       <text class="m-txt">模型与语音设置</text>
       <text class="m-arrow">›</text>
     </view>
+    <view class="menu-row" bindtap="goPrivacy">
+      <text class="m-ico">🛡️</text>
+      <text class="m-txt">隐私中心（政策 / 同意 / 导出 / 删除）</text>
+      <text class="m-arrow">›</text>
+    </view>
     <view class="menu-row" bindtap="goLife">
       <text class="m-ico">◔</text>
       <text class="m-txt">15 分钟生活圈体检</text>

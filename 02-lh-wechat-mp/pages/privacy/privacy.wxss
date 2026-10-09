@@ -1,0 +1,113 @@
+/* 鲤慧 LiHui · 隐私中心样式（沿用全局 lh-* 变量与卡片风格） */
+.wrap {
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+/* 状态卡 */
+.status-card .status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+.status-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+.status-v {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+.status-v.ok {
+  color: #0fa693;
+}
+.status-v.off {
+  color: #b45309;
+}
+.status-v.unknown {
+  color: #6b7280;
+}
+
+/* 按钮 */
+.btn-main {
+  background: #0fa693;
+  color: #fff;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+}
+.btn-warn {
+  background: #fff;
+  color: #b45309;
+  border: 1rpx solid #e5e7eb;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+}
+button[disabled] {
+  opacity: 0.6;
+}
+
+/* 自助权行 */
+.right-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 24rpx 4rpx;
+  border-bottom: 1rpx solid #f1f2f4;
+}
+.right-row:last-child {
+  border-bottom: none;
+}
+.r-ico {
+  font-size: 36rpx;
+}
+.r-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+.r-t {
+  font-size: 29rpx;
+  color: #1f2329;
+}
+.r-t.danger {
+  color: #d64545;
+}
+
+/* 政策文本 */
+.p-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+.p-ver {
+  font-size: 22rpx;
+  color: #8f959e;
+}
+.p-summary {
+  display: block;
+  font-size: 27rpx;
+  line-height: 1.7;
+  color: #3f3f46;
+  margin-bottom: 20rpx;
+}
+.p-sec {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+  margin: 24rpx 0 10rpx;
+}
+.p-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  padding: 10rpx 0;
+}
+.p-i-t {
+  font-size: 27rpx;
+  color: #1f2329;
+}
