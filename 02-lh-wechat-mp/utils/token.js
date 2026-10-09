@@ -5,6 +5,7 @@ const KEY_DEVICE = 'lh_device_id'
 const KEY_PLAN = 'lh_plan'
 const KEY_CARE = 'lh_care_mode'
 const KEY_VOICE = 'lh_voice_cfg'
+const KEY_AUTH = 'lh_auth' // { token, user } 登录态
 
 function randomId() {
   let s = ''
@@ -81,6 +82,40 @@ function setVoiceCache(cfg) {
   } catch (e) {}
 }
 
+/* 登录态（RBAC 令牌 + 用户资料）
+ * user 里含 nickname/avatar，改资料后这里同步更新，「我的」页离线也能显示 */
+function getAuth() {
+  try {
+    return wx.getStorageSync(KEY_AUTH) || null
+  } catch (e) {
+    return null
+  }
+}
+
+function setAuth(data) {
+  try {
+    wx.setStorageSync(KEY_AUTH, data || null)
+  } catch (e) {}
+}
+
+function clearAuth() {
+  try {
+    wx.removeStorageSync(KEY_AUTH)
+  } catch (e) {}
+}
+
+function getAuthToken() {
+  const a = getAuth()
+  return (a && a.token) || ''
+}
+
+function patchAuthUser(user) {
+  const a = getAuth() || {}
+  a.user = Object.assign({}, a.user || {}, user || {})
+  setAuth(a)
+  return a.user
+}
+
 module.exports = {
   ensureDeviceId,
   getDeviceId,
@@ -89,5 +124,10 @@ module.exports = {
   getCareMode,
   setCareMode,
   getVoiceCache,
-  setVoiceCache
+  setVoiceCache,
+  getAuth,
+  setAuth,
+  clearAuth,
+  getAuthToken,
+  patchAuthUser
 }

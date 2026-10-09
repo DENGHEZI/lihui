@@ -84,6 +84,14 @@ const getVoiceConfig = () => get('/voice/config')
 const saveVoiceConfig = (cfg) => post('/voice/config', cfg)
 const tts = (text, opts) => post('/voice/tts', Object.assign({ text }, opts || {}))
 
+/* ---------------- 鉴权 / 个人资料（RBAC） ----------------
+ * login/register 返回 { token, user }；profile 改昵称/头像返回 { user }
+ * silent：登录态相关失败不打全局 toast，由「我的」页自己弹窗引导 */
+const authLogin = (username, password) => post('/auth/login', { username, password }, { silent: true })
+const authRegister = (username, password) => post('/auth/register', { username, password }, { silent: true })
+const authMe = () => get('/auth/me', {}, { silent: true })
+const authProfile = (p) => post('/auth/profile', p)
+
 /* ---------------- 反馈 / Token / 动作 ---------------- */
 const submitFeedback = (p) => post('/feedback', p)
 const tokenStats = (range) => get('/token/stats', { range: range || '7d' })
@@ -163,5 +171,9 @@ module.exports = {
   openApp,
   desktopOperate,
   publicConfig,
-  uploadAsr
+  uploadAsr,
+  authLogin,
+  authRegister,
+  authMe,
+  authProfile
 }

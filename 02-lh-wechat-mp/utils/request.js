@@ -7,7 +7,7 @@
  *  - 仅业务性只读数据缓存（天气/推荐/体检报告），搜索与对话永远实时
  */
 const config = require('./config.js')
-const { getDeviceId, getPlan } = require('./token.js')
+const { getDeviceId, getPlan, getAuthToken } = require('./token.js')
 
 let lastTokenCost = 0
 
@@ -124,6 +124,9 @@ function request(path, { method = 'GET', data = {}, loading = false, loadingText
       'X-Device-Id': getDeviceId(),
       'X-Plan': getPlan()
     }
+    // 已登录则带 RBAC 令牌（/auth/me、/auth/profile 等需要；401 时端上自己处理）
+    const authToken = getAuthToken()
+    if (authToken) header.Authorization = 'Bearer ' + authToken
     const onSuccess = (res) => {
       const body = res.data || {}
       if (body.code === 0) {

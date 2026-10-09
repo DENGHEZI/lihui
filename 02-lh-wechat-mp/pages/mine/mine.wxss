@@ -56,6 +56,93 @@
   padding: 8rpx 20rpx;
   align-self: flex-start;
 }
+
+/* ---------------- 资料卡：可自定义头像 / 昵称 ---------------- */
+.avatar {
+  position: relative;
+}
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: block;
+}
+.avatar-edit {
+  position: absolute;
+  right: -4rpx;
+  bottom: -4rpx;
+  width: 40rpx;
+  height: 40rpx;
+  line-height: 36rpx;
+  text-align: center;
+  font-size: 22rpx;
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #3A8BFF, #1677FF);
+  border: 3rpx solid #FFFFFF;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.theme-dark .avatar-edit {
+  border-color: rgba(255, 255, 255, .18);
+}
+.p-name-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+.p-name-edit {
+  margin-left: 12rpx;
+  font-size: 24rpx;
+  color: var(--lh-text-weak);
+  opacity: .7;
+}
+.p-hint {
+  margin-top: 6rpx;
+  opacity: .75;
+}
+.p-logout {
+  font-size: 24rpx;
+  color: var(--lh-text-sub);
+  background: var(--lh-glass-hi);
+  border: 1rpx solid var(--lh-glass-line);
+  border-radius: 999rpx;
+  padding: 8rpx 20rpx;
+  align-self: flex-start;
+}
+
+/* ---------------- 登录 / 注册卡 ---------------- */
+.login-card {
+  padding-bottom: 32rpx;
+}
+.login-in {
+  margin-top: 20rpx;
+  height: 84rpx;
+  padding: 0 26rpx;
+  border-radius: 20rpx;
+  background: var(--lh-glass-hi);
+  border: 1rpx solid var(--lh-glass-line);
+  font-size: 28rpx;
+  color: var(--lh-text);
+}
+.login-btn {
+  margin-top: 28rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 20rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #3A8BFF, #1677FF);
+  box-shadow: 0 6rpx 20rpx rgba(22, 119, 255, .35);
+}
+.login-btn.is-busy {
+  opacity: .6;
+}
+.login-tip {
+  display: block;
+  margin-top: 16rpx;
+  text-align: center;
+}
 .lh-card {
   margin: 24rpx 32rpx 0;
 }

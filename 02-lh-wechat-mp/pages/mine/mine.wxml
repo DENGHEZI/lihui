@@ -1,11 +1,34 @@
 <view class="lh-page {{careMode ? 'care-mode' : ''}} {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="profile">
-    <view class="avatar">鲤</view>
-    <view class="p-mid">
-      <text class="p-name">鲤慧用户</text>
-      <text class="lh-cap">{{deviceShort}} · {{planName}}</text>
+    <view class="avatar" bindtap="onChooseAvatar">
+      <image wx:if="{{avatarUrl}}" class="avatar-img" src="{{avatarUrl}}" mode="aspectFill" />
+      <text wx:else>鲤</text>
+      <view class="avatar-edit">✎</view>
     </view>
-    <text class="p-loc">{{locText}}</text>
+    <view class="p-mid" bindtap="onEditName">
+      <view class="p-name-row">
+        <text class="p-name">{{logged ? nickname : '点击登录'}}</text>
+        <text wx:if="{{logged}}" class="p-name-edit">✎</text>
+      </view>
+      <text class="lh-cap">{{logged ? roleText + ' · ' + deviceShort : deviceShort + ' · ' + planName}}</text>
+      <text wx:if="{{logged}}" class="lh-mini p-hint">点头像换头像 · 点昵称改名字</text>
+    </view>
+    <text wx:if="{{logged}}" class="p-logout" catchtap="onLogout">退出</text>
+    <text wx:else class="p-loc">{{locText}}</text>
+  </view>
+
+  <!-- 登录 / 注册（RBAC 账号体系） -->
+  <view class="lh-card login-card" wx:if="{{loginShow}}">
+    <view class="head">
+      <text class="lh-h2">{{loginMode === 'register' ? '注册鲤慧账号' : '登录鲤慧'}}</text>
+      <text class="link" bindtap="switchLoginMode">{{loginMode === 'register' ? '已有账号，去登录' : '没有账号？注册'}}</text>
+    </view>
+    <input class="login-in" value="{{loginName}}" placeholder="用户名（至少 3 位）" bindinput="onNameInput" />
+    <input class="login-in" password value="{{loginPwd}}" placeholder="密码（至少 6 位）" bindinput="onPwdInput" />
+    <button class="login-btn {{submitting ? 'is-busy' : ''}}" bindtap="doSubmit">
+      {{submitting ? '请稍候…' : (loginMode === 'register' ? '注 册' : '登 录')}}
+    </button>
+    <text class="lh-mini login-tip">资料保存在服务端账号体系；登录后可自定义昵称与头像</text>
   </view>
 
   <!-- Token 消耗 -->

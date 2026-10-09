@@ -5,6 +5,28 @@
 
 ---
 
+## [V1.0.8] · 2026-10-09 · 个人资料：自定义昵称与头像（对接 RBAC 账号体系）
+
+### 👤 服务端（`services/auth.js` / `routes/auth.js` / `app.js`）
+- 用户记录新增 `nickname` / `avatar` 字段；`publicUser` 透出二者。
+- 新端点 `POST /api/v1/auth/profile`（`ROUTE_ROLE` 施加 `user` 角色）：`{ nickname?, avatar? }` 至少传一个；
+  - 昵称 1~24 字符；头像为 png/jpg/webp 的 dataURL，base64 全长 ≤ 256KB（约 190KB 二进制），超限/格式非法直接拒绝，传空串清除头像回落默认「鲤」字；
+  - 头像 base64 直存用户记录——量级合适（单枚压缩头像几十 KB）、零文件路由依赖，端上 `<image src="{{dataURL}}">` 直接显示。
+- `GET /api/v1/auth/me` 改为从库读实时资料（令牌载荷只含 uid/username/role，资料改动返回最新值）。
+
+### 📱 微信小程序端（`pages/mine/*` / `utils/*`）
+- 「我的」页资料卡升级：**点头像换头像、点昵称改名字**（含 ✎ 角标与操作提示）；未登录显示「点击登录」。
+- 新增内嵌登录/注册卡（用户名+密码，登录/注册一键切换），对接 `POST /auth/login`、`POST /auth/register`。
+- 换头像链路：`wx.chooseMedia`（compressed）→ 大于 200KB 先 `wx.compressImage`(q40) → 读 base64 拼 dataURL → **走 JSON 通道上传（免 uploadFile 域名校验）** → 更新服务端与本地缓存。
+- `utils/token.js` 新增登录态存取（`lh_auth`：token + user，含 `patchAuthUser` 局部更新）；`utils/request.js` 全局自动附 `Authorization: Bearer <token>`；`utils/api.js` 新增 `authLogin/authRegister/authMe/authProfile`。
+- 进「我的」页静默 `authMe` 同步资料；401 就地清登录态回落匿名。
+
+### ✅ 验证
+- E2E：注册 → 未登录改资料 401 → 改昵称/头像 200 → 非法格式拒、超大头像拒、空昵称拒、超长昵称拒 → `/auth/me` 读回含 nickname/avatar。
+- 安全套件 **459/459 全绿**（清空历史蜜罐持久化封禁后）。
+
+---
+
 ## [V1.0.7] · 2026-10-09 · 外卖平台「联网识别」（美团 / 饿了么 / 抖音）
 
 ### 🥡 门店维度外卖平台识别（`services/supplier.js` / `services/catalog.js` / `routes/shop.js`）

@@ -43,10 +43,30 @@ module.exports = {
     return ok(res, { token: login.token, user: login.user });
   },
 
-  /** GET /api/v1/auth/me（需 user 角色） */
+  /** GET /api/v1/auth/me（需 user 角色）—— 返回完整资料（含昵称/头像） */
   'GET /auth/me': async (req, res) => {
     const a = req.auth;
     if (!a) return fail(res, 4010, '未登录或令牌无效', 401);
-    return ok(res, { uid: a.uid, username: a.username, role: auth.ROLE_NAME[a.role] || 'guest' });
+    // 从库里读实时资料（令牌里只有 uid/username/role，昵称头像改过要最新值）
+    const u = auth.getUserById(a.uid);
+    return ok(res, u ? auth.publicUser(u) : { uid: a.uid, username: a.username, role: auth.ROLE_NAME[a.role] || 'guest' });
+  },
+
+  /**
+   * POST /api/v1/auth/profile { nickname?, avatar? }（需 user 角色）
+   *  · nickname：1~24 字符
+   *  · avatar：png/jpg/webp 的 dataURL（base64 ≤ 190KB），传空串清除回落默认
+   * 头像不需要文件上传通道——base64 直存用户记录，端上 <image> 直接显示。
+   */
+  'POST /auth/profile': async (req, res, q, body) => {
+    const a = req.auth;
+    if (!a) return fail(res, 4010, '未登录或令牌无效', 401);
+    const b = body || {};
+    if (b.nickname === undefined && b.avatar === undefined) {
+      return fail(res, 1001, 'nickname / avatar 至少传一个');
+    }
+    const r = auth.updateProfile(a.uid, { nickname: b.nickname, avatar: b.avatar });
+    if (r.error) return fail(res, 1001, r.error, 400);
+    return ok(res, { user: r.user });
   },
 };

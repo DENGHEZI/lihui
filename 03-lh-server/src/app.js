@@ -63,6 +63,7 @@ const ROUTE_ROLE = {
   'POST /voice/config': auth.ROLE.admin,
   'GET /stats': auth.ROLE.admin,
   'GET /auth/me': auth.ROLE.user,
+  'POST /auth/profile': auth.ROLE.user,
 };
 
 /* ---------------- 限流：角色感知令牌桶 + 标准响应头（2026-10-09 升级） ----------------

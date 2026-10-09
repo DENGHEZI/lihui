@@ -116,7 +116,48 @@ function getUserById(id) {
 }
 function publicUser(u) {
   if (!u) return null;
-  return { id: u.id, username: u.username, role: ROLE_NAME[u.role] || 'guest', createdAt: u.createdAt };
+  return {
+    id: u.id,
+    username: u.username,
+    role: ROLE_NAME[u.role] || 'guest',
+    createdAt: u.createdAt,
+    nickname: u.nickname || '',
+    avatar: u.avatar || '',
+  };
+}
+
+/* ---------------- 个人资料（昵称 / 头像，2026-10） ----------------
+ * 头像以 dataURL（base64）直接存用户记录：
+ *  · 量级合适——单枚压缩后头像 ~几十 KB，users.json 是低频写的小库；
+ *  · 零依赖——不引文件路由 / 静态目录，端上 <image src="{{dataURL}}"> 可直接显示。
+ * 上限：base64 全长 ≤ 256KB（约 190KB 二进制），超限拒绝，防止 users.json 被撑爆。 */
+const NICKNAME_MAX = 24;
+const AVATAR_MAX_CHARS = 256 * 1024;
+const AVATAR_RE = /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/;
+
+function updateProfile(uid, patch = {}) {
+  const u = getUserById(uid);
+  if (!u) return { error: '用户不存在' };
+  const p = {};
+  if (patch.nickname !== undefined) {
+    const nick = String(patch.nickname || '').trim();
+    if (!nick) return { error: '昵称不能为空' };
+    if (nick.length > NICKNAME_MAX) return { error: `昵称最多 ${NICKNAME_MAX} 个字符` };
+    p.nickname = nick;
+  }
+  if (patch.avatar !== undefined) {
+    const av = String(patch.avatar || '');
+    if (av === '') {
+      p.avatar = ''; // 允许清空头像，回落默认「鲤」字
+    } else {
+      if (!AVATAR_RE.test(av)) return { error: '头像必须是 png/jpg/webp 图片（dataURL）' };
+      if (av.length > AVATAR_MAX_CHARS) return { error: '头像太大（超过 190KB），请换小图' };
+      p.avatar = av;
+    }
+  }
+  if (!Object.keys(p).length) return { error: '没有要修改的内容' };
+  const out = users().update(uid, p);
+  return { user: publicUser(out || u) };
 }
 function createUser({ username, password, role }) {
   username = String(username || '').trim();
@@ -182,6 +223,7 @@ module.exports = {
   issueToken,
   verifyToken,
   createUser,
+  updateProfile,
   authenticate,
   getUserByName,
   getUserById,
