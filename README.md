@@ -4,6 +4,10 @@
 <p align="center">一句话说清「我家周边缺什么、去哪儿最方便、怎么走最省力」。<br>真实路网算路 · 真实店铺 · 真实步行距离 —— 不玩虚的。</p>
 
 <p align="center">
+  🇨🇳 中文 · <a href="README.en.md">🇺🇸 English</a>
+</p>
+
+<p align="center">
   <a href="https://gitee.com/deng-he-ziyan/lihui/releases"><img alt="最新发行版" src="https://img.shields.io/badge/%E6%9C%80%E6%96%B0%E5%8F%91%E8%A1%8C%E7%89%88-v1.0.0-C71D23"></a>
   <img alt="平台" src="https://img.shields.io/badge/%E5%B0%8F%E7%A8%8B%E5%BA%8F%20%C2%B7%20%E7%BD%91%E9%A1%B5%E7%89%88%20%C2%B7%20%E4%BA%91%E6%89%98%E7%AE%A1-%E4%B8%89%E7%AB%AF%E5%90%8C%E4%B8%80%E5%90%8E%E7%AB%AF-2f75f0">
   <img alt="依赖" src="https://img.shields.io/badge/Node.js-%E9%9B%B6%E4%B8%89%E6%96%B9%E4%BE%9D%E8%B5%96-00B96B">
