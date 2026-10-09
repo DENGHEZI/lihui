@@ -433,7 +433,7 @@
     <div class="mark">🐟</div>
     <div class="tt"><b>鲤<i>慧</i></b><span>15分钟生活圈 · 网页版</span></div>
   </div>
-  <div class="loc-chip" id="locChip" title="点击重新定位">
+  <div class="loc-chip" id="locChip" title="点击选择城市 / 手动纠正定位">
     <span class="dot off" id="locDot"></span><span id="locText">定位中…</span>
   </div>
 </div></header>
@@ -724,37 +724,69 @@ function setLocUI(city, district, src) {
   if (hot) hot.textContent = '🔥 ' + (c || '本城') + '热门';
 }
 
+/* 单次尝试浏览器定位：返回 {ok, coords, code}。code: 1=拒绝授权 2=位置不可用 3=超时 0=不支持 */
+function tryGeo(opts) {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve({ ok: false, code: 0 });
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ ok: true, coords: p.coords }),
+      (e) => resolve({ ok: false, code: (e && e.code) || 0 }),
+      opts
+    );
+  });
+}
+function geoSrcLabel(coords, kind) {
+  const m = Math.round((coords && coords.accuracy) || (kind === 'gps' ? 50 : 500));
+  return (kind === 'gps' ? '浏览器 GPS · ±' : '浏览器网络定位 · ±') + m + 'm';
+}
+
 async function locate() {
   $('#locText').textContent = '定位中…';
   $('#locDot').classList.add('off');
-  /* ① 浏览器精确定位（WGS-84 → GCJ-02） */
-  const geo = await new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve(null);
-    navigator.geolocation.getCurrentPosition(
-      (p) => resolve(p.coords),
-      () => resolve(null),
-      { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 }
-    );
-  });
+  $('#locSrc').textContent = '正在精确定位…';
+  $('#addr').textContent = '正在获取你的位置（首次会请求浏览器定位授权，请选「允许」）';
+
+  /* ① 高精度 GPS（GNSS / Wi-Fi 辅助），给足 10s——台式机冷启动常超 6s */
+  let r = await tryGeo({ enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+  let geo = r.ok ? r.coords : null;
+
+  /* ② GPS 超时/不可用（非拒绝授权）→ 低精度网络定位，通常几百米级，仍远好于 IP 城市中心 */
+  if (!geo && r.code !== 1) {
+    $('#locSrc').textContent = 'GPS 慢，改用网络定位…';
+    const r2 = await tryGeo({ enableHighAccuracy: false, timeout: 8000, maximumAge: 120000 });
+    if (r2.ok) geo = r2.coords;
+  }
+  const denied = !geo && r.code === 1; /* 用户拒绝授权：不再空转，直接兜底 + 指引 */
+
   if (geo) {
+    const src = geoSrcLabel(geo, r.ok ? 'gps' : 'net');
     const g = wgs84ToGcj02(Number(geo.longitude), Number(geo.latitude));
     state.lng = g.lng; state.lat = g.lat;
     try {
-      const r = await api('/map/reverse-geocode', { lng: g.lng, lat: g.lat });
-      setLocUI(r.city, r.district, '浏览器 GPS · ±' + Math.round(geo.accuracy || 50) + 'm');
-      $('#addr').textContent = r.formatted || '';
-    } catch (e) { setLocUI('', '', '浏览器 GPS'); }
+      const rr = await api('/map/reverse-geocode', { lng: g.lng, lat: g.lat });
+      setLocUI(rr.city, rr.district, src);
+      $('#addr').textContent = rr.formatted || '已获取精确坐标（' + src + '）';
+    } catch (e) {
+      setLocUI('', '', src);
+      $('#addr').textContent = '已获取精确坐标（' + src + '）';
+    }
     return true;
   }
-  /* ② 回落服务端 IP 锚定（城市级） */
+
+  /* ③ 回落服务端 IP 锚定（城市级） */
   try {
     const d = await api('/ip/locate');
     const p = d.point || {};
     if (isFinite(Number(p.lng)) && isFinite(Number(p.lat))) {
       state.lng = Number(p.lng); state.lat = Number(p.lat);
       setLocUI(d.city || '', d.district || '', 'IP 锚定 · 城市级');
-      $('#addr').textContent = '未授权精确定位，已按 IP 估算城市中心（可能不准，可点右上角手动选城市）。';
-      banner('浏览器定位未授权，当前为 IP 城市级定位（误差数公里，运营商属地可能偏差到省会）。可点右上角城市名手动纠正。');
+      if (denied) {
+        $('#addr').textContent = '浏览器定位未授权，已按 IP 估算。要精确定位：点地址栏左侧 🔒/ⓘ → 「位置」改为「允许」→ 刷新页面，再点「重新定位」。';
+        banner('你拒绝了浏览器定位授权，当前为 IP 城市级定位（误差数公里）。可在地址栏左侧 🔒/ⓘ 里把「位置」改为「允许」后刷新，恢复精确定位。');
+      } else {
+        $('#addr').textContent = '浏览器定位不可用，已按 IP 估算城市中心（可能不准，可点右上角手动选城市）。';
+        banner('浏览器精确定位超时/不可用，当前为 IP 城市级定位。可稍后点「重新定位」重试，或点右上角城市名手动纠正。');
+      }
       return true;
     }
   } catch (e) {}
