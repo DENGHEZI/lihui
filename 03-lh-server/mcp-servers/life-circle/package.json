@@ -1,0 +1,26 @@
+{
+  "name": "lh-mcp-server-life-circle",
+  "version": "1.0.0",
+  "private": false,
+  "description": "15 分钟生活圈体检 MCP Server：6 类设施打分、短板识别、个性化方案、服务质量评价",
+  "type": "commonjs",
+  "bin": {
+    "lh-mcp-life-circle": "index.js"
+  },
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "lihui",
+    "baidu-map",
+    "life-circle"
+  ],
+  "license": "MIT",
+  "dependencies": {}
+}

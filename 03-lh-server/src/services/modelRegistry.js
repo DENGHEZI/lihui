@@ -130,7 +130,24 @@ function active() {
   // ⚠️ 不再回退到「没配 key 的云端模型」——那样每次对话只会白报错；
   //    也不默认回退到付费渠道——客户明确要求不消耗个人付费 API。
   const usable = (x) => x.enabled && (x.apiKey || x.provider === 'ollama');
-  return all.find((x) => usable(x) && x.isDefault) || all.find(usable) || null;
+  const found = all.find((x) => usable(x) && x.isDefault) || all.find(usable) || null;
+  if (found) return found;
+  // 全局 LLM 兜底：部署时只设了 LLM_API_KEY / LLM_BASE_URL / LLM_MODEL（未配任何预置模型）也能跑真实 AI。
+  // 让 config.llm 真正作为「环境变量即默认模型」，避免云端只设 env 却仍走规则引擎。
+  if (config.llm.apiKey && config.llm.baseUrl) {
+    return {
+      id: 'global-llm',
+      name: '全局 LLM（环境变量）',
+      provider: 'openai-compatible',
+      baseUrl: config.llm.baseUrl,
+      apiKey: config.llm.apiKey,
+      model: config.llm.model || 'deepseek-chat',
+      enabled: true,
+      isDefault: true,
+      preset: false,
+    };
+  }
+  return null;
 }
 
 function save(input) {

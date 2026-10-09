@@ -1,0 +1,26 @@
+{
+  "name": "lh-mcp-server-ip-anchor",
+  "version": "1.0.0",
+  "private": false,
+  "description": "IP 自动锚定 MCP Server：IP 反查城市/坐标/运营商，支持批量",
+  "type": "commonjs",
+  "bin": {
+    "lh-mcp-ip-anchor": "index.js"
+  },
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "lihui",
+    "baidu-map",
+    "life-circle"
+  ],
+  "license": "MIT",
+  "dependencies": {}
+}
