@@ -204,7 +204,7 @@ node tests/security-e2e.mjs   # 459 条攻击用例，五条铁律断言，~250m
 
 ## 7. 🤝 参与与反馈
 
-- ⭐ **如果鲤慧帮到了你**：欢迎到 [Gitee](https://gitee.com/deng-he-ziyan/lihui) 点个 Star，并在 [Issue](https://gitee.com/deng-he-ziyan/lihui/issues) 里提建议或报 bug（请附系统/浏览器版本、复现步骤与截图）。
+- ⭐ **如果鲤慧帮到了你**：欢迎顺手点个 Star —— [Gitee](https://gitee.com/deng-he-ziyan/lihui) · [GitHub](https://github.com/DENGHEZI/lihui)；并在 [Issue](https://gitee.com/deng-he-ziyan/lihui/issues) 里提建议或报 bug（请附系统/浏览器版本、复现步骤与截图）。
 - 双仓库同步维护：[Gitee（主）](https://gitee.com/deng-he-ziyan/lihui) · [GitHub](https://github.com/DENGHEZI/lihui)，push Gitee 自动触发微信云托管构建部署。
 
 ## 8. 🌐 生态与技术栈
