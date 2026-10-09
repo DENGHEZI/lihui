@@ -73,8 +73,12 @@ function seed() {
     })));
     return;
   }
-  // 补齐新增预置 + 用环境变量填充免费渠道密钥 + 预置项开关以代码为准
-  // （预置的 enabled/isDefault 改动要能落库生效，否则云上永远跑旧开关）
+  // 补齐新增预置 + 用环境变量填充免费渠道密钥。
+  // ⚠️ 2026-10-09 修复「用户端填的 API 登出/重启后遗忘」：
+  // 旧逻辑每次启动都把预置项的 enabled/isDefault/model/baseUrl 强制回写为代码值——
+  // 云托管每次 push 都重建容器，用户在设置页填好 key 并启用/设默认后，一次部署就被打回，
+  // 表现为「填了 API 又忘了」。新原则：**用户库里的配置永远优先，代码预置只在缺项时补齐**。
+  // 免费渠道（MODELSCOPE 等）保留「有环境变量 key 就自动启用」的云端免配逻辑。
   const ids = new Set(list.map((x) => x.id));
   let changed = false;
   for (const p of PRESETS) {
@@ -85,7 +89,7 @@ function seed() {
     }
     const it = list.find((x) => x.id === p.id);
     // 免费渠道：库里有 key 就尊重库里的；没 key 而环境变量有 → 自动填；
-    // 且拿到有效 key 后自动启用为默认（没 key 时保持关闭，避免 401 挡住整条链）
+    // 拿到有效 key 后自动启用为默认（没 key 时保持关闭，避免 401 挡住整条链）
     if (p.id === 'preset-qwen-free') {
       if (!it.apiKey && process.env[PRESET_ENV_KEY[p.id]]) it.apiKey = process.env[PRESET_ENV_KEY[p.id]];
       const shouldOn = !!it.apiKey;
@@ -94,20 +98,11 @@ function seed() {
         it.isDefault = shouldOn;
         changed = true;
       }
-      if (it.model !== p.model || it.baseUrl !== p.baseUrl) {
-        it.model = p.model;
-        it.baseUrl = p.baseUrl;
-        changed = true;
-      }
       continue;
     }
-    if (it.apiKey && process.env[PRESET_ENV_KEY[p.id]] && !it.apiKey) it.apiKey = process.env[PRESET_ENV_KEY[p.id]];
-    // 开关/默认以代码里的预置为准（防止旧的「付费 preset 是默认」状态残留）
-    if (it.enabled !== p.enabled || it.isDefault !== p.isDefault || it.model !== p.model || it.baseUrl !== p.baseUrl) {
-      it.enabled = p.enabled;
-      it.isDefault = p.isDefault;
-      it.model = p.model;
-      it.baseUrl = p.baseUrl;
+    // 其余预置：只填空 key，不回写用户的开关/默认/模型/地址配置
+    if (!it.apiKey && process.env[PRESET_ENV_KEY[p.id]]) {
+      it.apiKey = process.env[PRESET_ENV_KEY[p.id]];
       changed = true;
     }
   }
@@ -139,6 +134,9 @@ function active() {
 }
 
 function save(input) {
+  // 2026-10-09 修复：更新已有项时保留 preset 身份与旧备注（旧逻辑强制 preset:false
+  // 会把预置渠道降级为普通项，配合 seed 回写导致用户配置被重置）
+  const editing = input.id && get(input.id);
   const patch = {
     name: input.name || '未命名模型',
     provider: input.provider || 'openai-compatible',
@@ -147,14 +145,16 @@ function save(input) {
     model: input.model || '',
     enabled: input.enabled !== false,
     note: input.note || '',
-    preset: false,
+    preset: editing ? !!get(input.id).preset : false,
     updatedAt: Date.now(),
   };
   let item;
-  if (input.id && get(input.id)) {
+  if (editing) {
     const old = get(input.id);
     // 未传新 key 时保留旧 key
     if (!input.apiKey) patch.apiKey = old.apiKey;
+    // 未传备注时保留旧备注
+    if (!input.note) patch.note = old.note || '';
     item = col.update(input.id, patch);
   } else {
     item = col.add({ id: store.uid('m'), createdAt: Date.now(), ...patch });
