@@ -75,12 +75,8 @@
 
 **👉 在线体验：<https://lihui-landing.app.workbuddy.host/>**（与小程序同一后端、同一套数据）
 
-<p align="center"><img src="docs/readme/frames/web-workbench.png" width="860" alt="网页版工作台：白色主题 + 金色主色 · 8 独立视图 · 智能助手与 AI 状态徽标"></p>
-<p align="center">
-  <img src="docs/readme/frames/web-life.png" width="420" alt="网页版生活圈体检：七类加权评分 · 真实最近距离">&nbsp;&nbsp;
-  <sub>八项设施全部实查落位，限流自愈后无「检索受限」</sub>
-</p>
-<p align="center"><sub>↑ 白色主题 · 金 #b98629 主色 · Linear/Apple 式细线边框与留白</sub></p>
+<p align="center"><img src="docs/readme/frames/web-tour.gif" width="860" alt="网页版全景动图：工作台 → 生活圈体检 → 15/30 分钟等时圈 → 模型接口 → API 密钥管理"></p>
+<p align="center"><sub>↑ 网页版动图漫游：白色主题 · 金 #b98629 主色 · Linear/Apple 式细线边框与留白 · 8 独立视图自动切换</sub></p>
 
 - **白色 + 金色为主色调**：白底细线边框、金色 `#b98629` 点睛，Linear / Apple 式克制留白的高级感；
 - **8 个独立视图**：工作台（AI 对话首屏）· 生活圈体检 · 步行等时圈 · 便民速查 · 账号管理 · **模型接口** · 安全运维 · API 接口手册，侧栏切换不再滚动锚点；
@@ -98,7 +94,7 @@
 - **POI 去重计数**：同 uid 重复收录、「同店不同 uid」脏数据（同名同址）合并后再计数，连锁分店（同名不同址）正常保留——重复 POI 不再推高数量达标度。
 - **失败隔离**：单类检索失败不参与计分（区别于「确实没有」），权重归一化后偶发网络抖动不会把总分拉穿。
 
-<p align="center"><img src="docs/readme/frames/f02-life.png" width="860" alt="生活圈体检：七类设施加权评分与短板提示"></p>
+<p align="center"><img src="docs/readme/frames/web-life.png" width="860" alt="网页版实拍：生活圈体检 89 分 · 七类设施加权评分 · 八项设施全部实查落位"></p>
 <p align="center">
   <img src="docs/readme/frames/mp-g09-life-radar.jpg" width="420" alt="真机：生活圈体检七类雷达">&nbsp;&nbsp;
   <img src="docs/readme/frames/mp-g03-life-plan.jpg" width="420" alt="真机：生活圈体检规划方案">
@@ -110,11 +106,11 @@
 以家为圆心、36 个方向沿真实路网二分收敛出「N 分钟步行能到哪」，Catmull-Rom 样条连成平滑等时圈；圈内部 N×N 网格逐格评估七类覆盖，加权分 <40 判**服务盲区**（红色格），并对盲区格做二次实测复核。**「真实地图 / 示意图」一键切换**，15/30/45/60 分钟档随点随算。
 
 <p align="center">
-  <img src="docs/readme/isochrone-zh.gif" width="860" alt="等时圈：15→30→60 分钟档切换，真实地图上叠加等时圈与盲区格，可切示意图">
+  <img src="docs/readme/web-iso.gif" width="860" alt="等时圈动图：15 分钟档 ↔ 30 分钟档切换（真实地图叠加等时圈与盲区格）">
 </p>
 <p align="center">
-  <img src="docs/readme/frames/f03-iso15.png" width="280" alt="功能实测帧：15 分钟等时圈与盲区格">&nbsp;&nbsp;
-  <img src="docs/readme/frames/f04-iso30.png" width="280" alt="功能实测帧：30 分钟等时圈（真实地图叠加）">&nbsp;&nbsp;
+  <img src="docs/readme/frames/web-iso15.png" width="420" alt="网页版实拍：15 分钟等时圈与盲区格">&nbsp;&nbsp;
+  <img src="docs/readme/frames/web-iso30.png" width="420" alt="网页版实拍：30 分钟等时圈（真实地图叠加）">&nbsp;&nbsp;
   <img src="docs/readme/frames/mp-g04-isochrone.jpg" width="280" alt="真机：步行等时圈服务盲区页">
 </p>
 <p align="center"><sub>↑ 功能测试帧图：15 / 30 分钟档等时圈静态实测（36 方向真实路网收敛结果）</sub></p>

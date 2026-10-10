@@ -1088,10 +1088,11 @@ async function apiPost(path, body) {
   return b.data;
 }
 
-function banner(msg) {
+function banner(msg, html) {
   const b = $('#banner');
   if (!msg) { b.classList.remove('show'); return; }
-  b.textContent = msg; b.classList.add('show');
+  if (html) b.innerHTML = msg; else b.textContent = msg;
+  b.classList.add('show');
 }
 
 /* ================= WGS-84 → GCJ-02（浏览器定位是 WGS-84，服务端接口收 GCJ-02） ================= */
@@ -1606,15 +1607,22 @@ function renderIsoMap(d, provider) {
 
     isoMapInst.fitBounds(poly.getBounds(), { padding: [42, 42] });
 
-    /* 瓦片健康监控：连续失败 ≥3 → 换兜底底图；6s 内 0 张成功（透明图/改版类静默失效）→ 同样换。
-       顺序：百度 → 高德 → 示意图，任何情况下不出灰屏空图。 */
+    /* 瓦片健康监控：连续失败 ≥3 → 换兜底底图；10s 内 0 张成功（透明图/改版类静默失效）→ 同样换。
+       顺序：百度 → 高德 → 示意图，任何情况下不出灰屏空图。
+       V1.0.27：6s→10s（弱网容错，避免慢加载被误杀）；示意图横幅附「重新加载真实地图」按钮。 */
     isoTileErrors = 0; isoTileLoads = 0;
-    isoMapInst.on('tileload', () => { isoTileLoads += 1; isoTileErrors = 0; });
+    isoMapInst.on('tileload', () => {
+      isoTileLoads += 1; isoTileErrors = 0;
+      if (isoTileLoads === 1) { /* 首张瓦片出图即清「底图异常」横幅（重算/重试成功不再挂旧告警） */
+        const bt = document.getElementById('isoRetryMap');
+        if (bt) banner('');
+      }
+    });
     isoMapInst.on('tileerror', () => {
       isoTileErrors += 1;
       if (isoTileErrors >= 3) switchIsoProvider(d);
     });
-    setTimeout(() => { if (isoTileLoads === 0 && isoTileErrors < 3) switchIsoProvider(d); }, 6000);
+    setTimeout(() => { if (isoTileLoads === 0 && isoTileErrors < 3) switchIsoProvider(d); }, 10000);
 
     isoMapInst.whenReady(() => {
       const l = document.getElementById('isoMapLoad');
@@ -1636,7 +1644,10 @@ function switchIsoProvider(d) {
     banner('百度底图瓦片暂不可用，已自动切换高德底图（数据仍为百度 POI，不受影响）。');
     renderIsoMap(d, 'gaode');
   } else if (state.isoData) {
-    banner('地图底图加载异常，已切换为示意图（数据不变）。');
+    /* V1.0.27：示意图横幅带「重新加载真实地图」按钮——弱网误杀/临时抖动可一键自愈 */
+    banner('⚠️ 地图底图加载异常，已切换为示意图（数据不变）。<a id="isoRetryMap" style="color:var(--primary-deep);font-weight:650;text-decoration:underline;cursor:pointer;margin-left:6px">🔄 重新加载真实地图</a>', true);
+    const rb = document.getElementById('isoRetryMap');
+    if (rb) rb.onclick = () => { banner(''); renderIsoMap(state.isoData, 'gaode'); };
     renderIsoSvg(state.isoData);
   }
 }
