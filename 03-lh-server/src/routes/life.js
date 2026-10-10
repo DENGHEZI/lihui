@@ -23,20 +23,44 @@ function withTimeout(promise, ms, fallback) {
   ]);
 }
 
-/** 服务端本地兜底计算（不依赖 MCP；六类互相隔离，单类故障不拖垮总分） */
-async function localDiagnose({ lng, lat, radius = 1200 }) {
+/** 服务端本地兜底计算（不依赖 MCP；六类互相隔离，单类故障不拖垮总分）
+ *  2026-10-10 评分修复：
+ *  - POI 去重计数（scoreCategory 内统一 dedupePOIs，同 uid/同名同址合并，count 不再虚高）
+ *  - 真实权重：city 命中 standards 库中的城市规范且带 categoryWeights 时按标准权重计分
+ *    （来源标注在 weightSource / weightNote；未命中回落内置默认口径） */
+async function localDiagnose({ lng, lat, radius = 1200, city = '' }) {
+  /* 真实权重：按城市匹配适用规范；categoryWeights 键 = 六类 key */
+  let weightMap = null;
+  let weightSource = '内置默认口径';
+  let weightNote = '';
+  try {
+    const std = standards.resolve(city);
+    const cw = std && std.standard && std.standard.metrics && std.standard.metrics.categoryWeights;
+    if (cw && typeof cw === 'object') {
+      const complete = CATEGORIES.every((c) => Number.isFinite(Number(cw[c.key])));
+      if (complete) {
+        weightMap = {};
+        CATEGORIES.forEach((c) => { weightMap[c.key] = Number(cw[c.key]); });
+        weightSource = std.standard.name;
+        weightNote = std.standard.metrics.categoryWeights.note || '';
+      }
+    }
+  } catch (e) {
+    logger.warn('life', `standards weight resolve failed: ${e.message}`);
+  }
+
   const cats = await Promise.all(
     CATEGORIES.map(async (c, i) => {
-      const { items, failed } = await fetchCategory(c, lng, lat, radius, i * 200);
+      const { items, failed } = await fetchCategory(c, lng, lat, radius, i * 150);
       // 检索失败的类不参与计分（区别于"确实没有"），避免偶发网络错误把总分拉穿
-      const { hitTypes, score } = scoreCategory(c, items, failed);
+      const { hitTypes, score, count } = scoreCategory(c, items, failed);
       return {
         key: c.key,
         name: c.name,
-        weight: c.weight,
+        weight: weightMap ? weightMap[c.key] : c.weight,
         need: c.need,
         score,
-        count: (items || []).length,
+        count,
         failed,
         types: hitTypes,
         nearest: items[0] ? { name: items[0].name, distance: items[0].distance } : null,
@@ -57,6 +81,9 @@ async function localDiagnose({ lng, lat, radius = 1200 }) {
     level,
     center: { lng: Number(lng), lat: Number(lat) },
     radius,
+    // 评分权重来源（真实权重口径）：城市规范命中时为规范全名，否则为内置默认口径
+    weightSource,
+    weightNote: weightNote || undefined,
     // 预计步行可达分钟：radius ÷ 步速 80m/min ÷ 路网弯曲 1.3，四舍五入。
     // 端上「预计步行 X 分钟可达」直接用它（之前端上读了个不存在的字段，显示为空）
     walkMinutes: Math.round(Number(radius) / 80 / 1.3),
@@ -79,16 +106,16 @@ const REPORT_TTL = 10 * 60 * 1000;
 const REPORT_GRACE = 30 * 60 * 1000; // stale-while-revalidate 宽限期：TTL 过期后先回旧值、后台重建
 const reportCache = new Map(); // key → { at, val }
 const reportInflight = new Map(); // key → Promise
-function reportCacheKey(lng, lat, radius) {
-  return `rep:${lng.toFixed(4)},${lat.toFixed(4)}:${Math.round(radius)}`;
+function reportCacheKey(lng, lat, radius, city) {
+  return `rep:${lng.toFixed(4)},${lat.toFixed(4)}:${Math.round(radius)}:${String(city || '').trim()}`;
 }
 
 /** 体检重建作业（本地引擎优先 → MCP 兜底），成功后写缓存 */
-function buildReportJob(lng, lat, radius, ck) {
+function buildReportJob(lng, lat, radius, ck, city) {
   const job = (async () => {
-    // ① 本地引擎（六类并行 + 类间错峰 + 共享 POI 缓存）
+    // ① 本地引擎（六类并行 + 类间错峰 + 共享 POI 缓存 + 城市标准真实权重）
     try {
-      const data = await localDiagnose({ lng, lat, radius });
+      const data = await localDiagnose({ lng, lat, radius, city });
       if (reportCache.size >= 64) reportCache.delete(reportCache.keys().next().value);
       reportCache.set(ck, { at: Date.now(), val: data });
       return data;
@@ -124,7 +151,8 @@ module.exports = {
     const lat = numOr(q.lat, NaN);
     if (!Number.isFinite(lng) || !Number.isFinite(lat)) return fail(res, 1001, 'lng/lat 必填');
     const radius = numOr(q.radius, 1200);
-    const ck = reportCacheKey(lng, lat, radius);
+    const city = String(q.city || '').trim(); // 城市名：命中城市规范时用该规范的真实权重计分
+    const ck = reportCacheKey(lng, lat, radius, city);
 
     const hit = reportCache.get(ck);
     if (hit) {
@@ -132,7 +160,7 @@ module.exports = {
       if (age < REPORT_TTL) return ok(res, hit.val);
       // stale-while-revalidate：宽限期内回旧值 + 后台重建（不阻塞响应）
       if (age < REPORT_TTL + REPORT_GRACE) {
-        if (!reportInflight.has(ck)) buildReportJob(lng, lat, radius, ck);
+        if (!reportInflight.has(ck)) buildReportJob(lng, lat, radius, ck, city);
         return ok(res, { ...hit.val, stale: true });
       }
     }
@@ -146,7 +174,7 @@ module.exports = {
     }
 
     try {
-      return ok(res, await buildReportJob(lng, lat, radius, ck));
+      return ok(res, await buildReportJob(lng, lat, radius, ck, city));
     } catch (e) {
       return fail(res, 5003, '体检引擎繁忙，请稍后再试');
     }

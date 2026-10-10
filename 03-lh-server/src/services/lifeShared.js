@@ -58,38 +58,52 @@ function poiCacheSet(key, val) {
  * 单类设施检索：RRF 融合一轮 → 全部关键词逐路二次确认 → 仍失败标记 failed 供降权处理
  * （原先在 life.js 内，等时圈引擎也要按同一口径取六类设施，故上移共享）
  * 成功结果写入 5min 共享缓存；失败/熔断不写（下次重试真实检索）
+ *
+ * 2026-10-10 提速与修复：
+ *  - 类内整体 12s 超时（此前单请求最坏 9s×retry2 轮 ≈ 36s/类，拖垮整份体检）
+ *  - 二次确认只发前 2 个关键词（受控并发，防百度 401 并发超限后的重试雪崩）
+ *  - 出口统一 POI 去重（uid 优先 + 同名同址合并），评分计数不再受脏数据影响
  */
+const CAT_TIMEOUT_MS = 12 * 1000;
+function withCatTimeout(p) {
+  return Promise.race([
+    p,
+    new Promise((resolve) => setTimeout(() => resolve(null), CAT_TIMEOUT_MS)),
+  ]);
+}
+
 async function fetchCategory(c, lng, lat, radius, stagger = 0) {
   const ck = `full:${c.key}:${Number(lng).toFixed(4)},${Number(lat).toFixed(4)}:${Math.round(radius)}`;
   const cached = poiCacheGet(ck);
   if (cached) return cached;
   if (isQuotaBlocked()) return { items: [], failed: true, quota: true };
   if (stagger) await new Promise((r) => setTimeout(r, stagger)); // 类间错峰，防百度 QPS 瞬时超限
+  const finish = (items) => {
+    const deduped = dedupePOIs(items);
+    const ret = { items: deduped, failed: false };
+    poiCacheSet(ck, ret);
+    return ret;
+  };
   try {
-    const r = await baiduMap.poiSearch({ query: c.keywords.join('|'), lng, lat, radius, pageSize: 20 });
-    if ((r.items || []).length) {
-      const ret = { items: r.items, failed: false };
-      poiCacheSet(ck, ret);
-      return ret;
-    }
+    const r = await withCatTimeout(baiduMap.poiSearch({ query: c.keywords.join('|'), lng, lat, radius, pageSize: 20 }));
+    if (r === null) return { items: [], failed: true, timeout: true }; // 超时：不再叠加二次确认
+    if ((r.items || []).length) return finish(r.items);
   } catch (e) {
     noteQuotaError(e);
   }
   if (isQuotaBlocked()) return { items: [], failed: true, quota: true };
+  /* 二次确认：只取前 2 个关键词（受控并发）。联合词已覆盖全部关键词语义，
+     前 2 词命中即可确认该类存在；两词皆空才判「确实没有」。 */
   const parts = await Promise.all(
-    c.keywords.map((k) =>
-      baiduMap.poiSearch({ query: k, lng, lat, radius, pageSize: 20 }).catch((e) => {
+    c.keywords.slice(0, 2).map((k) =>
+      withCatTimeout(baiduMap.poiSearch({ query: k, lng, lat, radius, pageSize: 20 }).catch((e) => {
         noteQuotaError(e);
         return null;
-      })
+      }))
     )
   );
   for (const p of parts) {
-    if (p && (p.items || []).length) {
-      const ret = { items: p.items, failed: false };
-      poiCacheSet(ck, ret);
-      return ret;
-    }
+    if (p && (p.items || []).length) return finish(p.items);
   }
   return { items: [], failed: true, quota: isQuotaBlocked() };
 }
@@ -98,21 +112,53 @@ async function fetchCategory(c, lng, lat, radius, stagger = 0) {
 /* 评分纯函数（从 life.js localDiagnose 抽出，便于单元测试与口径统一）    */
 /* ------------------------------------------------------------------ */
 /**
+ * POI 去重（纯函数）：修复评分虚高的「重复计数」BUG。
+ *  - 第一遍按 uid 去重（百度 POI 唯一标识）
+ *  - 第二遍按 name@量化坐标(~11m) 合并「同店不同 uid」的脏数据（同连锁店被
+ *    百度收录多条记录时，uid 各不相同但名称与坐标一致）
+ *  - 同名不同址的正规连锁分店保留（坐标量化后不同即不合并）
+ * @returns {Array} 去重后的新数组（不改入参）
+ */
+function dedupePOIs(items) {
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  const byUid = new Map();
+  for (const it of list) {
+    const uid = String((it && it.uid) || '').trim();
+    const k = uid ? 'uid:' + uid : 'raw:' + byUid.size;
+    if (!byUid.has(k)) byUid.set(k, it);
+  }
+  const seenGeo = new Set();
+  const out = [];
+  for (const it of byUid.values()) {
+    const lng = Number(it && it.lng), lat = Number(it && it.lat);
+    const geo = Number.isFinite(lng) && Number.isFinite(lat)
+      ? lng.toFixed(4) + ',' + lat.toFixed(4)
+      : String((it && it.address) || '');
+    const key = String((it && it.name) || '').trim() + '@@' + geo;
+    if (seenGeo.has(key)) continue;
+    seenGeo.add(key);
+    out.push(it);
+  }
+  return out;
+}
+
+/**
  * 单类设施评分（纯函数，不发请求）：
- *  - 数量达标度 ratio   = min(1, 命中数 / need)        权重 0.6
+ *  - POI 先去重再计数（同 uid / 同名同址合并），杜绝重复 POI 推高数量达标度
+ *  - 数量达标度 ratio   = min(1, 去重命中数 / need)     权重 0.6
  *  - 类型覆盖度 typeRatio = 命中关键词数 / 关键词总数    权重 0.4
  *  - 检索失败(failed)返回 null —— 该类不参与总分（区别于「确实没有」）
- * @returns {{ hitTypes:string[], score:number|null }}
+ * @returns {{ hitTypes:string[], score:number|null, count:number, total:number }}
  */
 function scoreCategory(c, items, failed) {
-  const list = Array.isArray(items) ? items : [];
+  const deduped = dedupePOIs(items);
   const hitTypes = (c.keywords || []).filter((k) =>
-    list.some((i) => String((i && i.name) || '') + String((i && i.tag) || '') + String((i && i.type) || '') .includes(k))
+    deduped.some((i) => (String((i && i.name) || '') + String((i && i.tag) || '') + String((i && i.type) || '')).includes(k))
   );
-  if (failed) return { hitTypes, score: null };
-  const ratio = Math.min(1, list.length / Math.max(c.need, 1));
+  if (failed) return { hitTypes, score: null, count: deduped.length, total: deduped.length };
+  const ratio = Math.min(1, deduped.length / Math.max(c.need, 1));
   const typeRatio = hitTypes.length / Math.max((c.keywords || []).length, 1);
-  return { hitTypes, score: Math.round((ratio * 0.6 + typeRatio * 0.4) * 100) };
+  return { hitTypes, score: Math.round((ratio * 0.6 + typeRatio * 0.4) * 100), count: deduped.length, total: deduped.length };
 }
 
 /**
@@ -132,4 +178,4 @@ function scoreSummary(cats) {
   return { score, level, shortboards };
 }
 
-module.exports = { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, fetchCategory, scoreCategory, scoreSummary };
+module.exports = { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, fetchCategory, dedupePOIs, scoreCategory, scoreSummary };

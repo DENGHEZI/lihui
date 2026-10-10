@@ -29,7 +29,7 @@ const logger = require('../utils/logger');
 const { Cache } = require('../utils/cache');
 const { gcj02ToBd09 } = require('../utils/coord');
 const config = require('../config');
-const { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet } = require('./lifeShared');
+const { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, dedupePOIs } = require('./lifeShared');
 
 /* ---------------- 常量（官方口径） ---------------- */
 const SPEED_M_PER_MIN = 80;            // 步行速度 80 m/min
@@ -315,7 +315,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
           radius: preRadius,
           pageSize: 20,
         });
-        const items = (r.items || []).filter((x) => Number.isFinite(x.lng) && Number.isFinite(x.lat));
+        const items = dedupePOIs((r.items || []).filter((x) => Number.isFinite(x.lng) && Number.isFinite(x.lat))); // 去重后再入缓存/计数（与体检评分口径一致）
         if (items.length) poiCacheSet(ck, items); // 只缓存有效结果，失败留白下次重试
         return { ...c, items, failed: false };
       } catch (e) {

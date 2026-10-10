@@ -824,7 +824,7 @@ async function loadLife() {
   if (state.lng == null) return;
   $('#lifeBox').innerHTML = '<div class="spin"></div><div class="empty">正在体检你的 15 分钟生活圈</div>';
   try {
-    const r = await api('/life/report', { lng: state.lng, lat: state.lat });
+    const r = await api('/life/report', { lng: state.lng, lat: state.lat, city: state.city || '' });
     const cats = (r.categories || []).map((c) => {
       const pct = c.score == null ? 0 : c.score;
       const near = c.nearest ? (c.nearest.name || '') + (c.nearest.distance ? ' · ' + fmtM(c.nearest.distance) : '') : '暂无';
