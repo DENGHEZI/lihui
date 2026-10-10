@@ -106,14 +106,13 @@
 以家为圆心、36 个方向沿真实路网二分收敛出「N 分钟步行能到哪」，Catmull-Rom 样条连成平滑等时圈；圈内部 N×N 网格逐格评估七类覆盖，加权分 <40 判**服务盲区**（红色格），并对盲区格做二次实测复核。**「真实地图 / 示意图」一键切换**，15/30/45/60 分钟档随点随算。
 
 <p align="center">
-  <img src="docs/readme/web-iso.gif" width="860" alt="等时圈动图：15 分钟档 ↔ 30 分钟档切换（真实地图叠加等时圈与盲区格）">
+  <img src="docs/readme/frames/web-iso30.png" width="860" alt="网页版实拍：株洲 30 分钟步行等时圈（真实地图叠加等时圈多边形与盲区格）">
 </p>
+<p align="center"><sub>↑ 网页版实拍：30 分钟档步行等时圈 —— 36 方向真实路网收敛 · 盲区格分级着色 · 真实地图 / 示意图一键切换 · 15/30/45/60 分钟随点随算</sub></p>
 <p align="center">
-  <img src="docs/readme/frames/web-iso15.png" width="420" alt="网页版实拍：15 分钟等时圈与盲区格">&nbsp;&nbsp;
-  <img src="docs/readme/frames/web-iso30.png" width="420" alt="网页版实拍：30 分钟等时圈（真实地图叠加）">&nbsp;&nbsp;
-  <img src="docs/readme/frames/mp-g04-isochrone.jpg" width="280" alt="真机：步行等时圈服务盲区页">
+  <img src="docs/readme/frames/mp-g04-isochrone.jpg" width="280" alt="真机：小程序端步行等时圈服务盲区页">
 </p>
-<p align="center"><sub>↑ 功能测试帧图：15 / 30 分钟档等时圈静态实测（36 方向真实路网收敛结果）</sub></p>
+<p align="center"><sub>↑ 真机实测：小程序端步行等时圈（与网页版同一引擎、同一后端）</sub></p>
 
 <details>
 <summary>等时圈是怎么算出来的（算法细节）</summary>
