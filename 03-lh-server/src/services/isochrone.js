@@ -434,7 +434,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
     CATEGORIES.map(async (c, i) => {
       if (isQuotaBlocked()) return { ...c, items: [], failed: true, quota: true };
       await new Promise((r) => setTimeout(r, catStagger(i))); // 类间错峰（按百度 QPS 上限动态节奏，防 401 并发超限）
-      const ck = `lite:${c.key}:${center.lng.toFixed(4)},${center.lat.toFixed(4)}:${preRadius}`;
+      const ck = `lite2:${c.key}:${center.lng.toFixed(4)},${center.lat.toFixed(4)}:${preRadius}`; // V1.0.31 升版：作废旧的 20 条欠采样缓存
       const cached = poiCacheGet(ck);
       if (cached) return { ...c, items: cached, failed: false };
       try {
@@ -445,7 +445,31 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
           radius: preRadius,
           pageSize: 20,
         });
-        const items = dedupePOIs((r.items || []).filter((x) => Number.isFinite(x.lng) && Number.isFinite(x.lat))); // 去重后再入缓存/计数（与体检评分口径一致）
+        let items = dedupePOIs((r.items || []).filter((x) => Number.isFinite(x.lng) && Number.isFinite(x.lat))); // 去重后再入缓存/计数（与体检评分口径一致）
+        // V1.0.31 采样密度修正（实测 bug：体检交通 89 分 vs 盲区交通缺口 100% 的矛盾）：
+        // 体检只评「家」一个点（need≤3 条就达标），盲区要评「每一格」的最近设施 ——
+        // 高密度类（公交站/超市/餐厅/药店遍地都是）20 条样本在 2.4km 半径严重欠采样，
+        // 盲区格门口的设施挤不进前 20 → 格级最近距离被高估成 15min+ → 假 100% 缺口。
+        // 对高密度类自动翻页补采至 ≤60 条（百度 place 支持 page_num 分页）。
+        const HIGH_DENSITY = new Set(['transit', 'market', 'food', 'medical']);
+        if (items.length >= 20 && HIGH_DENSITY.has(c.key)) {
+          for (const pn of [1, 2]) {
+            if (isQuotaBlocked()) break;
+            try {
+              const r2 = await baiduMap.poiSearch({
+                query: c.keywords.join('|'), lng: center.lng, lat: center.lat,
+                radius: preRadius, pageSize: 20, pageNum: pn,
+              });
+              const more = dedupePOIs((r2.items || []).filter((x) => Number.isFinite(x.lng) && Number.isFinite(x.lat)));
+              if (!more.length) break;
+              items = dedupePOIs(items.concat(more));
+              if (items.length >= 60) break;
+            } catch (e2) {
+              noteQuotaError(e2);
+              if (isQuotaBlocked()) break;
+            }
+          }
+        }
         if (items.length) poiCacheSet(ck, items); // 只缓存有效结果，失败留白下次重试
         return { ...c, items, failed: false };
       } catch (e) {
