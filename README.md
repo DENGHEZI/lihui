@@ -101,20 +101,17 @@
 
 </details>
 
-### 🐟 智能助手（小程序端常驻 · 网页版临时下线）
+### 🐟 智能助手（小程序端）
 
 「附近哪家便利店还开着？」「帮我解读体检结果」「15 分钟生活圈有哪些国际标准可以对标？」——自然语言直接问。答案里的距离、店名、评分都来自工具实查；问到标准/规范/指标时，自动检索**标准知识库**并把原文注入上下文，引用必须带编号出处。
 
-> ℹ️ **可用性说明**：助手当前在**微信小程序端照常可用**（走云托管内网通道）；网页版入口临时下线（地图数据源配额受限期间对话质量不达标，后端 Agent 接口完整保留，配额恢复后重开）。下图为网页版功能留存演示。
+> ℹ️ 该功能仅在**微信小程序端**提供（走云托管内网通道）；网页版不包含助手功能。
 
 <p align="center">
-  <img src="docs/readme/assistant-zh.gif" width="860" alt="智能助手：欢迎语 → 提问 → 打字动画 → 带依据的回答">
+  <img src="docs/screenshots/05-assistant.jpg" width="420" alt="小程序智能助手：欢迎语 → 提问 → 带依据的回答">&nbsp;&nbsp;
+  <img src="docs/screenshots/06-mine.jpg" width="420" alt="小程序「我的」页：隐私中心入口与账号头像">
 </p>
-<p align="center">
-  <img src="docs/readme/frames/f07-ai.png" width="420" alt="功能实测帧：智能助手欢迎与建议问题">&nbsp;&nbsp;
-  <img src="docs/readme/frames/f09-ai-reply.png" width="420" alt="功能实测帧：带标准出处编号的回答">
-</p>
-<p align="center"><sub>↑ 功能测试帧图：助手欢迎页 / 带出处编号的结构化回答（分段卡片渲染）</sub></p>
+<p align="center"><sub>↑ 小程序实测：智能助手对话 / 我的页（隐私中心 · 账号头像）</sub></p>
 
 <details>
 <summary>回答为什么准：RRF 三通道检索 + LLMWiki 词条图 + 国际标准知识库（RAG）</summary>

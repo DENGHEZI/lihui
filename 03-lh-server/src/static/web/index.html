@@ -227,36 +227,6 @@
   .iso-view-tgl span { font-size: 12.5px; padding: 6px 14px; cursor: pointer; color: var(--text-2); background: #fff; transition: all .18s; }
   .iso-view-tgl span.on { background: var(--primary-weak); color: var(--primary); font-weight: 650; }
 
-  /* ---------- 智能助手（网页版） ---------- */
-  .ai-chat { display: flex; flex-direction: column; height: 460px; }
-  .ai-msgs { flex: 1; overflow-y: auto; padding: 4px 4px 10px; display: flex; flex-direction: column; gap: 12px; }
-  .ai-row { display: flex; gap: 10px; align-items: flex-start; }
-  .ai-row.me { flex-direction: row-reverse; }
-  .ai-ava { flex: none; width: 34px; height: 34px; border-radius: 11px; display: flex; align-items: center; justify-content: center;
-    font-size: 17px; background: var(--primary-weak); border: 1px solid var(--primary-line); }
-  .ai-row.me .ai-ava { background: #F4F6F9; border-color: var(--line); }
-  .ai-bub { max-width: 78%; padding: 10px 14px; border-radius: 14px; font-size: 13.5px; line-height: 1.75;
-    background: #F7F9FC; border: 1px solid var(--line); color: var(--text-1); word-break: break-word; }
-  .ai-row.me .ai-bub { background: var(--primary-weak); border-color: var(--primary-line); }
-  .ai-bub b { font-weight: 650; }
-  .ai-bub .ai-meta { display: block; margin-top: 6px; font-size: 11px; color: var(--text-3); }
-  .ai-bub.typing { display: flex; gap: 5px; align-items: center; padding: 13px 16px; }
-  .ai-bub.typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); opacity: .35; animation: aiBlink 1.2s infinite; }
-  .ai-bub.typing i:nth-child(2) { animation-delay: .2s; }
-  .ai-bub.typing i:nth-child(3) { animation-delay: .4s; }
-  @keyframes aiBlink { 0%,70%,100% { opacity: .25; } 35% { opacity: .95; } }
-  .ai-input { display: flex; gap: 8px; margin-top: 12px; }
-  .ai-input input { flex: 1; height: 44px; border: 1px solid var(--line); border-radius: 12px; padding: 0 14px;
-    font-size: 13.5px; outline: none; background: #fff; color: var(--text-1); transition: border-color .18s; }
-  .ai-input input:focus { border-color: var(--primary); }
-  .ai-input button { flex: none; height: 44px; padding: 0 20px; border: 0; border-radius: 12px; font-size: 13.5px;
-    font-weight: 650; color: #fff; background: linear-gradient(135deg, var(--primary), #3E9BFF); cursor: pointer; }
-  .ai-input button:disabled { opacity: .55; cursor: not-allowed; }
-  .ai-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-  .ai-chips span { font-size: 12px; color: var(--text-2); background: #F4F6F9; border: 1px solid var(--line);
-    border-radius: 999px; padding: 5px 12px; cursor: pointer; transition: all .18s; }
-  .ai-chips span:hover { border-color: var(--primary-line); color: var(--primary); }
-
   /* ---------- Tabs ---------- */
   .tabs { display: flex; gap: 8px; margin: 14px 0 4px; flex-wrap: wrap; }
   .tab {
@@ -532,20 +502,6 @@
   </div>
   </section>
 
-  <!-- 🐟 智能助手（网页版）：同一 agent 后端，文字对话 -->
-  <!-- 2026-10-09 下线网页版智能助手（地图数据源配额受限期间对话质量不达标），后端 Agent 接口保留，恢复后移除本隐藏即可 -->
-  <div class="card" id="aiCard" style="display:none">
-    <h2>🐟 智能助手 <span class="sub">生活圈问答 · 找店 / 出行 / 体检解读 · 同一小程序 Agent 后端</span></h2>
-    <div class="ai-chat">
-      <div class="ai-msgs" id="aiMsgs"></div>
-      <div class="ai-chips" id="aiChips"></div>
-      <div class="ai-input">
-        <input id="aiInput" placeholder="问点什么：附近哪家便利店还开着？帮我解读体检结果…" maxlength="500" />
-        <button id="aiSend">发送</button>
-      </div>
-    </div>
-  </div>
-
   <!-- 🧠 Memory · 人机协同安全运维：AI 只建议不执行，批准产出工件由人合并 -->
   <div class="card" id="memCard">
     <h2>🧠 Memory · 安全运维记忆 <span class="sub">人机协同 · AI 只建议，绝不自动执行</span></h2>
@@ -575,7 +531,6 @@
     <div class="cap-grid">
       <div class="cap"><div class="ic">🩺</div><div class="nm">生活圈体检</div><div class="ds">六类设施加权评分 · 最近距离 · 短板提示</div><span class="st ok">✅ 网页版已支持</span></div>
       <div class="cap"><div class="ic">⏱</div><div class="nm">步行等时圈</div><div class="ds">真实路网算路 · 百度地图实景渲染 · 盲区网格</div><span class="st ok">✅ 网页版已支持</span></div>
-      <div class="cap" style="display:none"><div class="ic">🐟</div><div class="nm">智能助手</div><div class="ds">生活圈问答 · 找店 / 出行 / 体检解读</div><span class="st ok">✅ 网页版已支持</span></div>
       <div class="cap"><div class="ic">🧭</div><div class="nm">便民速查</div><div class="ds">吃饭 / 买菜 / 看病 / 公交 / 公园 1.5km POI</div><span class="st ok">✅ 网页版已支持</span></div>
       <div class="cap"><div class="ic">🛒</div><div class="nm">真实店源</div><div class="ds">百度真实门店 + 参考价 · 附近 / 本城热门</div><span class="st ok">✅ 网页版已支持</span></div>
       <div class="cap"><div class="ic">🗺️</div><div class="nm">地图主页</div><div class="ds">地图打点 · 路线规划 · 实时天气</div><span class="st mp">小程序端</span></div>
@@ -1386,76 +1341,7 @@ document.querySelectorAll('#isoViewTgl span').forEach((t) => {
   };
 });
 
-/* ================= 智能助手（网页版 · 同一 agent 后端） ================= */
-const AI_SESSION_KEY = 'lh_web_session';
-function aiSessionId() {
-  let id = '';
-  try { id = localStorage.getItem(AI_SESSION_KEY) || ''; } catch (e) {}
-  if (!id) {
-    id = 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    try { localStorage.setItem(AI_SESSION_KEY, id); } catch (e) {}
-  }
-  return id;
-}
-let aiBusy = false;
-function aiBubble(role, html, meta) {
-  const row = document.createElement('div');
-  row.className = 'ai-row' + (role === 'me' ? ' me' : '');
-  row.innerHTML = '<div class="ai-ava">' + (role === 'me' ? '🙂' : '🐟') + '</div>' +
-    '<div class="ai-bub">' + html + (meta ? '<span class="ai-meta">' + esc(meta) + '</span>' : '') + '</div>';
-  const box = $('#aiMsgs');
-  box.appendChild(row);
-  box.scrollTop = box.scrollHeight;
-  return row;
-}
-/* 轻量富化：先转义防注入，再 **加粗** → <b>、换行 → <br>（和小程序 md.js 同风格，网页从简） */
-function aiRich(text) {
-  return esc(String(text)).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
-}
-async function aiSend(text) {
-  text = (text || $('#aiInput').value || '').trim();
-  if (!text || aiBusy) return;
-  $('#aiInput').value = '';
-  aiBubble('me', aiRich(text));
-  aiBusy = true;
-  $('#aiSend').disabled = true;
-  const typing = aiBubble('ai', '<span class="typing"><i></i><i></i><i></i></span>');
-  try {
-    const r = await apiPost('/agent/chat', {
-      text,
-      sessionId: aiSessionId(),
-      deviceId: deviceId(),
-      lng: state.lng,
-      lat: state.lat,
-    });
-    typing.querySelector('.ai-bub').innerHTML =
-      aiRich(r.reply || '（这轮没有产出回复，再问一次试试）') +
-      (r.model ? '<span class="ai-meta">' + esc(r.model) + ' · Token ' + ((r.usage && r.usage.total) || 0) + '</span>' : '');
-    const box = $('#aiMsgs');
-    box.scrollTop = box.scrollHeight;
-  } catch (e) {
-    typing.querySelector('.ai-bub').innerHTML =
-      '没答上来：' + esc(e.message || '网络异常') + '<br><span style="color:var(--text-3)">稍后再问，或换个说法试试。</span>';
-  } finally {
-    aiBusy = false;
-    $('#aiSend').disabled = false;
-    $('#aiInput').focus();
-  }
-}
-$('#aiSend').onclick = () => aiSend();
-$('#aiInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') aiSend(); });
-/* 常用问法（点击即问） */
-[
-  '我这 15 分钟生活圈怎么样？',
-  '附近有什么好吃的？',
-  '最近的公园怎么走？',
-  '帮我看看家里周边缺什么配套',
-].forEach((q) => {
-  const s = document.createElement('span');
-  s.textContent = q;
-  s.onclick = () => aiSend(q);
-  $('#aiChips').appendChild(s);
-});
+/* ================= 等时圈时间档切换 ================= */
 document.querySelectorAll('#isoCtl .mtab').forEach((t) => {
   t.onclick = () => {
     document.querySelectorAll('#isoCtl .mtab').forEach((x) => x.classList.remove('on'));
@@ -1480,7 +1366,6 @@ document.documentElement.classList.add('js');
 
 (async function init() {
   renderQuickTabs();
-  aiBubble('ai', aiRich('你好，我是鲤慧 🐟\n周边配套、找店、出行、体检解读都可以问我——**试试下面这些**，或者直接输入。'));
   const ok = await locate();
   loadAll();
   memOverview(); /* Memory 面板与定位无关,直接加载 */
