@@ -59,7 +59,13 @@ Thumbs.db
 03-lh-server/data/consents.json
 03-lh-server/data/backups/
 
-# README 录帧原始文件（仅 f02-life/f12-memory 被 README 引用入库，其余帧不入库）
+# README 录帧原始文件（仅 README 引用的帧入库，其余录帧原始件不入库）
 docs/readme/frames/*
 !docs/readme/frames/f02-life.png
 !docs/readme/frames/f12-memory.png
+!docs/readme/frames/f03-iso15.png
+!docs/readme/frames/f04-iso30.png
+!docs/readme/frames/f07-ai.png
+!docs/readme/frames/f09-ai-reply.png
+!docs/readme/frames/f10-shop-near.png
+!docs/readme/frames/f11-shop-hot.png
