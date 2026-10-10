@@ -545,6 +545,33 @@
     border: 1px dashed var(--line); border-radius: 12px; padding: 10px 13px; line-height: 1.8; }
   .api-note code { font-family: ui-monospace, Consolas, monospace; color: var(--primary-deep);
     background: var(--primary-weak); border-radius: 5px; padding: 0 5px; font-size: 11px; }
+
+  /* ---------- 模型接口（与小程序设置·模型配置同一套） ---------- */
+  .mo-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+  .mo-row:last-child { border-bottom: none; }
+  .mo-row.dim { opacity: .55; }
+  .mo-row .mo-nm { font-weight: 650; font-size: 13.5px; color: var(--text); display: flex; align-items: center; gap: 7px; }
+  .mo-row .mo-meta { font-size: 12px; color: var(--text-3); margin-top: 3px; line-height: 1.55; }
+  .mo-badge { display: inline-flex; align-items: center; font-size: 10.5px; font-weight: 650; border-radius: 999px; padding: 1.5px 8px; }
+  .mo-badge.def { color: var(--primary-deep); background: var(--primary-weak); border: 1px solid var(--primary-line); }
+  .mo-badge.off { color: #8A6210; background: var(--gold-weak); border: 1px solid var(--gold-line); }
+  .mo-badge.ok { color: var(--primary-deep); background: var(--primary-weak); border: 1px solid var(--primary-line); }
+  .mo-badge.err { color: #A33; background: #FBEDEC; border: 1px solid #EBC9C7; }
+  .mo-ops { margin-left: auto; display: flex; gap: 6px; flex: none; }
+  .mo-ops .btn { padding: 5px 11px; font-size: 12px; border-radius: 9px; }
+  .mo-preset { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--primary-deep);
+    background: #fff; border: 1px solid var(--primary-line); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+  .mo-preset:hover { background: var(--primary-weak); }
+  .mo-form { display: grid; gap: 12px; margin-top: 16px; max-width: 520px; }
+  .mo-form select { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px;
+    font-size: 13.5px; background: #FAFBFA; color: var(--text); outline: none; cursor: pointer; }
+  .mo-form select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15,166,147,.12); background: #fff; }
+  .mo-out { margin-top: 12px; font-size: 12.5px; line-height: 1.7; display: none;
+    border: 1px solid var(--line); border-radius: 12px; padding: 10px 13px; background: #F7FAF8; color: var(--text); }
+  .mo-out.show { display: block; }
+  .mo-out.ok { border-color: var(--primary-line); background: var(--primary-weak); color: var(--primary-deep); }
+  .mo-out.err { border-color: #EBC9C7; background: #FBEDEC; color: #A33; }
+  .mo-out code { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--primary-deep); }
 </style>
 <meta name="theme-color" content="#0fa693">
 </head>
@@ -566,6 +593,7 @@
   <a class="nav-item" data-view="iso"><span class="ic">⏱</span>步行等时圈</a>
   <a class="nav-item" data-view="quick"><span class="ic">🧭</span>便民速查</a>
   <a class="nav-item" data-view="account"><span class="ic">👤</span>账号管理</a>
+  <a class="nav-item" data-view="models"><span class="ic">🤖</span>模型接口</a>
   <a class="nav-item" data-view="mem"><span class="ic">🧠</span>安全运维</a>
   <a class="nav-item" data-view="cap"><span class="ic">🧩</span>能力全景</a>
   <a class="nav-item" data-view="api"><span class="ic">🔌</span>API 接口</a>
@@ -852,6 +880,71 @@
     </div>
   </div>
   </div><!-- /view-account -->
+
+  <!-- ═══ 视图：模型接口（与小程序设置·模型配置同一套） ═══ -->
+  <div class="view" id="view-models">
+  <div class="view-head">
+    <h1>模型接口</h1>
+    <p>与小程序「设置 · 模型配置」<strong>同一套配置库</strong>：这里新增 / 改 Key / 测试，小程序端重新打开即同步生效；反之亦然。</p>
+  </div>
+  <div class="card">
+    <h2>🤖 当前默认渠道 <span class="sub"><span class="sync-badge">🔄 双端同步 · modelRegistry</span></span></h2>
+    <div id="moActive" style="font-size:13px;color:var(--text-3);margin-top:10px">加载中…</div>
+
+    <h2 style="margin-top:22px">📋 已配置渠道</h2>
+    <div id="moList" style="margin-top:6px">加载中…</div>
+    <div class="cp-hint" style="margin-top:10px">明文 Key 永不回显（安全设计）：编辑时留空 = 保持现有 Key 不变；测试与对话在服务端完成，Key 不下发给浏览器。</div>
+
+    <h2 style="margin-top:22px">➕ 新增 / 编辑渠道 <span class="sub" id="moEditTag"></span></h2>
+    <div class="mo-form">
+      <div class="acc-field">
+        <label>显示名 <small>如：DeepSeek 官方 / 通义免费档</small></label>
+        <input id="moName" placeholder="渠道名称" maxlength="40" />
+      </div>
+      <div class="acc-field">
+        <label>接口类型</label>
+        <select id="moProvider">
+          <option value="openai-compatible">OpenAI 兼容</option>
+          <option value="deepseek">DeepSeek</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="gemini">Gemini</option>
+          <option value="ollama">本地 Ollama</option>
+          <option value="baidu-qianfan">百度千帆</option>
+        </select>
+      </div>
+      <div class="acc-field">
+        <label>接口地址 Base URL <small>以 /v1 结尾，末尾斜杠自动去除</small></label>
+        <input id="moBase" placeholder="https://api.deepseek.com/v1" />
+      </div>
+      <div class="acc-field">
+        <label>API Key <small id="moKeyHint">新增时必填 · 编辑时留空保持不变</small></label>
+        <input id="moKey" type="password" placeholder="sk-…" autocomplete="new-password" />
+      </div>
+      <div class="acc-field">
+        <label>模型名 Model <small>如 deepseek-chat / qwen-plus</small></label>
+        <input id="moModel" placeholder="deepseek-chat" />
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-2);cursor:pointer">
+        <input type="checkbox" id="moEnabled" checked style="width:auto;accent-color:var(--primary)" /> 启用该渠道（停用后不会被自动选用）
+      </label>
+      <div class="cp-row" style="margin-top:2px">
+        <button class="btn primary" id="moSave">保存</button>
+        <button class="btn" id="moTestForm">不入库直接测试</button>
+        <button class="btn" id="moCancel" style="display:none">取消编辑</button>
+      </div>
+      <div id="moOut" class="mo-out"></div>
+    </div>
+
+    <div style="margin-top:20px">
+      <div style="font-size:12px;font-weight:650;color:var(--text-3);letter-spacing:.06em;margin-bottom:9px">⚡ 快捷填入预置渠道（点击后补 Key 即可保存）</div>
+      <div id="moPresets" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    </div>
+
+    <div class="api-note">
+      智能助手（网页「工作台」对话框与小程序助手）调用对话模型时，按这里的<strong>默认渠道</strong>走：保存后立即可用，无需重启；「测试」会真实发一条 ping 验证连通与 Key 有效性，显示延迟与用量。
+    </div>
+  </div>
+  </div><!-- /view-models -->
 
   <!-- ═══ 视图：API 接口 ═══ -->
   <div class="view" id="view-api">
@@ -1772,7 +1865,150 @@ function switchView(name) {
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('on', v.id === 'view-' + name));
   document.querySelectorAll('.nav-item[data-view]').forEach((n) => n.classList.toggle('on', n.dataset.view === name));
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (name === 'models') loadModels();
 }
+
+/* ---------- 模型接口（与小程序「设置 · 模型配置」同一套 modelRegistry） ---------- */
+let moLoaded = false, moItems = [], moPresets = [], moEditingId = '';
+
+function moOut(html, cls) {
+  const o = $('#moOut');
+  o.className = 'mo-out show' + (cls ? ' ' + cls : '');
+  o.innerHTML = html;
+}
+
+async function loadModels() {
+  if (moLoaded && moEditingId) return; /* 正在编辑不打断表单 */
+  try {
+    const d = await api('/model/list');
+    moItems = d.items || [];
+    moPresets = d.presets || [];
+    renderMoActive();
+    renderMoList();
+    renderMoPresets();
+    moLoaded = true;
+  } catch (e) { $('#moActive').textContent = '加载失败：' + e.message; }
+}
+
+function renderMoActive() {
+  const act = moItems.find((m) => m.isDefault && m.enabled) || moItems.find((m) => m.enabled);
+  $('#moActive').innerHTML = act
+    ? `对话与助手当前走：<b style="color:var(--primary-deep)">${esc(act.name)}</b><span style="color:var(--text-3)">（${esc(act.model)}）</span>`
+    : '暂无启用的渠道——新增一个并「设默认」后，智能助手即可对话。';
+}
+
+function renderMoList() {
+  $('#moList').innerHTML = moItems.map((m) => `
+    <div class="mo-row ${m.enabled ? '' : 'dim'}">
+      <div style="min-width:0">
+        <div class="mo-nm">${esc(m.name)} ${m.isDefault && m.enabled ? '<span class="mo-badge def">默认</span>' : ''}${m.enabled ? '' : '<span class="mo-badge off">已停用</span>'}${m.preset ? '<span class="mo-badge off">预置</span>' : ''}</div>
+        <div class="mo-meta">${esc(m.model || '—')} · ${esc(m.baseUrl || '默认地址')}<br>Key ${m.apiKey ? '已配置 ' + esc(m.apiKey) : '未设置'}</div>
+      </div>
+      <div class="mo-ops">
+        <button class="btn" data-mo-test="${m.id}">测试</button>
+        ${m.isDefault ? '' : `<button class="btn" data-mo-def="${m.id}">设默认</button>`}
+        <button class="btn" data-mo-edit="${m.id}">编辑</button>
+        ${m.preset ? '' : `<button class="btn" data-mo-del="${m.id}">删除</button>`}
+      </div>
+    </div>`).join('') || '<div style="font-size:13px;color:var(--text-3);padding:8px 0">暂无渠道，从下方新增或点预置快捷填入。</div>';
+}
+
+function renderMoPresets() {
+  $('#moPresets').innerHTML = moPresets.map((p) => `<button class="mo-preset" data-mo-preset="${p.id}">＋ ${esc(p.name)}</button>`).join('') || '<span style="font-size:12px;color:var(--text-3)">无预置</span>';
+}
+
+function moFillForm(m) {
+  $('#moName').value = m.name || '';
+  $('#moProvider').value = m.provider || 'openai-compatible';
+  $('#moBase').value = m.baseUrl || '';
+  $('#moKey').value = '';
+  $('#moModel').value = m.model || '';
+  $('#moEnabled').checked = m.enabled !== false;
+  $('#moKey').placeholder = m.id ? '已配置（留空保持现有 Key 不变）' : 'sk-…';
+  $('#moKeyHint').textContent = m.id ? '留空 = 保持现有 Key 不变' : '必填（服务端保存后永不明文回显）';
+  $('#moCancel').style.display = '';
+  $('#moEditTag').textContent = m.id ? '正在编辑：' + m.name : '';
+  moEditingId = m.id || '';
+}
+
+function moResetForm() {
+  moFillForm({});
+  $('#moCancel').style.display = 'none';
+  $('#moEditTag').textContent = '';
+  $('#moEnabled').checked = true;
+  moEditingId = '';
+}
+
+async function moTest(id, btn) {
+  const old = btn.textContent; btn.textContent = '测试中…'; btn.disabled = true;
+  try {
+    const r = await apiPost('/model/test', { id });
+    if (r.ok) moOut(`✅ 连通正常 · ${r.latencyMs}ms · 回复「${esc(r.reply || '')}」 · ${esc(r.model || '')}`, 'ok');
+    else moOut(`❌ 测试失败：${esc(r.msg || '未知错误')}（${r.latencyMs || 0}ms）`, 'err');
+  } catch (e) { moOut('❌ 测试失败：' + esc(e.message), 'err'); }
+  btn.textContent = old; btn.disabled = false;
+}
+
+(function bindModels() {
+  $('#moList').onclick = async (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.moTest) return moTest(b.dataset.moTest, b);
+    if (b.dataset.moDef) {
+      try { await apiPost('/model/default', { id: b.dataset.moDef }); renderMoList(); renderMoActive(); moOut('✅ 已设为默认渠道', 'ok'); }
+      catch (err) { moOut('❌ ' + esc(err.message), 'err'); }
+      return;
+    }
+    if (b.dataset.moEdit) { const m = moItems.find((x) => x.id === b.dataset.moEdit); if (m) { moFillForm(m); $('#moName').scrollIntoView({ behavior: 'smooth', block: 'center' }); } return; }
+    if (b.dataset.moDel) {
+      if (!confirm('删除该渠道？删除后不可恢复（预置渠道不受影响）。')) return;
+      try { await apiPost('/model/remove', { id: b.dataset.moDel }); renderMoList(); renderMoActive(); moOut('✅ 已删除', 'ok'); }
+      catch (err) { moOut('❌ ' + esc(err.message), 'err'); }
+    }
+  };
+  $('#moPresets').onclick = (e) => {
+    const b = e.target.closest('button[data-mo-preset]'); if (!b) return;
+    const p = moPresets.find((x) => x.id === b.dataset.moPreset); if (!p) return;
+    moFillForm(p); moEditingId = '';
+    $('#moKey').focus();
+    moOut('已填入预置渠道，补上 API Key 后点「保存」即可。');
+  };
+  $('#moSave').onclick = async () => {
+    const name = $('#moName').value.trim(), model = $('#moModel').value.trim();
+    const key = $('#moKey').value.trim();
+    if (!name) return moOut('❌ 请填显示名', 'err');
+    if (!model) return moOut('❌ 请填模型名（如 deepseek-chat）', 'err');
+    if (!moEditingId && !key) return moOut('❌ 新增渠道需要填 API Key（编辑已有渠道时留空 = 保持不变）', 'err');
+    const body = {
+      name, model,
+      provider: $('#moProvider').value,
+      baseUrl: $('#moBase').value.trim(),
+      apiKey: key || undefined,
+      enabled: $('#moEnabled').checked,
+    };
+    if (moEditingId) body.id = moEditingId;
+    $('#moSave').disabled = true;
+    try {
+      await apiPost('/model/save', body);
+      moResetForm();
+      moLoaded = false; await loadModels();
+      moOut('✅ 已保存，双端即刻生效（小程序端重新打开设置页可见）', 'ok');
+    } catch (e) { moOut('❌ 保存失败：' + esc(e.message), 'err'); }
+    $('#moSave').disabled = false;
+  };
+  $('#moTestForm').onclick = async () => {
+    const baseUrl = $('#moBase').value.trim(), model = $('#moModel').value.trim(), apiKey = $('#moKey').value.trim();
+    if (!baseUrl || !model) return moOut('❌ 「不入库直接测试」需先填接口地址与模型名', 'err');
+    if (!apiKey && !moEditingId) return moOut('❌ 需要填 API Key 才能测试', 'err');
+    $('#moTestForm').disabled = true;
+    try {
+      const r = await apiPost('/model/test', { baseUrl, apiKey, model, provider: $('#moProvider').value });
+      if (r.ok) moOut(`✅ 连通正常 · ${r.latencyMs}ms · 回复「${esc(r.reply || '')}」 · ${esc(r.model || '')}`, 'ok');
+      else moOut(`❌ 测试失败：${esc(r.msg || '未知错误')}（${r.latencyMs || 0}ms）`, 'err');
+    } catch (e) { moOut('❌ 测试失败：' + esc(e.message), 'err'); }
+    $('#moTestForm').disabled = false;
+  };
+  $('#moCancel').onclick = () => moResetForm();
+})();
 (function () {
   document.querySelectorAll('.nav-item[data-view]').forEach((n) => {
     n.onclick = () => switchView(n.dataset.view);
