@@ -180,22 +180,15 @@
 
 微信小程序同后端：百度底图主页、语音对话与播报（ASR + TTS）、拍照识图（多模态）、订单留痕、明暗主题、隐私中心（政策/同意/撤回/导出/删除）。总包 223.7 KB，测试版扫码即用。
 
-> 🖼 **真机全景漫游**：下方 15 帧按章节标注的大图（地图主页 → 路线 → 体检 → 等时圈 → 助手 → 商城 / 订单 → 隐私 / 账号），逐帧对应 README 各功能小节。
+<p align="center"><img src="docs/readme/frames/mp-panorama.gif" width="340" alt="鲤慧微信小程序真机全景漫游（动态）：15 帧按章节标注循环播放"></p>
+<p align="center"><sub>↑ <b>真机全景漫游（动态循环）</b>：① 地图主页 ② POI 列表 ③ 城市纠偏 ④ 路线规划 ⑤ 等时圈盲区 ⑥–⑦ 生活圈体检 ⑧–⑩ 智能助手 ⑪ 商城 ⑫ 订单 ⑬–⑭ 隐私合规 ⑮ 我的·账号锚定</sub></p>
 
-<p align="center"><img src="docs/readme/frames/mp-panorama.jpg" width="720" alt="鲤慧微信小程序真机实测全景：15 帧按章节标注"></p>
-<p align="center"><sub>↑ 真机实测全景（非模拟器）：① 地图主页 ② POI 列表 ③ 城市纠偏 ④ 路线规划 ⑤ 等时圈盲区 ⑥–⑦ 生活圈体检 ⑧–⑩ 智能助手 ⑪ 商城 ⑫ 订单 ⑬–⑭ 隐私合规 ⑮ 我的·账号锚定</sub></p>
+<details>
+<summary>🖼 静态全景大图（15 帧一次看全，点击展开）</summary>
 
-<p align="center">
-  <img src="docs/readme/frames/mp-g15-map-home.jpg" width="270" alt="真机：地图主页 POI 检索">&nbsp;
-  <img src="docs/readme/frames/mp-g14-poi-list.jpg" width="270" alt="真机：POI 列表">&nbsp;
-  <img src="docs/readme/frames/mp-g10-city-pick.jpg" width="270" alt="真机：城市纠偏">
-</p>
-<p align="center">
-  <img src="docs/readme/frames/mp-g08-route.jpg" width="270" alt="真机：路线规划">&nbsp;
-  <img src="docs/readme/frames/mp-g12-orders.jpg" width="270" alt="真机：我的订单">&nbsp;
-  <img src="docs/readme/frames/mp-g06-mine-account.jpg" width="270" alt="真机：我的 · 账号ID锚定+花费">
-</p>
-<p align="center"><sub>↑ 真机实测（非模拟器）：地图主页 / POI 列表 / 城市纠偏 / 路线规划 / 我的订单 / 我的·账号</sub></p>
+<p align="center"><img src="docs/readme/frames/mp-panorama.jpg" width="640" alt="鲤慧微信小程序真机实测全景：15 帧按章节标注"></p>
+
+</details>
 
 ### 🧠 Memory · 安全运维记忆
 
