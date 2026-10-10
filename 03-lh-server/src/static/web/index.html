@@ -1693,7 +1693,7 @@ async function loadShop() {
   const p = state.lng != null ? { lng: state.lng, lat: state.lat } : {};
   try {
     const r = await api('/shop/source', Object.assign({ mode: state.shopMode }, p));
-    if (r.quotaHit) banner('百度地图今日配额已用尽，店源为缓存数据（约 1 小时内），明日自动恢复。');
+    if (r.quotaHit) banner('百度检索限流中（QPS 超限或配额紧张），店源为缓存数据，稍后自动恢复。');
     $('#shopFrom').textContent = r.from || '';
     const rows = (r.items || []).slice(0, 15).map((i) =>
       '<div class="row"><div class="ico">' + (i.icon || '🏬') + '</div><div class="mid">' +

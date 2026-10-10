@@ -23,20 +23,20 @@ const CATEGORIES = [
 ];
 
 /* ------------------------------------------------------------------ */
-/* 配额熔断：百度 302(天配额超限)/401(并发超限) 后短路易过               */
-/* V1.0.27 修复：401 是「瞬时并发超限」，并发风暴退去即恢复，此前一律    */
-/* 熔断 10 分钟导致体检/等时圈检索受限类迟迟不恢复（用户看到「暂无」）。  */
-/* 401 → 45 秒短熔断（恰好覆盖一次并发风暴）；302 → 10 分钟（天配额，   */
-/* 0 点才恢复，长短熔断分开处理）。                                     */
-/* ------------------------------------------------------------------ */
+/* 配额熔断：百度 302/401 限流类错误后短路易过                             */
+/* V1.0.27：401 → 45 秒短熔断（瞬时并发风暴）。                           */
+/* V1.0.30 修正（实测证伪）：302 文案虽叫「天配额超限」，但控制台配额才用   */
+/* 14% 也照样回 302 —— 百度把 QPS 超限也报成 302。故 302 从 10 分钟降为    */
+/* 2 分钟中熔断：QPS 类 2 分钟试探即恢复；真天配额打满会持续 302 续期，    */
+/* 代价可控。根因防线是 BAIDU_QPS 贴合控制台限额（个人 AK 地点检索 3QPS）。 */
 let quotaBlockedUntil = 0;
 function isQuotaBlocked() {
   return Date.now() < quotaBlockedUntil;
 }
 function noteQuotaError(e) {
   if (e && e.baiduStatus === 302) {
-    quotaBlockedUntil = Date.now() + 10 * 60 * 1000;
-    logger.warn('life', 'baidu quota blocked (status=302 天配额), 熔断 10 分钟');
+    quotaBlockedUntil = Date.now() + 2 * 60 * 1000;
+    logger.warn('life', 'baidu throttled (status=302 QPS/配额限制), 中熔断 2 分钟');
     return true;
   }
   if (e && e.baiduStatus === 401) {

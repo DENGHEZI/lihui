@@ -94,7 +94,7 @@ async function localDiagnose({ lng, lat, radius = 1200, city = '' }) {
     engine: 'server-local',
     quotaExhausted: isQuotaBlocked() && cats.every((c) => c.failed),
     hint: isQuotaBlocked() && cats.every((c) => c.failed)
-      ? '今日百度地图检索配额已用完（每日 0 点自动恢复）。本次仅展示部分结果，建议在百度地图开放平台完成个人认证以提升免费配额。'
+      ? '百度检索限流中（QPS 超限或配额紧张），稍后会自动恢复重试；等时圈算路不受影响。可在百度地图开放平台完成个人认证提升配额，或配置多把 AK 轮换。'
       : undefined,
   };
 }

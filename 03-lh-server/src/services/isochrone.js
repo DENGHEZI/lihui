@@ -157,12 +157,12 @@ function isMatrixBlocked() {
   return Date.now() < matrixBlockedUntil;
 }
 function noteMatrixError(e) {
-  /* V1.0.27：401 并发超限是瞬时的，45 秒短熔断即恢复（此前一律 10 分钟，
-   * 算路熔断期间等时圈被迫降级理想圆，与检索熔断叠加造成"全页没数据"观感）；
-   * 302 天配额仍熔断 10 分钟。 */
+  /* V1.0.27：401 并发超限是瞬时的，45 秒短熔断即恢复。
+   * V1.0.30：302 文案虽叫「天配额超限」，实测控制台配额未满也回 302（百度把
+   * QPS 超限也报 302）→ 从 10 分钟降为 2 分钟中熔断，QPS 类试探即恢复。 */
   if (e && e.baiduStatus === 302) {
-    matrixBlockedUntil = Date.now() + 10 * 60 * 1000;
-    logger.warn('isochrone', 'matrix quota blocked (status=302 天配额), 算路熔断 10 分钟');
+    matrixBlockedUntil = Date.now() + 2 * 60 * 1000;
+    logger.warn('isochrone', 'matrix throttled (status=302 QPS/配额限制), 中熔断 2 分钟');
     return true;
   }
   if (e && e.baiduStatus === 401) {
