@@ -29,7 +29,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/readme/frames/web-tour.gif" width="960" alt="LiHui web tour: locate → living-circle checkup (89/100) → walking isochrones (15/30 min, real map) → model endpoints → API handbook">
+  <img src="docs/readme/frames/web-workbench.png" width="960" alt="LiHui web workbench: locate → living-circle checkup → walking isochrones → AI assistant, white theme with gold accent">
 </p>
 <p align="center"><sub>↑ Web tour: checkup score → real-map isochrone switching → shop walking distance → assistant conversation (same backend powers the Mini Program)</sub></p>
 

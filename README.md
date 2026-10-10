@@ -36,9 +36,9 @@
 </p>
 
 <p align="center">
-  <img src="docs/readme/frames/web-tour.gif" width="960" alt="鲤慧网页版全景动图：定位 → 生活圈体检（89 分）→ 步行等时圈（15/30 分钟档真实地图）→ 模型接口 → API 手册">
+  <img src="docs/readme/frames/web-workbench.png" width="960" alt="鲤慧网页版工作台：定位 → 生活圈体检 → 步行等时圈 → 智能助手，白色主题 + 金 #b98629 主色">
 </p>
-<p align="center"><sub>↑ 网页版全景漫游（白色主题 · 金 #b98629）：体检评分 → 等时圈真实地图切档 → 模型接口配置 → 智能助手对话（同一后端驱动小程序）</sub></p>
+<p align="center"><sub>↑ 网页版工作台首屏（白色主题 · 金 #b98629 · Linear/Apple 式细线边框与留白）；下方 §2 附 8 视图全景动图</sub></p>
 
 ## ✨ 核心特性
 
