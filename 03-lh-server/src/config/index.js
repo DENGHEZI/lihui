@@ -58,6 +58,10 @@ const config = {
     host: env('HOST', '0.0.0.0'),
     corsOrigin: env('CORS_ORIGIN', '*'),
     logLevel: env('LOG_LEVEL', 'info'),
+    // 是否信任反向代理头（x-forwarded-for 等）。默认 false=直连部署下不信任客户端可伪造的
+    // 转发头，clientIp 一律以 TCP 对端地址为准（防伪造 127.0.0.1 绕过封禁/限流/回环豁免）。
+    // 挂在反代（Nginx / 云托管网关）后面时设 TRUST_PROXY=true 才会读转发头取真实客户端 IP。
+    trustProxy: bool('TRUST_PROXY', false),
   },
 
   baidu: {
@@ -135,7 +139,9 @@ const config = {
   auth: {
     secret: env('LH_AUTH_SECRET', ''),
     adminUser: env('LH_ADMIN_USER', 'admin'),
-    adminPass: env('LH_ADMIN_PASS', 'lihui-admin-2026'),
+    // 安全：不再内置公开默认口令。未配置 LH_ADMIN_PASS 时，首次播种自动生成随机口令并
+    // 仅在启动日志打印一次（此前硬编码默认值一旦漏配即成公开后门，见 issue #5）。
+    adminPass: env('LH_ADMIN_PASS', ''),
     allowRegister: bool('LH_AUTH_ALLOW_REGISTER', true),
     allowLoopbackAdmin: bool('LH_AUTH_ALLOW_LOOPBACK_ADMIN', false),
     tokenTtlMs: num('LH_AUTH_TOKEN_TTL_MS', 7 * 24 * 3600 * 1000),

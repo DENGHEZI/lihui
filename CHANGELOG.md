@@ -5,6 +5,27 @@
 
 ---
 
+## [V1.0.29] · 2026-10-10 · 社区安全审计修复（GitHub Issues #1~#6 全闭环）
+
+> 感谢 [@skyfireitdiy](https://github.com/skyfireitdiy) 的 6 个高质量 issue。全部修复并验证。
+
+### 安全（issues #1 #5 #6）
+
+- **#1 clientIp 无条件信任转发头**（`utils/http.js`）：新增 `TRUST_PROXY` 开关（默认 false）——直连部署下 `X-Forwarded-For` 等客户端可伪造头一律不读，`clientIp` 以 TCP 对端地址为准；伪造 `X-Forwarded-For: 127.0.0.1` 不再能绕过 IP 封禁 / IP 地板限流 / `allowLoopbackAdmin` 提权。`local` 回环判定只看真实对端地址。挂在反代（云托管网关/Nginx）后设 `TRUST_PROXY=true` 恢复读头。
+- **#5 默认管理员口令硬编码**（`config/index.js` + `services/auth.js`）：移除公开默认值 `lihui-admin-2026`——未配置 `LH_ADMIN_PASS` 时首次播种自动生成随机口令并仅在启动日志打印一次；存量库检测到仍在用旧公开默认口令的账号，启动时用 `LH_ADMIN_PASS` 强制重置（迁移逻辑已单测验证）。**所有部署方请立即升级并配置自己的 `LH_ADMIN_PASS`。**
+- **#6 CORS 实际响应与预检不一致**（`utils/http.js`）：`json()` 的 `Access-Control-Allow-Origin` 从固定 `*` 改为读 `CORS_ORIGIN` 配置（与 OPTIONS 预检同源），补 `Vary: Origin`；配置具体域名后跨域策略真正生效。
+
+### 健壮性（issues #2 #3 #4）
+
+- **#2 clientIp 死代码**：`::ffff:127.0.0.1` 永不命中的判断随 #1 重写一并清理。
+- **#3 矩阵端点永久缓存**（`services/isochrone.js`）：记住的端点以非配额类原因失败时立即失效缓存，回退完整候选列表重试（`/direction/v2/matrix` 备用端点恢复可达性），不再整轮走降级链降精度。
+- **#4 等时圈去重 key 口径**（`services/isochrone.js`）：in-flight 去重 key 的 grid 从固定 5 改为 `resolveGridN` 自适应值，与内部 TTL 缓存 key 同口径。
+
+### 其他
+
+- **提高并发阈值**（`app.js`）：入口限流 guest 60rpm/burst10 → **120rpm/burst25**、user 300/40 → **600/80**、admin 2000/200 → **3000/300**、单 IP 地板 120/20 → **240/50**——多视图并发拉取与多人同时访问不再误伤（百度 401 已有 45s 短熔断自愈兜底）。
+- **README 主视觉换新**：中英双语 README 首图从旧蓝图 `hero-zh.gif` 换为白金主题 `web-tour.gif` 动图。
+
 ## [V1.0.28] · 2026-10-10 · 等时圈底图横幅修复 + README 全新动图
 
 ### 网页版（03-lh-server/src/static/web/index.html）

@@ -79,10 +79,12 @@ const ROUTE_ROLE = {
  *  - IP 地板：仅对非回环来源生效（防客户端伪造 x-device-id 绕过）；回环=本机可信，免地板；
  *  - 响应头：X-RateLimit-Limit / Remaining / Reset，429 时附 Retry-After。 */
 const RL = {
-  guest: { rpm: 60, burst: 10 },
-  user: { rpm: 300, burst: 40 },
-  admin: { rpm: 2000, burst: 200 },
-  ipFloor: { rpm: 120, burst: 20 }, // 单 IP 硬上限（防 deviceId 伪造绕过），仅非回环
+  // 2026-10-10 提高并发阈值：网页版多视图并发拉取 + 多人同时访问，原 guest burst=10
+  // 易误伤正常浏览（429 风暴观感）；百度 401 已有 45s 短熔断自愈，入口侧放宽。
+  guest: { rpm: 120, burst: 25 },
+  user: { rpm: 600, burst: 80 },
+  admin: { rpm: 3000, burst: 300 },
+  ipFloor: { rpm: 240, burst: 50 }, // 单 IP 硬上限（防 deviceId 伪造绕过），仅非回环
 };
 const RATE_WINDOW = 60000;
 const rateBuckets = new Map();

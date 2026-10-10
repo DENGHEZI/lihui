@@ -10,6 +10,7 @@ const https = require('https');
 const zlib = require('zlib');
 const { URL } = require('url');
 const logger = require('./logger');
+const config = require('../config');
 
 const TRACE = () => 'tr_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
@@ -19,9 +20,11 @@ function json(res, data, status = 200, headers = {}) {
   const body = JSON.stringify(data);
   const h = {
     'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': (config.server && config.server.corsOrigin) || '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Device-Id, X-Trace-Id',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    // CORS_ORIGIN 配置为具体域名时告知缓存按 Origin 区分（issue #6：与 OPTIONS 预检口径统一）
+    'Vary': 'Origin',
     'X-Trace-Id': headers['X-Trace-Id'] || TRACE(),
     ...headers,
   };
@@ -146,27 +149,35 @@ function fetchJSON(url, { method = 'GET', body = null, headers = {}, timeout = 8
   });
 }
 
-/** 自动锚定用户 IP：按可信度从高到低取 */
+/** 自动锚定用户 IP：
+ *  安全口径（issue #1/#2）：
+ *  - 仅当 TRUST_PROXY=true（挂在可信反代后面）才读 x-forwarded-for 等转发头取真实客户端 IP；
+ *  - 直连部署默认不信任任何客户端可伪造的头 —— 伪造 X-Forwarded-For: 127.0.0.1 不再能
+ *    冒充回环（绕过 IP 封禁 / IP 地板限流 / allowLoopbackAdmin 提权）；
+ *  - local 回环判定只看 TCP 层真实对端地址（req.socket.remoteAddress），与请求头无关。 */
 function clientIp(req) {
   const h = req.headers || {};
   const pick = (v) => String(v || '').split(',')[0].trim();
+  const trustProxy = !!(config.server && config.server.trustProxy);
+
+  // TCP 层真实对端地址（唯一不可伪造的来源）
+  let ra = String((req.socket && req.socket.remoteAddress) || '');
+  if (ra.startsWith('::ffff:')) ra = ra.slice(7); // IPv4-mapped IPv6 归一化
+  const raLocal = ra === '::1' || ra === '127.0.0.1';
 
   let ip = '';
-  const xff = pick(h['x-forwarded-for']);
-  if (xff) ip = xff;
-  if (!ip) ip = pick(h['x-real-ip']);
-  if (!ip) ip = pick(h['cf-connecting-ip']);
-  if (!ip) ip = pick(h['x-client-ip']);
-  if (!ip) {
-    const ra = req.socket && req.socket.remoteAddress;
-    ip = String(ra || '');
+  if (trustProxy) {
+    ip = pick(h['x-forwarded-for']);
+    if (!ip) ip = pick(h['x-real-ip']);
+    if (!ip) ip = pick(h['cf-connecting-ip']);
+    if (!ip) ip = pick(h['x-client-ip']);
   }
-  // IPv6 映射
+  if (!ip) ip = ra;
   if (ip.startsWith('::ffff:')) ip = ip.slice(7);
-  if (ip === '::1' || ip === '127.0.0.1' || ip === '::ffff:127.0.0.1') {
-    return { ip: ip || '127.0.0.1', local: true };
-  }
-  return { ip, local: false };
+
+  // 回环只由真实对端地址决定；转发头里出现的 127.0.0.1 不算 local（直连部署下可伪造）
+  if (raLocal) return { ip: '127.0.0.1', local: true };
+  return { ip: ip || 'unknown', local: false };
 }
 
 function isPrivateIp(ip) {

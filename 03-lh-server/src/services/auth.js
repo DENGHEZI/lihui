@@ -189,10 +189,33 @@ function authenticate(username, password) {
 }
 
 /* ---------------- 启动播种（默认管理员） ---------------- */
+/* issue #5：V1.0.28 及之前版本曾以公开常量 'lihui-admin-2026' 作为默认口令 ——
+ * 生产漏配 LH_ADMIN_PASS 即成公开后门。现口径：
+ *  ① 播种时未配置口令 → 自动生成随机口令，仅在启动日志打印一次；
+ *  ② 检测到仍在用旧公开默认口令的账号 → 用 LH_ADMIN_PASS（若已配置）强制重置。 */
+const LEGACY_DEFAULT_PASS = 'lihui-admin-2026';
+function migrateLegacyDefaultPass() {
+  const pass = (config.auth && config.auth.adminPass) || '';
+  if (!pass) return;
+  const legacy = users().all().find((u) => {
+    try {
+      return u && u.passwordHash && verifyPassword(LEGACY_DEFAULT_PASS, u.passwordHash);
+    } catch (_) {
+      return false;
+    }
+  });
+  if (legacy) {
+    users().update(legacy.id, { passwordHash: hashPassword(pass) });
+    logger.warn('auth', `安全修复：账号 "${legacy.username}" 曾使用公开默认口令，已用 LH_ADMIN_PASS 重置。请用新口令重新登录。`);
+  }
+}
 function bootstrapSeed() {
+  migrateLegacyDefaultPass();
   if (users().all().length > 0) return;
   const name = (config.auth && config.auth.adminUser) || 'admin';
-  const pass = (config.auth && config.auth.adminPass) || 'lihui-admin-2026';
+  let pass = (config.auth && config.auth.adminPass) || '';
+  const generated = !pass;
+  if (generated) pass = 'lh-' + crypto.randomBytes(9).toString('base64url');
   const u = {
     id: store.uid('u'),
     username: name,
@@ -202,7 +225,12 @@ function bootstrapSeed() {
     seeded: true,
   };
   users().add(u);
-  logger.info('auth', `已播种默认管理员 "${name}"（角色 admin）。建议尽快配置 LH_ADMIN_PASS 修改口令，并设 LH_AUTH_ALLOW_REGISTER=false。`);
+  if (generated) {
+    logger.warn('auth', `未配置 LH_ADMIN_PASS，已自动生成随机管理员口令（仅此一次打印，请立即保存）: ${pass}`);
+    logger.warn('auth', `建议尽快在环境变量写入 LH_ADMIN_PASS 固定口令，并设 LH_AUTH_ALLOW_REGISTER=false。`);
+  } else {
+    logger.info('auth', `已播种管理员 "${name}"（口令来自 LH_ADMIN_PASS）。建议设 LH_AUTH_ALLOW_REGISTER=false。`);
+  }
 }
 
 /* ---------------- 请求解析 ---------------- */

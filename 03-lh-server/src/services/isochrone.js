@@ -181,8 +181,11 @@ async function walkMatrixBatch(origin, dests) {
   if (isMatrixBlocked()) throw Object.assign(new Error('matrix quota blocked'), { matrixBlocked: true });
   const o = `${origin.lat},${origin.lng}`;
   const d = dests.map((p) => `${p.lat},${p.lng}`).join('|');
-  const candidates = matrixEndpoint
-    ? [matrixEndpoint]
+  // issue #3：记住的端点若以「非配额类」原因失败（改版/临时故障），立即失效缓存并
+  // 回退完整候选列表重试一次（递归自带守卫：缓存已清空，第二轮不会再进本分支）。
+  const cached = matrixEndpoint;
+  const candidates = cached
+    ? [cached]
     : [
         { path: '/routematrix/v2/walking', params: { coordtype: 'gcj02' } }, // 实测可用（GCJ-02）
         { path: '/routematrix/v2/walking', params: { coordtype: 3 } }, // 数字风格也实测兼容
@@ -208,6 +211,10 @@ async function walkMatrixBatch(origin, dests) {
       // 算路配额类错误换端点也没用，直接上抛走降级链
       if (e.baiduStatus === 302 || e.baiduStatus === 401) throw e;
       logger.warn('isochrone', `matrix endpoint ${c.path}(${JSON.stringify(c.params)}) failed: ${e.message}`);
+      if (cached && c === cached) {
+        matrixEndpoint = null; // 失效即重置，下次（含本轮递归）重新尝试全部候选端点
+        return walkMatrixBatch(origin, dests);
+      }
     }
   }
   throw lastErr || new Error('matrix all endpoints failed');
@@ -853,7 +860,10 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
 const security = require('../utils/security');
 const _buildIsochroneRaw = buildIsochrone;
 function buildIsochroneDedup(opts) {
-  const key = `iso:${Number(opts.lng).toFixed(4)}:${Number(opts.lat).toFixed(4)}:${opts.minutes || 15}:${opts.grid || 5}`;
+  // issue #4：去重 key 与 buildIsochrone 内部 cacheKey 同口径 —— grid 未指定时
+  // 用 resolveGridN(自适应 7/6/5) 而非固定 5，避免不同 minutes 的请求 key 碰撞语义混乱。
+  const gridN = resolveGridN(opts.grid, opts.minutes || 15);
+  const key = `iso:${Number(opts.lng).toFixed(4)}:${Number(opts.lat).toFixed(4)}:${opts.minutes || 15}:${gridN}`;
   return security.dedup(key, () => _buildIsochroneRaw(opts));
 }
 
