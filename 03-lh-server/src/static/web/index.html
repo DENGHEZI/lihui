@@ -572,6 +572,16 @@
   .mo-out.ok { border-color: var(--primary-line); background: var(--primary-weak); color: var(--primary-deep); }
   .mo-out.err { border-color: #EBC9C7; background: #FBEDEC; color: #A33; }
   .mo-out code { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--primary-deep); }
+
+  /* ---------- AI 状态徽标（工作台首屏）与兜底提示 ---------- */
+  .ai-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 650;
+    border-radius: 999px; padding: 4px 11px; white-space: nowrap; flex: none; }
+  .ai-chip.ok { color: var(--primary-deep); background: var(--primary-weak); border: 1px solid var(--primary-line); }
+  .ai-chip.warn { color: #8A6210; background: var(--gold-weak); border: 1px solid var(--gold-line); }
+  .ai-chip.warn:hover { background: #F6E9C8; }
+  .ai-fallback { margin-top: 8px; font-size: 12px; color: #8A6210; background: var(--gold-weak);
+    border: 1px dashed var(--gold-line); border-radius: 10px; padding: 7px 11px; line-height: 1.6; }
+  .ai-fallback a { color: var(--gold); font-weight: 650; cursor: pointer; text-decoration: underline; }
 </style>
 <meta name="theme-color" content="#0fa693">
 </head>
@@ -656,6 +666,7 @@
     <div class="ask">
       <textarea id="aiText" rows="2" placeholder="输入中心点地名（区 / 街道 / 小区 / 景区），或直接问我：附近哪家菜市场最近？体检短板在哪？"></textarea>
       <div class="ask-bar">
+        <span class="ai-chip" id="aiModelChip">🤖 AI 检测中…</span>
         <span class="hint">回车发送 · Shift + 回车换行 · 回答引用真实 POI 与标准编号</span>
         <a class="jump" id="jumpLife" style="cursor:pointer">直达生活圈体检 ↓</a>
         <button class="ai-send" id="aiSend" title="发送">↑</button>
@@ -1887,6 +1898,7 @@ async function loadModels() {
     renderMoList();
     renderMoPresets();
     moLoaded = true;
+    refreshAiChip(); /* 模型增删后同步刷新工作台 AI 状态徽标 */
   } catch (e) { $('#moActive').textContent = '加载失败：' + e.message; }
 }
 
@@ -1915,6 +1927,31 @@ function renderMoList() {
 
 function renderMoPresets() {
   $('#moPresets').innerHTML = moPresets.map((p) => `<button class="mo-preset" data-mo-preset="${p.id}">＋ ${esc(p.name)}</button>`).join('') || '<span style="font-size:12px;color:var(--text-3)">无预置</span>';
+}
+
+/* 工作台首屏 AI 状态徽标：有可用模型（有 Key 或 Ollama）= 就绪，否则警示并引导去模型接口页 */
+async function refreshAiChip() {
+  const el = $('#aiModelChip');
+  if (!el) return;
+  try {
+    const a = await api('/model/active');
+    if (a && (a.hasKey || a.provider === 'ollama')) {
+      el.className = 'ai-chip ok';
+      el.textContent = '🤖 AI 已就绪 · ' + (a.name || a.model || '');
+      el.onclick = null; el.style.cursor = 'default'; el.title = '对话模型：' + (a.model || '');
+    } else {
+      el.className = 'ai-chip warn';
+      el.textContent = '⚠️ 未配置模型 API KEY · AI 走规则兜底，点击配置';
+      el.onclick = () => switchView('models');
+      el.style.cursor = 'pointer';
+      el.title = '前往「模型接口」新增渠道并填 Key，AI 润色即刻生效';
+    }
+  } catch (e) {
+    el.className = 'ai-chip warn';
+    el.textContent = '⚠️ AI 状态获取失败，点击重试';
+    el.onclick = () => refreshAiChip();
+    el.style.cursor = 'pointer';
+  }
 }
 
 function moFillForm(m) {
@@ -2028,6 +2065,7 @@ async function moTest(id, btn) {
   const ok = await locate();
   loadAll();
   memOverview(); /* Memory 面板与定位无关,直接加载 */
+  refreshAiChip(); /* 工作台 AI 状态徽标（模型 Key 配置检测） */
   if (!ok) { loadShop(); } /* 定位失败也至少看热门店源 */
 })();
 </script>
@@ -2077,6 +2115,14 @@ async function moTest(id, btn) {
       });
       const cost = (d.usage && Number(d.usage.costCny) > 0) ? '<span class="cost">本条消耗 ¥' + Number(d.usage.costCny).toFixed(4) + '</span>' : '';
       bub.innerHTML = esc(d.reply || '（服务端返回为空，稍后再试）') + cost;
+      /* 无模型（规则引擎兜底）时明确告知，并给一键配置入口 */
+      if (!d.model || d.model === 'local-rule-orchestrator') {
+        const tip = document.createElement('div');
+        tip.className = 'ai-fallback';
+        tip.innerHTML = '⚠️ 本条由规则引擎直答（未走大模型）——当前未配置模型 API KEY。<a>去「模型接口」配置 →</a>';
+        tip.querySelector('a').onclick = () => switchView('models');
+        bub.appendChild(tip);
+      }
       scroll();
     } catch (e) {
       bub.classList.add('ai-err');
