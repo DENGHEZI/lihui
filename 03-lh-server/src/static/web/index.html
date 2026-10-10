@@ -667,7 +667,9 @@ function setAuthState(v) {
 }
 function authHeaders() {
   const a = authState();
-  return a && a.token ? { Authorization: 'Bearer ' + a.token } : {};
+  if (!(a && a.token)) return {};
+  /* 双头并发：标准 Authorization（本地/云托管直连）+ X-Auth-Token（反代会剥 Authorization 的环境兜底） */
+  return { Authorization: 'Bearer ' + a.token, 'X-Auth-Token': 'Bearer ' + a.token };
 }
 
 async function api(path, params) {

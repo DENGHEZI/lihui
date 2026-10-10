@@ -207,9 +207,17 @@ function bootstrapSeed() {
 
 /* ---------------- 请求解析 ---------------- */
 function fromRequest(req) {
+  // ① 标准 Authorization 头（本地 / 云托管直连 / 小程序 callContainer 通道）
   const h = (req.headers && req.headers['authorization']) || '';
   if (h.startsWith('Bearer ')) {
     const t = verifyToken(h.slice(7).trim());
+    if (t) return t;
+  }
+  // ② X-Auth-Token 自定义头兜底（V1.0.14）：部分反向代理会剥标准 Authorization 头，
+  //    自定义头按 RFC 透传不受影响（线上实测 X-Device-Id 到达而 Authorization 被剥）
+  const alt = (req.headers && (req.headers['x-auth-token'] || req.headers['x-authorization'])) || '';
+  if (alt) {
+    const t = verifyToken(String(alt).replace(/^Bearer\s+/i, '').trim());
     if (t) return t;
   }
   return null; // 未登录或令牌无效 → 视为 guest
