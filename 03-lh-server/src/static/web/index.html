@@ -855,45 +855,52 @@
 
   <!-- ═══ 视图：API 接口 ═══ -->
   <div class="view" id="view-api">
-  <div class="view-head"><h1>API 接口</h1><p>本页所有功能都走同一套 REST 接口，前缀 /api/v1，网页与小程序完全同源</p></div>
+  <div class="view-head"><h1>API 接口 · 手机端调用手册</h1><p>微信小程序全部功能走这套接口（前缀 /api/v1）——右侧说明即该接口在手机端的使用位置</p></div>
   <div class="card">
     <h2>🔌 接口一览 <span class="sub">零外部依赖 · JSON · code=0 成功</span></h2>
 
     <div class="api-group"><div class="gt">鉴权 · 账号</div>
-      <div class="api-row"><span class="m m-post">POST</span><span class="p">/auth/login</span><span class="d">登录，返回 token + user</span></div>
-      <div class="api-row"><span class="m m-post">POST</span><span class="p">/auth/register</span><span class="d">自注册（仅 user 角色，用户名唯一）</span></div>
-      <div class="api-row"><span class="m m-get">GET</span><span class="p">/auth/me</span><span class="d">当前身份实时资料（昵称/头像）</span></div>
-      <div class="api-row"><span class="m m-post">POST</span><span class="p">/auth/profile</span><span class="d">改昵称 / 头像（双端同步）</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/auth/login</span><span class="d">「我的」登录 · 返回 token + user</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/auth/register</span><span class="d">「我的」注册 · 用户名全服唯一，网页/小程序共库不重复</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/auth/me</span><span class="d">「我的」启动同步 · 任一端改的昵称/头像，另一端靠它刷新</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/auth/profile</span><span class="d">「我的」资料编辑 · 昵称 1~24 字 / 头像 dataURL ≤190KB，双端同步</span></div>
     </div>
 
     <div class="api-group"><div class="gt">生活圈 · 地图</div>
-      <div class="api-row"><span class="m m-get">GET</span><span class="p">/life/report</span><span class="d">七类体检报告（加权评分 + 短板）</span></div>
-      <div class="api-row"><span class="m m-get">GET</span><span class="p">/life/isochrone</span><span class="d">步行等时圈 + 盲区网格</span></div>
-      <div class="api-row"><span class="m m-get">GET</span><span class="p">/map/poi/search</span><span class="d">POI 检索（便民速查数据源）</span></div>
-      <div class="api-row"><span class="m m-get">GET</span><span class="p">/map/reverse-geocode</span><span class="d">坐标 → 地址（逆地理）</span></div>
-      <div class="api-row"><span class="m m-get">GET</span><span class="p">/map/geocode</span><span class="d">地址 → 坐标（城市切换）</span></div>
-      <div class="api-row"><span class="m m-get">GET</span><span class="p">/map/weather</span><span class="d">实时天气</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/life/report</span><span class="d">生活圈体检页 · 七类加权评分 + 短板 + 规划方案</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/life/isochrone</span><span class="d">等时圈页 · 步行等时圈 + 盲区网格（真实地图/示意图）</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/map/poi/search</span><span class="d">地图主页 · POI 检索打点 / 便民速查数据源</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/map/reverse-geocode</span><span class="d">主页定位纠偏 · 坐标 → 地址</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/map/geocode</span><span class="d">主页城市切换 · 地址 → 坐标（BD-09，端上转 GCJ-02）</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/map/weather</span><span class="d">主页天气卡 · 实时温度 / 湿度 / 现象</span></div>
     </div>
 
     <div class="api-group"><div class="gt">店源 · 助手</div>
-      <div class="api-row"><span class="m m-get">GET</span><span class="p">/shop/source</span><span class="d">真实店源（附近 3km / 本城热门）</span></div>
-      <div class="api-row"><span class="m m-post">POST</span><span class="p">/agent/chat</span><span class="d">智能规划助手（带位置上下文）</span></div>
-      <div class="api-row"><span class="m m-post">POST</span><span class="p">/agent/vision</span><span class="d">多模态识图（小程序端）</span></div>
-      <div class="api-row"><span class="m m-get">GET</span><span class="p">/agent/standards?q=</span><span class="d">标准知识库 RRF 检索</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/shop/source</span><span class="d">商城页 · 附近 3km / 本城热门（mode=near|hot）</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/agent/chat</span><span class="d">助手对话 · {text, sessionId, lng, lat} → {reply, usage.costCny}</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/agent/vision</span><span class="d">助手拍照识图 · {image: base64, question?}</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/agent/standards?q=</span><span class="d">助手标准检索 · RRF 三通道融合命中</span></div>
+    </div>
+
+    <div class="api-group"><div class="gt">模型配置（DeepSeek 等自定义渠道）</div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/model/list</span><span class="d">设置·模型配置 · Key 只回脱敏串（sk-1****），明文仅本机可查</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/model/save</span><span class="d">设置·保存模型 · apiKey 留空 = 保持已配置 Key 不变</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/model/test</span><span class="d">设置·测试 · 支持不入库先试 {baseUrl, apiKey, model}</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/model/default</span><span class="d">设置·设默认对话渠道</span></div>
     </div>
 
     <div class="api-group"><div class="gt">隐私 · 运维</div>
-      <div class="api-row"><span class="m m-get">GET</span><span class="p">/privacy/policy</span><span class="d">版本化隐私政策全文</span></div>
-      <div class="api-row"><span class="m m-post">POST</span><span class="p">/privacy/consent</span><span class="d">记录同意（幂等）</span></div>
-      <div class="api-row"><span class="m m-post">POST</span><span class="p">/privacy/withdraw</span><span class="d">撤回同意（停采 + 删画像）</span></div>
-      <div class="api-row"><span class="m m-get">GET</span><span class="p">/privacy/export</span><span class="d">数据导出（可携权）</span></div>
-      <div class="api-row"><span class="m m-post">POST</span><span class="p">/privacy/delete</span><span class="d">数据删除（被遗忘权）</span></div>
-      <div class="api-row"><span class="m m-get">GET</span><span class="p">/memory/overview</span><span class="d">安全事件 + 建议 + 学习记忆</span></div>
-      <div class="api-row"><span class="m m-get">GET</span><span class="p">/token/stats</span><span class="d">Token 消耗 / 预估花费</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/privacy/policy</span><span class="d">隐私中心 · 版本化隐私政策全文</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/privacy/consent</span><span class="d">首启同意弹窗 + 隐私中心 · 记录同意（幂等，本地+服务端双记）</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/privacy/withdraw</span><span class="d">隐私中心撤回 · 停采 + 删画像</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/privacy/export</span><span class="d">隐私中心导出 · 数据可携权（JSON）</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/privacy/delete</span><span class="d">隐私中心删除 · 被遗忘权（需 confirm:"DELETE"）</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/memory/overview</span><span class="d">安全运维 · 安全事件 + 建议 + 学习记忆</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/token/stats</span><span class="d">「我的」花费 · Token 消耗 / 预估花费（登录后自动合并本机匿名段）</span></div>
     </div>
 
     <div class="api-note">
-      调用方式：请求头带 <code>X-Device-Id: 设备号</code>；已登录接口再带 <code>Authorization: Bearer &lt;token&gt;</code>（网页端登录后自动携带，小程序 request 封装同款）。响应统一 <code>{"code":0,"msg":"ok","data":…}</code>，非 0 见 msg。限流 429 时响应含 <code>X-RateLimit-*</code> 头。
+      手机端调用方式（utils/request.js 封装）：请求头带 <code>X-Device-Id: 设备号</code>；已登录再带 <code>Authorization: Bearer &lt;token&gt;</code>（+<code>X-Auth-Token</code> 双头兜底反代剥头）；读响应头 <code>X-Token-Cost</code> 显示本条花费。响应统一 <code>{"code":0,"msg":"ok","data":…}</code>，非 0 封装直接抛 <code>body.msg</code>（端上 toast 即真实原因）。限流 429 时响应含 <code>X-RateLimit-*</code> 头。网页端同源直连、登录后自动携带，同一套封装口径。
     </div>
   </div>
   </div><!-- /view-api -->
