@@ -75,6 +75,11 @@
 - **失败隔离**：单类检索失败不参与计分（区别于「确实没有」），权重归一化后偶发网络抖动不会把总分拉穿。
 
 <p align="center"><img src="docs/readme/frames/f02-life.png" width="860" alt="生活圈体检：七类设施加权评分与短板提示"></p>
+<p align="center">
+  <img src="docs/readme/frames/mp-g09-life-radar.jpg" width="420" alt="真机：生活圈体检七类雷达">&nbsp;&nbsp;
+  <img src="docs/readme/frames/mp-g03-life-plan.jpg" width="420" alt="真机：生活圈体检规划方案">
+</p>
+<p align="center"><sub>↑ 真机实测（非模拟器）：七类设施雷达 / 规划方案</sub></p>
 
 ### ⏱ 步行等时圈 · 服务盲区
 
@@ -84,8 +89,9 @@
   <img src="docs/readme/isochrone-zh.gif" width="860" alt="等时圈：15→30→60 分钟档切换，真实地图上叠加等时圈与盲区格，可切示意图">
 </p>
 <p align="center">
-  <img src="docs/readme/frames/f03-iso15.png" width="420" alt="功能实测帧：15 分钟等时圈与盲区格">&nbsp;&nbsp;
-  <img src="docs/readme/frames/f04-iso30.png" width="420" alt="功能实测帧：30 分钟等时圈（真实地图叠加）">
+  <img src="docs/readme/frames/f03-iso15.png" width="280" alt="功能实测帧：15 分钟等时圈与盲区格">&nbsp;&nbsp;
+  <img src="docs/readme/frames/f04-iso30.png" width="280" alt="功能实测帧：30 分钟等时圈（真实地图叠加）">&nbsp;&nbsp;
+  <img src="docs/readme/frames/mp-g04-isochrone.jpg" width="280" alt="真机：步行等时圈服务盲区页">
 </p>
 <p align="center"><sub>↑ 功能测试帧图：15 / 30 分钟档等时圈静态实测（36 方向真实路网收敛结果）</sub></p>
 
@@ -108,10 +114,11 @@
 > ℹ️ 该功能仅在**微信小程序端**提供（走云托管内网通道）；网页版不包含助手功能。
 
 <p align="center">
-  <img src="docs/screenshots/05-assistant.jpg" width="420" alt="小程序智能助手：欢迎语 → 提问 → 带依据的回答">&nbsp;&nbsp;
-  <img src="docs/screenshots/06-mine.jpg" width="420" alt="小程序「我的」页：隐私中心入口与账号头像">
+  <img src="docs/readme/frames/mp-g02-ai-vision.jpg" width="280" alt="真机：智能助手拍照识图">&nbsp;&nbsp;
+  <img src="docs/readme/frames/mp-g11-ai-fallback.jpg" width="280" alt="真机：智能助手兜底问答">&nbsp;&nbsp;
+  <img src="docs/readme/frames/mp-g13-ai-budget.jpg" width="280" alt="真机：智能助手预算方案">
 </p>
-<p align="center"><sub>↑ 小程序实测：智能助手对话 / 我的页（隐私中心 · 账号头像）</sub></p>
+<p align="center"><sub>↑ 真机实测（非模拟器）：拍照识图 / 兜底问答 / 预算方案</sub></p>
 
 <details>
 <summary>回答为什么准：RRF 三通道检索 + LLMWiki 词条图 + 国际标准知识库（RAG）</summary>
@@ -146,6 +153,12 @@
 
 </details>
 
+<p align="center">
+  <img src="docs/readme/frames/mp-g05-privacy-rights.jpg" width="420" alt="真机：隐私中心数据权利">&nbsp;&nbsp;
+  <img src="docs/readme/frames/mp-g07-privacy-policy.jpg" width="420" alt="真机：隐私政策详情">
+</p>
+<p align="center"><sub>↑ 真机实测（非模拟器）：隐私中心 · 数据权利 / 政策详情</sub></p>
+
 ### 🛒 附近真实店源
 
 「附近 3km」按定位实时拉真实门店，「本城热门」城市级检索；每家店给**真实步行距离 + 步行时长**（批量矩阵实测，非直线距离），带评分与品类标签，下单按真实店名跳美团/携程小程序直达。
@@ -160,16 +173,29 @@
   <img src="docs/readme/frames/f11-shop-hot.png" width="420" alt="功能实测帧：本城热门店源与参考价">
 </p>
 <p align="center"><sub>↑ 功能测试帧图：附近 3km（真实步行距离排序）/ 本城热门（参考价与品类标签）</sub></p>
+<p align="center"><img src="docs/readme/frames/mp-g01-shop.jpg" width="420" alt="真机：鲤慧商城附近真实店源"></p>
+<p align="center"><sub>↑ 真机实测（非模拟器）：鲤慧商城 · 附近真实店源</sub></p>
 
 ### 📱 小程序端：地图主页 · 语音 · 识图 · 隐私中心
 
 微信小程序同后端：百度底图主页、语音对话与播报（ASR + TTS）、拍照识图（多模态）、订单留痕、明暗主题、隐私中心（政策/同意/撤回/导出/删除）。总包 223.7 KB，测试版扫码即用。
 
+> 🖼 **真机全景漫游**：下方 15 帧按章节标注的大图（地图主页 → 路线 → 体检 → 等时圈 → 助手 → 商城 / 订单 → 隐私 / 账号），逐帧对应 README 各功能小节。
+
+<p align="center"><img src="docs/readme/frames/mp-panorama.jpg" width="720" alt="鲤慧微信小程序真机实测全景：15 帧按章节标注"></p>
+<p align="center"><sub>↑ 真机实测全景（非模拟器）：① 地图主页 ② POI 列表 ③ 城市纠偏 ④ 路线规划 ⑤ 等时圈盲区 ⑥–⑦ 生活圈体检 ⑧–⑩ 智能助手 ⑪ 商城 ⑫ 订单 ⑬–⑭ 隐私合规 ⑮ 我的·账号锚定</sub></p>
+
 <p align="center">
-  <img src="docs/screenshots/30-real-device-isochrone.jpg" width="420" alt="真机：步行等时圈盲区页">&nbsp;&nbsp;
-  <img src="docs/screenshots/27-real-device-vision-tts.jpg" width="420" alt="真机：多模态识图与语音播报">
+  <img src="docs/readme/frames/mp-g15-map-home.jpg" width="270" alt="真机：地图主页 POI 检索">&nbsp;
+  <img src="docs/readme/frames/mp-g14-poi-list.jpg" width="270" alt="真机：POI 列表">&nbsp;
+  <img src="docs/readme/frames/mp-g10-city-pick.jpg" width="270" alt="真机：城市纠偏">
 </p>
-<p align="center"><sub>↑ 真机实测（非模拟器）：等时圈盲区页 / 识图 + 语音播报按钮</sub></p>
+<p align="center">
+  <img src="docs/readme/frames/mp-g08-route.jpg" width="270" alt="真机：路线规划">&nbsp;
+  <img src="docs/readme/frames/mp-g12-orders.jpg" width="270" alt="真机：我的订单">&nbsp;
+  <img src="docs/readme/frames/mp-g06-mine-account.jpg" width="270" alt="真机：我的 · 账号ID锚定+花费">
+</p>
+<p align="center"><sub>↑ 真机实测（非模拟器）：地图主页 / POI 列表 / 城市纠偏 / 路线规划 / 我的订单 / 我的·账号</sub></p>
 
 ### 🧠 Memory · 安全运维记忆
 
