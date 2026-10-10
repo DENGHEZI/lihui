@@ -39,6 +39,7 @@ const BISECT_ROUNDS = 3;               // 二分收敛轮数
 const MATRIX_TTL = 60 * 1000;          // 矩阵算路缓存 1min
 const ISO_CACHE_TTL = 10 * 60 * 1000;  // 等时圈整体结果缓存 10min
 const BLIND_SCORE_THRESHOLD = 40;      // 盲区判定阈值（加权覆盖分 < 40）
+const BLIND_SEVERE_THRESHOLD = 25;     // 严重盲区阈值（覆盖分 < 25：七类几乎全缺）
 const VERIFY_TOLERANCE = 1.15;         // 盲区复核实测容忍系数（超 15% 判插值偏乐观）
 
 const isoCache = new Cache(64);
@@ -262,6 +263,85 @@ async function walkConcurrent(origin, dests, { concurrency = 8 } = {}) {
 }
 
 /* ------------------------------------------------------------------ */
+/* 盲区判定辅助（纯函数，CI 可测）                                      */
+/* ------------------------------------------------------------------ */
+/**
+ * 盲区分级（可解释口径）：
+ *  - severe   覆盖分 < 25：七类设施几乎全缺，居民基本生活服务无法步行获得；
+ *  - moderate 覆盖分 25~40：存在明显短板（通常缺 2~3 类）；
+ *  - null     非盲区。
+ */
+function blindLevel(score) {
+  if (score === null || score === undefined) return null;
+  if (score < BLIND_SEVERE_THRESHOLD) return 'severe';
+  if (score < BLIND_SCORE_THRESHOLD) return 'moderate';
+  return null;
+}
+
+/** 盲区占比（0~100）→ 治理等级：<10 良好 · 10~25 一般 · ≥25 待改善 */
+function blindGrade(ratioPct) {
+  if (ratioPct < 10) return '良好';
+  if (ratioPct < 25) return '一般';
+  return '待改善';
+}
+
+/** 盲区网格密度自适应：小半径圆格距小，自动加密网格保证盲区判读分辨率 */
+function resolveGridN(requested, minutesN) {
+  const n = Math.round(Number(requested) || 0);
+  if (n) return Math.min(9, Math.max(3, n)); // 显式指定优先（越界钳制 3~9）
+  if (minutesN <= 10) return 7;              // ≤10 分钟：格距约 260~400m，抓细碎盲区
+  if (minutesN <= 20) return 6;              // 11~20 分钟：格距约 450~600m
+  return 5;                                  // >20 分钟：格距约 700m+，控制复核矩阵调用量
+}
+
+/** 盲区格 4-邻接连通聚类：把离散格聚成可治理地块（单格孤点也算独立地块） */
+function clusterBlindCells(blindCells) {
+  const key = (c) => c.i + ',' + c.j;
+  const blindSet = new Set(blindCells.map(key));
+  const seen = new Set();
+  const clusters = [];
+  for (const c0 of blindCells) {
+    if (seen.has(key(c0))) continue;
+    const stack = [c0];
+    seen.add(key(c0));
+    const comp = [];
+    while (stack.length) {
+      const cur = stack.pop();
+      comp.push(cur);
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const ni = cur.i + di;
+        const nj = cur.j + dj;
+        const nk = ni + ',' + nj;
+        if (blindSet.has(nk) && !seen.has(nk)) {
+          seen.add(nk);
+          const nb = blindCells.find((x) => x.i === ni && x.j === nj);
+          if (nb) stack.push(nb);
+        }
+      }
+    }
+    clusters.push(comp);
+  }
+  return clusters;
+}
+
+/** 地块短板归因：聚类内某类「步行超时/缺失」格占比 ≥50% 判该地块缺这类 */
+function clusterLacking(comp, coverageCats, minutesN) {
+  return coverageCats
+    .filter((c) => !c.failed)
+    .map((c) => {
+      let miss = 0;
+      for (const cell of comp) {
+        const w = cell.walkMinByCategory[c.key];
+        if (w === null || w === undefined || w >= minutesN) miss++;
+      }
+      return { key: c.key, name: c.name, gapPct: Math.round((miss / comp.length) * 100) };
+    })
+    .filter((x) => x.gapPct >= 50)
+    .sort((a, b) => b.gapPct - a.gapPct)
+    .slice(0, 3);
+}
+
+/* ------------------------------------------------------------------ */
 /* 主流程：buildIsochrone                                              */
 /* ------------------------------------------------------------------ */
 /**
@@ -269,15 +349,15 @@ async function walkConcurrent(origin, dests, { concurrency = 8 } = {}) {
  * @param {number} p.lng 家经度（GCJ-02）
  * @param {number} p.lat 家纬度（GCJ-02）
  * @param {number} [p.minutes=15] 等时圈分钟数（5~60）
- * @param {number} [p.grid=5] 盲区网格 N×N（3~9）
+ * @param {number} [p.grid] 盲区网格 N×N（3~9；缺省按分钟数自适应：≤10→7×7，≤20→6×6，更大→5×5）
  */
-async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
+async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
   const center = { lng: Number(lng), lat: Number(lat) };
   if (!Number.isFinite(center.lng) || !Number.isFinite(center.lat)) {
     throw new Error('lng/lat invalid');
   }
   const minutesN = Math.min(60, Math.max(5, Number(minutes) || 15));
-  const gridN = Math.min(9, Math.max(3, Math.round(Number(grid) || 5)));
+  const gridN = resolveGridN(grid, minutesN);
 
   const cacheKey = `iso:${center.lng.toFixed(4)},${center.lat.toFixed(4)}:${minutesN}:${gridN}`;
   const cached = isoCache.get(cacheKey);
@@ -463,6 +543,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
         if (walkMin !== null && (minWalk === null || walkMin < minWalk)) minWalk = walkMin;
       }
       const score = wDiv > 0 ? Math.round((wSum / wDiv) * 100) : null;
+      const level = insideCircle ? blindLevel(score) : null;
       cells.push({
         i,
         j,
@@ -472,7 +553,8 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
         walkMinByCategory: walkByCategory,
         nearestWalkMin: minWalk === null ? null : Math.round(minWalk * 10) / 10,
         score,
-        blind: Boolean(insideCircle && score !== null && score < BLIND_SCORE_THRESHOLD),
+        level,
+        blind: Boolean(level),
       });
     }
   }
@@ -492,6 +574,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
           verifiedCells++;
           if (it.duration > budget * VERIFY_TOLERANCE) {
             c.blind = false;
+            c.level = null;
             c.outsideVerified = true; // 实测步行超时：其实不在生活圈内（多边形插值偏乐观）
           }
         }
@@ -564,31 +647,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
     })
     .sort((a, b) => b.gapPct - a.gapPct);
 
-  const cellKey = (c) => c.i + ',' + c.j;
-  const blindSet = new Set(blindCells.map(cellKey));
-  const seen = new Set();
-  const clusters = [];
-  for (const c0 of blindCells) {
-    if (seen.has(cellKey(c0))) continue;
-    const stack = [c0];
-    seen.add(cellKey(c0));
-    const comp = [];
-    while (stack.length) {
-      const cur = stack.pop();
-      comp.push(cur);
-      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const ni = cur.i + di;
-        const nj = cur.j + dj;
-        const nk = ni + ',' + nj;
-        if (blindSet.has(nk) && !seen.has(nk)) {
-          seen.add(nk);
-          const nb = blindCells.find((x) => x.i === ni && x.j === nj);
-          if (nb) stack.push(nb);
-        }
-      }
-    }
-    clusters.push(comp);
-  }
+  const clusters = clusterBlindCells(blindCells);
   const hotspots = clusters
     .map((comp) => {
       const avgScore = Math.round(comp.reduce((a, b) => a + (b.score || 0), 0) / comp.length);
@@ -599,8 +658,10 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
       return {
         cells: comp.length,
         areaHa: Math.round(comp.length * cellHa * 100) / 100,
+        level: blindLevel(avgScore), // 地块分级：severe 优先改造
         avgScore,
         avgNearestWalkMin: avgNearest,
+        lacking: clusterLacking(comp, cats, minutesN), // 地块缺哪几类（归因）
         center: {
           lng: Math.round((comp.reduce((a, b) => a + b.lng, 0) / comp.length) * 1e6) / 1e6,
           lat: Math.round((comp.reduce((a, b) => a + b.lat, 0) / comp.length) * 1e6) / 1e6,
@@ -608,17 +669,22 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
         priority: Math.round(comp.length * cellHa * (100 - avgScore) * 100) / 100,
       };
     })
-    .sort((a, b) => b.priority - a.priority)
+    .sort((a, b) => (b.level === 'severe') - (a.level === 'severe') || b.priority - a.priority)
     .slice(0, 3);
   const gridCellM = Math.round((cellWM + cellHM) / 2);
+  const blindRatioPct = insideCells.length ? Math.round((blindCells.length / insideCells.length) * 100) : 0;
   const blindAnalysis = {
     blindAreaHa,
+    blindRatioPct,
+    grade: blindGrade(blindRatioPct), // 良好 / 一般 / 待改善
+    severeCells: blindCells.filter((c) => c.level === 'severe').length,
     detourIndex,
     categoryGaps,
     hotspots,
     gridCellM,
     blindScoreThreshold: BLIND_SCORE_THRESHOLD,
-    method: `栅格 ${gridCellM}m · 判定阈值 覆盖分<${BLIND_SCORE_THRESHOLD} · 36 方向真实路网标定`,
+    severeScoreThreshold: BLIND_SEVERE_THRESHOLD,
+    method: `栅格 ${gridCellM}m · 判定阈值 覆盖分<${BLIND_SCORE_THRESHOLD}（严重<${BLIND_SEVERE_THRESHOLD}）· 36 方向真实路网标定`,
   };
 
   /* ===== 百度底图静态图 =====
@@ -682,6 +748,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
       lng: c.lng,
       lat: c.lat,
       score: c.score,
+      level: c.level,
       nearestWalkMin: c.nearestWalkMin,
     })),
     cells, // 全部网格（前端画覆盖热力 / 盲区标注）
@@ -691,6 +758,8 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
       gridTotal: gridN * gridN,
       blindCount: blindCells.length,
       blindRatio: insideCells.length ? Math.round((blindCells.length / insideCells.length) * 100) : 0,
+      blindGrade: blindAnalysis.grade,
+      severeCount: blindAnalysis.severeCells,
       circleAreaKm2: Math.round((polygonArea(polygon, center.lat) / 1e6) * 100) / 100,
       maxReachM: Math.round(maxR),
       verifiedCells,
@@ -730,7 +799,13 @@ module.exports = {
   polygonArea,
   walkMatrixBatch,
   walkConcurrent,
+  blindLevel,
+  blindGrade,
+  resolveGridN,
+  clusterBlindCells,
+  clusterLacking,
   SPEED_M_PER_MIN,
   DETOUR_FACTOR,
   BLIND_SCORE_THRESHOLD,
+  BLIND_SEVERE_THRESHOLD,
 };

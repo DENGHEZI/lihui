@@ -115,6 +115,57 @@ t('官方口径常量：步速 80m/min、弯曲系数 1.3', () => {
   assert.strictEqual(DETOUR_FACTOR, 1.3);
 });
 
+/* ---- 盲区分级（V1.0.26 能力升级） ---- */
+const { blindLevel, blindGrade, resolveGridN, clusterBlindCells, clusterLacking, BLIND_SEVERE_THRESHOLD } = require('../src/services/isochrone');
+t('blindLevel: <25 严重 · 25~40 中度 · ≥40 非盲区 · null 安全', () => {
+  assert.strictEqual(blindLevel(10), 'severe');
+  assert.strictEqual(blindLevel(BLIND_SEVERE_THRESHOLD - 0.5), 'severe');
+  assert.strictEqual(blindLevel(30), 'moderate');
+  assert.strictEqual(blindLevel(40), null);
+  assert.strictEqual(blindLevel(95), null);
+  assert.strictEqual(blindLevel(null), null);
+  assert.strictEqual(blindLevel(undefined), null);
+});
+t('blindGrade: <10 良好 · 10~25 一般 · ≥25 待改善', () => {
+  assert.strictEqual(blindGrade(0), '良好');
+  assert.strictEqual(blindGrade(9), '良好');
+  assert.strictEqual(blindGrade(15), '一般');
+  assert.strictEqual(blindGrade(25), '待改善');
+  assert.strictEqual(blindGrade(80), '待改善');
+});
+t('resolveGridN: 显式指定优先 · 缺省按分钟数自适应', () => {
+  assert.strictEqual(resolveGridN(4, 15), 4);      // 显式指定不被覆盖
+  assert.strictEqual(resolveGridN(0, 10), 7);      // ≤10 分钟加密到 7×7
+  assert.strictEqual(resolveGridN(undefined, 15), 6);
+  assert.strictEqual(resolveGridN(undefined, 30), 5);
+  assert.strictEqual(resolveGridN(99, 15), 9);     // 越界钳制到 9
+  assert.strictEqual(resolveGridN(1, 15), 3);      // 越界钳制到 3
+});
+t('clusterBlindCells: 4-邻接连通聚类（对角不连通 / 多簇 / 孤点）', () => {
+  const mk = (i, j) => ({ i, j });
+  const L = [mk(0, 0), mk(1, 0), mk(0, 1), mk(5, 5), mk(5, 6), mk(8, 8)];
+  const cs = clusterBlindCells(L);
+  assert.strictEqual(cs.length, 3, '期望 3 个地块：L 形 + 两格竖排 + 孤点');
+  const sizes = cs.map((c) => c.length).sort((a, b) => b - a);
+  assert.deepStrictEqual(sizes, [3, 2, 1]);
+});
+t('clusterLacking: 占比 ≥50% 才归因为缺该类 · 按 gapPct 降序 · 最多 3 条', () => {
+  const cats = [
+    { key: 'a', name: 'A 类', failed: false },
+    { key: 'b', name: 'B 类', failed: false },
+    { key: 'c', name: 'C 类', failed: false },
+    { key: 'd', name: 'D 类', failed: true },
+  ];
+  const comp = [
+    { walkMinByCategory: { a: null, b: 20, c: 3, d: null } },
+    { walkMinByCategory: { a: 25, b: 22, c: 4, d: null } },
+    { walkMinByCategory: { a: null, b: 2, c: 5, d: null } },
+  ];
+  const lacking = clusterLacking(comp, cats, 15);
+  assert.deepStrictEqual(lacking.map((x) => x.key), ['a', 'b']); // a 全缺 100%、b 2/3≥50%、c 0%
+  assert.ok(lacking[0].gapPct >= lacking[1].gapPct);
+});
+
 /* ---- 模块图完整性（循环依赖/导出缺失自检） ---- */
 t('模块图完整：lifeShared 与 isochrone 可互相协作', () => {
   const shared = require('../src/services/lifeShared');
