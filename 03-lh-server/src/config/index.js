@@ -81,7 +81,14 @@ const config = {
   },
 
   mcp: {
-    dir: path.resolve(ROOT, env('MCP_DIR', '../04-lh-mcp-servers')),
+    /* 解析顺序：MCP_DIR 环境变量 > 仓库内置 mcp-servers/（云端单目录部署的唯一可用副本）
+     * > 兄弟目录 ../04-lh-mcp-servers（本地开发完整仓库布局）。
+     * 2026-10-10 修复：线上只上传 03-lh-server，兄弟目录不存在导致全部工具 mcp server exited。 */
+    dir: env('MCP_DIR')
+      ? path.resolve(ROOT, env('MCP_DIR'))
+      : (fs.existsSync(path.join(ROOT, 'mcp-servers', 'life-circle', 'index.js'))
+        ? path.join(ROOT, 'mcp-servers')
+        : path.resolve(ROOT, '../04-lh-mcp-servers')),
     builtinDir: path.resolve(ROOT, 'src', 'mcp', 'servers'),
     autostart: bool('MCP_AUTOSTART', true),
     maxRestart: num('MCP_MAX_RESTART', 3),
