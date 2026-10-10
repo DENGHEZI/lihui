@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鲤慧 LiHui — 让你的 15 分钟生活圈会思考、会行动</title>
+<meta name="description" content="鲤慧 LiHui · 基于百度地图开放能力的 15 分钟生活圈智能体检与规划助手。真实路网步行等时圈、真实店源、Agent 助手、RBAC 安全体系，服务端零 npm 依赖。">
+<style>
+/* ============================================================
+   鲤慧 LiHui · 项目落地页（仿 AI Helper 版式）
+   设计系统：白色默认 + 明暗切换；中文默认 + 中英切换
+   ============================================================ */
+:root {
+  --bg: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --nav-bg: rgba(255, 255, 255, 0.78);
+  --text: #18181b;
+  --text-sub: #52525b;
+  --text-weak: #a1a1aa;
+  --border: #e4e4e7;
+  --border-soft: rgba(148, 163, 184, 0.3);
+  --accent: #6366f1;
+  --accent2: #8b5cf6;
+  --accent3: #ec4899;
+  --accent-glow: rgba(99, 102, 241, 0.10);
+  --badge-bg: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.06));
+  --badge-border: rgba(99, 102, 241, 0.25);
+  --glow-1: rgba(99, 102, 241, 0.08);
+  --glow-2: rgba(236, 72, 153, 0.06);
+  --glow-3: rgba(139, 92, 246, 0.06);
+  --code-bg: #18181b;
+  --success: #34d399;
+  --shadow: 0 8px 32px rgba(15, 23, 42, 0.08);
+}
+html[data-theme="dark"] {
+  --bg: #09090b;
+  --bg-card: #12121a;
+  --bg-card-hover: #1a1a28;
+  --nav-bg: rgba(9, 9, 11, 0.72);
+  --text: #f4f4f5;
+  --text-sub: #a1a1aa;
+  --text-weak: #71717a;
+  --border: #1e1e30;
+  --border-soft: rgba(148, 163, 184, 0.16);
+  --accent-glow: rgba(99, 102, 241, 0.18);
+  --badge-bg: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.08));
+  --badge-border: rgba(99, 102, 241, 0.3);
+  --glow-1: rgba(99, 102, 241, 0.12);
+  --glow-2: rgba(236, 72, 153, 0.10);
+  --glow-3: rgba(139, 92, 246, 0.08);
+  --code-bg: #0d0d14;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  transition: background .3s, color .3s;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; }
+
+/* ---------------- 背景光斑 ---------------- */
+.bg-glow { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.bg-glow::before, .bg-glow::after {
+  content: ""; position: absolute; border-radius: 50%; filter: blur(120px);
+}
+.bg-glow::before { width: 720px; height: 720px; top: -260px; left: 50%; transform: translateX(-50%); background: var(--glow-1); }
+.bg-glow::after  { width: 560px; height: 560px; top: 120px; right: -180px; background: var(--glow-2); }
+.wrap { position: relative; z-index: 1; }
+
+/* ---------------- 导航 ---------------- */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: var(--nav-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-soft);
+}
+.nav-inner {
+  max-width: 1200px; margin: 0 auto; padding: 0 24px;
+  display: flex; align-items: center; gap: 20px; height: 60px;
+}
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; white-space: nowrap; }
+.logo .logo-ico {
+  width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
+  font-size: 17px; background: linear-gradient(135deg, #6366f1, #8b5cf6); box-shadow: 0 4px 14px var(--accent-glow);
+}
+.logo .logo-name { background: linear-gradient(90deg, #818cf8, #c084fc); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+html[data-theme="light"] .logo .logo-name { background: linear-gradient(90deg, #4f46e5, #7c3aed); -webkit-background-clip: text; background-clip: text; }
+.nav-links { display: flex; gap: 4px; flex: 1; justify-content: center; }
+.nav-links a {
+  font-size: 13.5px; color: var(--text-sub); padding: 7px 13px; border-radius: 8px; transition: .2s; white-space: nowrap;
+}
+.nav-links a:hover { color: var(--text); background: var(--accent-glow); }
+.nav-actions { display: flex; align-items: center; gap: 8px; }
+.icon-btn {
+  width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border-soft);
+  background: var(--bg-card); color: var(--text-sub); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 15px; transition: .2s;
+}
+.icon-btn:hover { color: var(--text); border-color: var(--badge-border); transform: translateY(-1px); }
+.icon-btn svg { width: 17px; height: 17px; fill: currentColor; }
+.lang-group { display: flex; border: 1px solid var(--border-soft); border-radius: 9px; overflow: hidden; }
+.lang-group button {
+  border: none; background: transparent; color: var(--text-weak); font-size: 12.5px;
+  padding: 7px 11px; cursor: pointer; font-family: inherit; transition: .2s;
+}
+.lang-group button.on { background: var(--accent); color: #fff; }
+.theme-group { display: flex; border: 1px solid var(--border-soft); border-radius: 999px; overflow: hidden; }
+.theme-group button { border: none; background: transparent; cursor: pointer; font-size: 13px; padding: 6px 10px; transition: .2s; filter: grayscale(1) opacity(.5); }
+.theme-group button.on { filter: none; background: var(--accent-glow); }
+
+/* ---------------- Hero ---------------- */
+.hero { max-width: 900px; margin: 0 auto; padding: 150px 24px 90px; text-align: center; }
+.badge {
+  display: inline-flex; align-items: center; gap: 9px;
+  background: var(--badge-bg); border: 1px solid var(--badge-border);
+  border-radius: 999px; padding: 8px 20px; font-size: 13.5px; color: var(--text-sub);
+  margin-bottom: 34px;
+}
+.badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 10px var(--success); animation: pulse 2s infinite; }
+@keyframes pulse { 50% { opacity: .4; } }
+.badge b { color: var(--text); font-weight: 600; }
+h1.hero-title {
+  font-size: clamp(42px, 8vw, 76px); line-height: 1.12; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 26px;
+}
+.grad {
+  background: linear-gradient(90deg, #818cf8 0%, #a78bfa 40%, #e879f9 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.hero-sub { font-size: clamp(19px, 3.4vw, 26px); font-weight: 600; margin-bottom: 18px; }
+.hero-desc { font-size: 16.5px; color: var(--text-sub); max-width: 620px; margin: 0 auto 40px; }
+.hero-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 58px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 9px; padding: 13px 28px; border-radius: 13px;
+  font-size: 15.5px; font-weight: 600; cursor: pointer; transition: .22s; font-family: inherit; border: none;
+}
+.btn svg { width: 18px; height: 18px; fill: currentColor; }
+.btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; box-shadow: 0 8px 26px var(--accent-glow); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 34px var(--accent-glow); }
+.btn-ghost { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); }
+.btn-ghost:hover { border-color: var(--badge-border); transform: translateY(-2px); }
+.hero-stats { display: flex; justify-content: center; gap: clamp(20px, 5vw, 56px); flex-wrap: wrap; }
+.hstat { text-align: center; }
+.hstat .n { font-size: clamp(24px, 4vw, 34px); font-weight: 800; background: linear-gradient(90deg, #818cf8, #c084fc); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.hstat .l { font-size: 12.5px; color: var(--text-weak); margin-top: 4px; letter-spacing: .4px; }
+
+/* ---------------- 版块通用 ---------------- */
+section { max-width: 1200px; margin: 0 auto; padding: 84px 24px 0; }
+.sec-head { text-align: center; margin-bottom: 52px; }
+.sec-head h2 { font-size: clamp(28px, 5vw, 40px); font-weight: 800; letter-spacing: -1px; margin-bottom: 12px; }
+.sec-head p { color: var(--text-sub); font-size: 16px; }
+
+/* ---------------- 对比区 ---------------- */
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; max-width: 980px; margin: 0 auto; }
+.cmp-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 30px 28px; transition: .25s; }
+.cmp-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.cmp-card.bad { border-color: var(--border-soft); }
+.cmp-card.good { border-color: var(--badge-border); background: linear-gradient(160deg, var(--bg-card), rgba(99,102,241,0.05)); }
+.cmp-card h3 { font-size: 19px; margin-bottom: 6px; }
+.cmp-card .cmp-tag { font-size: 12.5px; color: var(--text-weak); margin-bottom: 20px; }
+.cmp-card.good h3 .grad { font-size: inherit; }
+.cmp-item { display: flex; gap: 11px; padding: 9px 0; font-size: 14.5px; color: var(--text-sub); align-items: flex-start; }
+.cmp-item .ic { flex-shrink: 0; width: 19px; text-align: center; }
+.cmp-card.bad .ic { color: var(--text-weak); }
+.cmp-card.good .ic { color: var(--success); }
+
+/* ---------------- 能力网格 ---------------- */
+.cap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(262px, 1fr)); gap: 18px; }
+.cap-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 26px 24px; transition: .25s;
+}
+.cap-card:hover { transform: translateY(-4px); border-color: var(--badge-border); background: var(--bg-card-hover); box-shadow: var(--shadow); }
+.cap-card .ico {
+  width: 46px; height: 46px; border-radius: 13px; display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin-bottom: 17px; background: var(--badge-bg); border: 1px solid var(--border-soft);
+}
+.cap-card h3 { font-size: 16.5px; font-weight: 700; margin-bottom: 8px; }
+.cap-card p { font-size: 13.8px; color: var(--text-sub); }
+
+/* ---------------- 场景 ---------------- */
+.case-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
+.case-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 28px; transition: .25s; position: relative; overflow: hidden; }
+.case-card::before { content: ""; position: absolute; inset: 0; background: var(--badge-bg); opacity: 0; transition: .25s; }
+.case-card:hover::before { opacity: 1; }
+.case-card:hover { transform: translateY(-3px); border-color: var(--badge-border); }
+.case-card > * { position: relative; }
+.case-card h3 { font-size: 17px; margin-bottom: 9px; }
+.case-card p { font-size: 14px; color: var(--text-sub); margin-bottom: 16px; }
+.case-tag { display: inline-block; font-size: 12px; padding: 4px 12px; border-radius: 999px; background: var(--badge-bg); border: 1px solid var(--badge-border); color: var(--accent2); font-weight: 600; }
+html[data-theme="light"] .case-tag { color: #6d28d9; }
+
+/* ---------------- 预览 ---------------- */
+.preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.shot { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; transition: .25s; }
+.shot:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--badge-border); }
+.shot img { display: block; width: 100%; height: 320px; object-fit: cover; object-position: top; background: var(--code-bg); }
+.shot .cap { padding: 15px 20px; font-size: 13.5px; color: var(--text-sub); border-top: 1px solid var(--border-soft); }
+.shot.noimg .ph { height: 320px; display: flex; align-items: center; justify-content: center; color: var(--text-weak); font-size: 14px; background: repeating-linear-gradient(45deg, var(--bg-card), var(--bg-card) 12px, var(--code-bg) 12px, var(--code-bg) 24px); }
+
+/* ---------------- 架构 ---------------- */
+.arch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 18px; }
+.arch-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 30px 28px; }
+.arch-card .ico { font-size: 26px; margin-bottom: 15px; }
+.arch-card h3 { font-size: 17px; margin-bottom: 13px; }
+.arch-card li { list-style: none; font-size: 14px; color: var(--text-sub); padding: 6px 0; display: flex; gap: 9px; }
+.arch-card li::before { content: "·"; color: var(--accent2); font-weight: 900; }
+.arch-card code { font-size: 12.5px; background: var(--code-bg); padding: 2px 7px; border-radius: 6px; color: #c4b5fd; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
+html[data-theme="light"] .arch-card code { color: #a78bfa; }
+
+/* ---------------- 快速开始 ---------------- */
+.qs { max-width: 860px; margin: 0 auto; }
+.qs-steps { counter-reset: step; }
+.qs-step { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 26px 28px; margin-bottom: 16px; }
+.qs-step h3 { font-size: 16.5px; margin-bottom: 13px; display: flex; align-items: center; gap: 12px; }
+.qs-step h3::before {
+  counter-increment: step; content: counter(step);
+  width: 28px; height: 28px; border-radius: 9px; background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.code-block {
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 13.2px; line-height: 1.75;
+  color: #d4d4d8; overflow-x: auto; white-space: pre;
+}
+.code-block .c { color: #6b7280; }
+.code-block .k { color: #c4b5fd; }
+.qs-note { text-align: center; color: var(--text-weak); font-size: 13.5px; margin-top: 22px; }
+.qs-note b { color: var(--text-sub); font-weight: 600; }
+
+/* ---------------- 页脚 ---------------- */
+footer { margin-top: 100px; border-top: 1px solid var(--border-soft); padding: 44px 24px 52px; text-align: center; }
+footer .f-logo { font-weight: 700; font-size: 17px; margin-bottom: 10px; }
+footer p { color: var(--text-weak); font-size: 13.5px; }
+footer .f-links { display: flex; gap: 20px; justify-content: center; margin: 18px 0 14px; font-size: 13.5px; color: var(--text-sub); }
+footer .f-links a:hover { color: var(--text); }
+.footer-kv { background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: 600; }
+
+/* ---------------- 响应式 ---------------- */
+@media (max-width: 860px) {
+  .nav-links { display: none; }
+  .compare, .preview-grid { grid-template-columns: 1fr; }
+  .hero { padding-top: 120px; }
+}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="wrap">
+
+<!-- ================= 导航 ================= -->
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="#top"><span class="logo-ico">🐟</span><span class="logo-name">鲤慧 LiHui</span></a>
+    <div class="nav-links">
+      <a href="#features" data-zh="核心能力" data-en="Features">核心能力</a>
+      <a href="#why" data-zh="亮点对比" data-en="Why LiHui">亮点对比</a>
+      <a href="#cases" data-zh="典型场景" data-en="Use Cases">典型场景</a>
+      <a href="#preview" data-zh="系统预览" data-en="Screenshots">系统预览</a>
+      <a href="#architecture" data-zh="架构" data-en="Architecture">架构</a>
+      <a href="#quickstart" data-zh="快速开始" data-en="Quick Start">快速开始</a>
+    </div>
+    <div class="nav-actions">
+      <a class="icon-btn" href="https://github.com/DENGHEZI/lihui" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub">
+        <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      </a>
+      <a class="icon-btn" href="https://gitee.com/deng-he-ziyan/lihui" target="_blank" rel="noopener" title="Gitee" aria-label="Gitee">
+        <svg viewBox="0 0 1024 1024"><path d="M512 1024C229.2 1024 0 794.8 0 512S229.2 0 512 0s512 229.2 512 512-229.2 512-512 512z m259.2-569.6H480c-12.8 0-25.6 12.8-25.6 25.6v64c0 12.8 12.8 25.6 25.6 25.6h176c12.8 0 25.6 12.8 25.6 25.6v12.8c0 41.6-35.2 76.8-76.8 76.8h-240c-12.8 0-25.6-12.8-25.6-25.6V416c0-41.6 35.2-76.8 76.8-76.8h355.2c12.8 0 25.6-12.8 25.6-25.6v-64c0-12.8-12.8-25.6-25.6-25.6H416c-105.6 0-192 86.4-192 192v355.2c0 12.8 12.8 25.6 25.6 25.6h374.4c92.8 0 172.8-76.8 172.8-172.8v-144c0-12.8-12.8-25.6-25.6-25.6z"/></svg>
+      </a>
+      <div class="lang-group" role="group" aria-label="language">
+        <button id="langZh" class="on" onclick="setLang('zh')">中文</button>
+        <button id="langEn" onclick="setLang('en')">EN</button>
+      </div>
+      <div class="theme-group" role="group" aria-label="theme">
+        <button id="thDark" class="on" onclick="setTheme('dark')" title="Dark">🌙</button>
+        <button id="thLight" onclick="setTheme('light')" title="Light">☀️</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ================= Hero ================= -->
+<header class="hero" id="top">
+  <div class="badge"><span class="dot"></span><span data-zh="V1.0.8 已发布 · 开源 · 2026 上海开源创新大赛" data-en="V1.0.8 Released · Open Source · 2026 Shanghai Open Innovation Contest">V1.0.8 已发布 · 开源 · 2026 上海开源创新大赛</span></div>
+  <h1 class="hero-title">
+    <span data-zh="让你的 15 分钟生活圈" data-en="Make Your Neighborhood">让你的 15 分钟生活圈</span><br>
+    <span class="grad" data-zh="会思考 · 会行动" data-en="Think &amp; Act">会思考 · 会行动</span>
+  </h1>
+  <p class="hero-sub" data-zh="不只是地图 —— 真正会体检、会规划、会行动的生活圈 AI 助手" data-en="More Than Maps — A Neighborhood Assistant That Really Checks, Plans &amp; Acts">不只是地图 —— 真正会体检、会规划、会行动的生活圈 AI 助手</p>
+  <p class="hero-desc" data-zh="鲤慧基于百度地图开放能力，用真实路网步行等时圈给你的 15 分钟生活圈做「体检」：哪里有盲区、哪家店步行几分钟、外卖平台怎么选——全部真实可验证，服务端纯 Node 标准库零依赖。" data-en="Built on Baidu Map Open Capabilities, LiHui health-checks your 15-minute neighborhood with real road-network walk isochrones: service blind spots, real walking minutes to every shop, delivery-platform choices — all verifiable, on a zero-dependency Node.js server.">鲤慧基于百度地图开放能力，用真实路网步行等时圈给你的 15 分钟生活圈做「体检」：哪里有盲区、哪家店步行几分钟、外卖平台怎么选——全部真实可验证，服务端纯 Node 标准库零依赖。</p>
+  <div class="hero-cta">
+    <a class="btn btn-primary" href="https://gitee.com/deng-he-ziyan/lihui" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      <span data-zh="查看源码" data-en="View Source">查看源码</span>
+    </a>
+    <a class="btn btn-ghost" href="#quickstart"><span data-zh="快速开始" data-en="Quick Start">快速开始</span> →</a>
+  </div>
+  <div class="hero-stats">
+    <div class="hstat"><div class="n">459</div><div class="l" data-zh="E2E 安全攻击用例" data-en="E2E Security Tests">E2E 安全攻击用例</div></div>
+    <div class="hstat"><div class="n">0</div><div class="l" data-zh="服务端 npm 依赖" data-en="Server npm Deps">服务端 npm 依赖</div></div>
+    <div class="hstat"><div class="n">3</div><div class="l" data-zh="端（小程序 / APP / Web）" data-en="Clients (MP / APP / Web)">端（小程序 / APP / Web）</div></div>
+    <div class="hstat"><div class="n">15 min</div><div class="l" data-zh="生活圈体检半径" data-en="Neighborhood Radius">生活圈体检半径</div></div>
+  </div>
+</header>
+
+<!-- ================= 亮点对比 ================= -->
+<section id="why">
+  <div class="sec-head">
+    <h2 data-zh="为什么选鲤慧？" data-en="Why LiHui?">为什么选鲤慧？</h2>
+    <p data-zh="同一个生活圈，两种完全不同的答案" data-en="Same neighborhood, two very different answers">同一个生活圈，两种完全不同的答案</p>
+  </div>
+  <div class="compare">
+    <div class="cmp-card bad">
+      <h3 data-zh="传统地图 App" data-en="Traditional Map Apps">传统地图 App</h3>
+      <div class="cmp-tag" data-zh="看起来很近，走起来很远" data-en="Looks close, walks far">看起来很近，走起来很远</div>
+      <div class="cmp-item"><span class="ic">✕</span><span data-zh="直线距离骗人：隔河高架 300 米，实际要走 1.2 公里" data-en="Straight-line distance lies: 300m across a river is 1.2km on foot">直线距离骗人：隔河高架 300 米，实际要走 1.2 公里</span></div>
+      <div class="cmp-item"><span class="ic">✕</span><span data-zh="只告诉你「有什么」，不告诉你「缺什么」" data-en="Shows what exists, never what's missing">只告诉你「有什么」，不告诉你「缺什么」</span></div>
+      <div class="cmp-item"><span class="ic">✕</span><span data-zh="店铺价格评分分散在美团/饿了么/抖音，来回切换" data-en="Prices &amp; ratings scattered across Meituan / ele.me / Douyin">店铺价格评分分散在美团/饿了么/抖音，来回切换</span></div>
+      <div class="cmp-item"><span class="ic">✕</span><span data-zh="没有针对老人、病人的关怀视角" data-en="No accessibility view for elders or patients">没有针对老人、病人的关怀视角</span></div>
+      <div class="cmp-item"><span class="ic">✕</span><span data-zh="密钥下发到端上，抓个包就泄露" data-en="API keys shipped to clients — one packet sniff and they leak">密钥下发到端上，抓个包就泄露</span></div>
+    </div>
+    <div class="cmp-card good">
+      <h3><span class="grad" data-zh="鲤慧 LiHui" data-en="LiHui">鲤慧 LiHui</span></h3>
+      <div class="cmp-tag" data-zh="真实路网算出来的生活圈" data-en="A neighborhood computed on real roads">真实路网算出来的生活圈</div>
+      <div class="cmp-item"><span class="ic">✓</span><span data-zh="批量矩阵实测步行距离与时长（routematrix），非直线圆" data-en="Batch-measured real walking distance &amp; time (routematrix), not circles">批量矩阵实测步行距离与时长（routematrix），非直线圆</span></div>
+      <div class="cmp-item"><span class="ic">✓</span><span data-zh="步行等时圈 + 服务盲区体检：缺诊所、缺菜市场一目了然" data-en="Walk isochrone + blind-spot check: missing clinics &amp; markets at a glance">步行等时圈 + 服务盲区体检：缺诊所、缺菜市场一目了然</span></div>
+      <div class="cmp-item"><span class="ic">✓</span><span data-zh="真实店源双源（附近 3km / 本城热门）+ 外卖平台识别直达" data-en="Dual real store sources (nearby 3km / city hot) + delivery-platform deep links">真实店源双源（附近 3km / 本城热门）+ 外卖平台识别直达</span></div>
+      <div class="cmp-item"><span class="ic">✓</span><span data-zh="关怀模式：大字、高对比、语音放慢" data-en="Care mode: larger text, high contrast, slower voice">关怀模式：大字、高对比、语音放慢</span></div>
+      <div class="cmp-item"><span class="ic">✓</span><span data-zh="AK 零下发 + 蜜罐诱捕 + 459 条 E2E 攻击用例全绿" data-en="Zero key exposure + honeypot traps + 459 green E2E attack tests">AK 零下发 + 蜜罐诱捕 + 459 条 E2E 攻击用例全绿</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 核心能力 ================= -->
+<section id="features">
+  <div class="sec-head">
+    <h2 data-zh="核心能力" data-en="Core Capabilities">核心能力</h2>
+    <p data-zh="从体检、规划到下单，覆盖生活圈全链路" data-en="From health-check to checkout — the full neighborhood loop">从体检、规划到下单，覆盖生活圈全链路</p>
+  </div>
+  <div class="cap-grid">
+    <div class="cap-card"><div class="ico">🏥</div><h3 data-zh="生活圈智能体检" data-en="Neighborhood Health Check">生活圈智能体检</h3><p data-zh="六维评分（买菜/就餐/就医/教育/休闲/出行），真实路网批量算路，服务盲区直出改进建议。" data-en="Six-dimension scoring (market / dining / clinic / school / leisure / transit) with real road routing and actionable blind-spot advice.">六维评分（买菜/就餐/就医/教育/休闲/出行），真实路网批量算路，服务盲区直出改进建议。</p></div>
+    <div class="cap-card"><div class="ico">◔</div><h3 data-zh="真实步行等时圈" data-en="Real Walk Isochrone">真实步行等时圈</h3><p data-zh="不是直线圆——沿真实人行路网算出「15 分钟能走多远」，盲区一眼看穿。" data-en="Not a circle — how far 15 minutes really takes you along pedestrian networks.">不是直线圆——沿真实人行路网算出「15 分钟能走多远」，盲区一眼看穿。</p></div>
+    <div class="cap-card"><div class="ico">🛒</div><h3 data-zh="真实店源双通道" data-en="Dual Real Store Sources">真实店源双通道</h3><p data-zh="附近 3km 按定位实时拉、本城热门城市级检索；百度 POI 真实店名/坐标/电话，落盘缓存护配额。" data-en="Nearby 3km live + city-hot search on Baidu POI with real names, coords &amp; phones; disk cache protects quota.">附近 3km 按定位实时拉、本城热门城市级检索；百度 POI 真实店名/坐标/电话，落盘缓存护配额。</p></div>
+    <div class="cap-card"><div class="ico">🥡</div><h3 data-zh="外卖平台识别" data-en="Delivery Platform Identify">外卖平台识别</h3><p data-zh="每家店挂美团/饿了么/抖音「搜这家店」深链；配了真实接口可自动核实在架/价格/评分，绝不编造数据。" data-en="Every store carries Meituan / ele.me / Douyin search deep-links; with real APIs it auto-verifies shelf status, price &amp; rating — never fabricated.">每家店挂美团/饿了么/抖音「搜这家店」深链；配了真实接口可自动核实在架/价格/评分，绝不编造数据。</p></div>
+    <div class="cap-card"><div class="ico">🚶</div><h3 data-zh="真实步行距离" data-en="Real Walking Distance">真实步行距离</h3><p data-zh="批量矩阵实测「走过去要几分钟」，隔河高架不再骗人；带「真实步行」徽章。" data-en="Batch-measured minutes-to-walk across rivers and viaducts, with a 'real walk' badge.">批量矩阵实测「走过去要几分钟」，隔河高架不再骗人；带「真实步行」徽章。</p></div>
+    <div class="cap-card"><div class="ico">🧠</div><h3 data-zh="Memory 长记忆" data-en="Long-Term Memory">Memory 长记忆</h3><p data-zh="JSON / SQLite 双驱动的用户画像与记忆沉淀，常搜类目自动上浮，人机协同安全运维。" data-en="JSON / SQLite dual-driven profiles and memory; frequently searched categories auto-surface, with human-in-the-loop ops.">JSON / SQLite 双驱动的用户画像与记忆沉淀，常搜类目自动上浮，人机协同安全运维。</p></div>
+    <div class="cap-card"><div class="ico">🤖</div><h3 data-zh="Agent 智能助手" data-en="Agent Assistant">Agent 智能助手</h3><p data-zh="多模态识图、语音对话与播报、工具调用；关怀模式下自动放慢语速、简化表达。" data-en="Multimodal vision, voice chat &amp; tool calls; auto slower-speech and simpler wording in care mode.">多模态识图、语音对话与播报、工具调用；关怀模式下自动放慢语速、简化表达。</p></div>
+    <div class="cap-card"><div class="ico">🔐</div><h3 data-zh="RBAC + 感知限流" data-en="RBAC + Rate Limiting">RBAC + 感知限流</h3><p data-zh="三角色最小权限（guest/user/admin）、scrypt 口令、HMAC 无状态令牌；令牌桶按身份限速并下发标准头。" data-en="Three-role least privilege, scrypt passwords, HMAC stateless tokens; identity-aware token buckets with standard rate headers.">三角色最小权限（guest/user/admin）、scrypt 口令、HMAC 无状态令牌；令牌桶按身份限速并下发标准头。</p></div>
+    <div class="cap-card"><div class="ico">🛡️</div><h3 data-zh="蜜罐安全体系" data-en="Honeypot Security">蜜罐安全体系</h3><p data-zh="假密钥诱捕、IP 自动封禁、出网脱敏、CSP 浏览器沙箱、多 AK 池自愈轮换；459 条攻击用例全绿。" data-en="Canary keys, auto IP bans, egress sanitization, CSP sandbox, multi-AK self-healing pool; 459 attack tests green.">假密钥诱捕、IP 自动封禁、出网脱敏、CSP 浏览器沙箱、多 AK 池自愈轮换；459 条攻击用例全绿。</p></div>
+    <div class="cap-card"><div class="ico">🧩</div><h3 data-zh="MCP 协议扩展" data-en="MCP Extension">MCP 协议扩展</h3><p data-zh="地图能力全部封装为 MCP 工具，任何支持 MCP 的 Agent 都能直接复用鲤慧的生活圈能力。" data-en="Every map capability is an MCP tool — any MCP-aware agent can reuse LiHui's neighborhood powers.">地图能力全部封装为 MCP 工具，任何支持 MCP 的 Agent 都能直接复用鲤慧的生活圈能力。</p></div>
+    <div class="cap-card"><div class="ico">🤝</div><h3 data-zh="人机协同共创" data-en="Co-Creation">人机协同共创</h3><p data-zh="发现地址缺失/不准？一键补报，云端留存后所有人的检索结果自动生效。" data-en="Missing or wrong address? One tap to report — after review it fixes search results for everyone.">发现地址缺失/不准？一键补报，云端留存后所有人的检索结果自动生效。</p></div>
+    <div class="cap-card"><div class="ico">📱</div><h3 data-zh="三端同源" data-en="Three Clients, One Core">三端同源</h3><p data-zh="微信小程序（217KB 轻包）、uni-app 多端 APP、Web Premium 仪表盘，一套服务端全支撑。" data-en="WeChat Mini Program (217KB), uni-app APP, and a Web Premium dashboard — one server for all.">微信小程序（217KB 轻包）、uni-app 多端 APP、Web Premium 仪表盘，一套服务端全支撑。</p></div>
+  </div>
+</section>
+
+<!-- ================= 典型场景 ================= -->
+<section id="cases">
+  <div class="sec-head">
+    <h2 data-zh="典型场景" data-en="Typical Use Cases">典型场景</h2>
+    <p data-zh="一个助手，覆盖日常生活方方面面" data-en="One assistant, covering everyday life">一个助手，覆盖日常生活方方面面</p>
+  </div>
+  <div class="case-grid">
+    <div class="case-card"><h3 data-zh="搬家政选址" data-en="Moving &amp; Home Picking">搬家政选址</h3><p data-zh="输入候选小区，体检报告直接对比六维得分与盲区：哪边缺诊所、哪边买菜远，一页看清。" data-en="Compare candidate neighborhoods by six-dimension scores and blind spots on one page.">输入候选小区，体检报告直接对比六维得分与盲区：哪边缺诊所、哪边买菜远，一页看清。</p><span class="case-tag" data-zh="生活决策" data-en="Life Decisions">生活决策</span></div>
+    <div class="case-card"><h3 data-zh="老人日常照护" data-en="Elderly Daily Care">老人日常照护</h3><p data-zh="关怀模式大字高对比，语音对话放慢播报；医院、药店、菜场的真实步行路线直接规划。" data-en="Care mode with large text and slowed voice; real walking routes to clinics, pharmacies and markets.">关怀模式大字高对比，语音对话放慢播报；医院、药店、菜场的真实步行路线直接规划。</p><span class="case-tag" data-zh="适老关怀" data-en="Accessibility">适老关怀</span></div>
+    <div class="case-card"><h3 data-zh="本地探店消费" data-en="Local Shop Discovery">本地探店消费</h3><p data-zh="附近真实店铺按真实步行距离排序，跳美团/饿了么/抖音看实时价格评分，选品留痕不碰资金。" data-en="Real stores sorted by real walking distance; deep-link to platforms for live prices &amp; ratings.">附近真实店铺按真实步行距离排序，跳美团/饿了么/抖音看实时价格评分，选品留痕不碰资金。</p><span class="case-tag" data-zh="消费决策" data-en="Consumption">消费决策</span></div>
+    <div class="case-card"><h3 data-zh="旅行目的地体检" data-en="Travel Spot Check">旅行目的地体检</h3><p data-zh="出门前给酒店周边做体检：15 分钟能步行到什么？缺什么？带家人出门心里有数。" data-en="Health-check hotel surroundings before you travel: what's within a 15-minute walk, and what's missing.">出门前给酒店周边做体检：15 分钟能步行到什么？缺什么？带家人出门心里有数。</p><span class="case-tag" data-zh="出行规划" data-en="Travel">出行规划</span></div>
+    <div class="case-card"><h3 data-zh="社区调研分析" data-en="Community Research">社区调研分析</h3><p data-zh="等时圈 + 盲区数据可导出，社区配套评估、城市研究的数据底座；标准规范知识库做评分依据。" data-en="Exportable isochrone &amp; blind-spot data for community assessment and urban research, scored against standards.">等时圈 + 盲区数据可导出，社区配套评估、城市研究的数据底座；标准规范知识库做评分依据。</p><span class="case-tag" data-zh="研究分析" data-en="Research">研究分析</span></div>
+    <div class="case-card"><h3 data-zh="Agent 日常问答" data-en="Agent Daily Q&amp;A">Agent 日常问答</h3><p data-zh="拍一张门牌问「这是哪、周围有啥」，语音问「附近哪家火锅便宜」——多模态与地图能力组合回答。" data-en="Snap a doorplate and ask where it is; ask which hotpot nearby is cheaper — multimodal + map in one flow.">拍一张门牌问「这是哪、周围有啥」，语音问「附近哪家火锅便宜」——多模态与地图能力组合回答。</p><span class="case-tag" data-zh="智能问答" data-en="AI Q&amp;A">智能问答</span></div>
+  </div>
+</section>
+
+<!-- ================= 系统预览 ================= -->
+<section id="preview">
+  <div class="sec-head">
+    <h2 data-zh="系统预览" data-en="System Preview">系统预览</h2>
+    <p data-zh="真实运行截图，先睹为快" data-en="Real running screenshots, a sneak peek">真实运行截图，先睹为快</p>
+  </div>
+  <div class="preview-grid">
+    <div class="shot" data-src="./hero-zh.gif"><img src="./hero-zh.gif" alt="鲤慧主页" loading="lazy" onerror="this.closest('.shot').classList.add('noimg');this.remove()"><div class="cap" data-zh="首页 · 定位与生活圈总览" data-en="Home · Location &amp; neighborhood overview">首页 · 定位与生活圈总览</div></div>
+    <div class="shot" data-src="./isochrone-zh.gif"><img src="./isochrone-zh.gif" alt="步行等时圈" loading="lazy" onerror="this.closest('.shot').classList.add('noimg');this.remove()"><div class="cap" data-zh="真实步行等时圈与服务盲区" data-en="Real walk isochrone &amp; blind spots">真实步行等时圈与服务盲区</div></div>
+    <div class="shot" data-src="./shop-zh.gif"><img src="./shop-zh.gif" alt="鲤慧商城" loading="lazy" onerror="this.closest('.shot').classList.add('noimg');this.remove()"><div class="cap" data-zh="商城 · 附近 3km 真实店源 + 步行距离" data-en="Shop · real nearby stores with walking distance">商城 · 附近 3km 真实店源 + 步行距离</div></div>
+    <div class="shot" data-src="./assistant-zh.gif"><img src="./assistant-zh.gif" alt="智能助手" loading="lazy" onerror="this.closest('.shot').classList.add('noimg');this.remove()"><div class="cap" data-zh="Agent 助手 · 语音 / 识图 / 工具调用" data-en="Assistant · voice / vision / tools">Agent 助手 · 语音 / 识图 / 工具调用</div></div>
+  </div>
+</section>
+
+<!-- ================= 架构 ================= -->
+<section id="architecture">
+  <div class="sec-head">
+    <h2 data-zh="系统架构" data-en="Architecture">系统架构</h2>
+    <p data-zh="三端接入 · 一颗零依赖核心 · 安全默认" data-en="Three clients · one zero-dependency core · secure by default">三端接入 · 一颗零依赖核心 · 安全默认</p>
+  </div>
+  <div class="arch-grid">
+    <div class="arch-card"><div class="ico">📱</div><h3 data-zh="端（三端同源）" data-en="Clients">端（三端同源）</h3>
+      <ul>
+        <li data-zh="微信小程序（主包 217KB）" data-en="WeChat Mini Program (217KB main)">微信小程序（主包 217KB）</li>
+        <li data-zh="uni-app 多端 APP（Android / HarmonyOS / iOS）" data-en="uni-app APP (Android / HarmonyOS / iOS)">uni-app 多端 APP（Android / HarmonyOS / iOS）</li>
+        <li data-zh="Web Premium 仪表盘 + 百度底图页" data-en="Web Premium dashboard + Baidu map page">Web Premium 仪表盘 + 百度底图页</li>
+        <li data-zh="所有百度能力经服务端中转，<code>AK 零下发</code>" data-en="All Baidu calls relayed server-side, zero keys on clients">所有百度能力经服务端中转，<code>AK 零下发</code></li>
+      </ul>
+    </div>
+    <div class="arch-card"><div class="ico">⚙️</div><h3 data-zh="服务端（Node 零依赖）" data-en="Server (Zero-dep Node)">服务端（Node 零依赖）</h3>
+      <ul>
+        <li data-zh="纯 Node 标准库 HTTP 服务，<code>node src/app.js</code> 即起" data-en="Pure stdlib HTTP server, boots with node src/app.js">纯 Node 标准库 HTTP 服务，<code>node src/app.js</code> 即起</li>
+        <li data-zh="体检引擎 / 等时圈 / 店源 / 商城 / 订单 / Agent / Memory" data-en="Check engine / isochrone / stores / shop / orders / Agent / Memory">体检引擎 / 等时圈 / 店源 / 商城 / 订单 / Agent / Memory</li>
+        <li data-zh="JSON / SQLite 双驱动存储 + 多级缓存" data-en="JSON / SQLite dual storage + multi-level cache">JSON / SQLite 双驱动存储 + 多级缓存</li>
+        <li data-zh="多 AK 池：配额打满自动冷却切换，0 点自愈回归" data-en="Multi-AK pool: auto cooldown &amp; switch, self-heals at midnight">多 AK 池：配额打满自动冷却切换，0 点自愈回归</li>
+      </ul>
+    </div>
+    <div class="arch-card"><div class="ico">🛡️</div><h3 data-zh="安全（默认开启）" data-en="Security (by default)">安全（默认开启）</h3>
+      <ul>
+        <li data-zh="RBAC 三角色 + scrypt 口令 + HMAC 无状态令牌" data-en="RBAC roles + scrypt passwords + HMAC stateless tokens">RBAC 三角色 + scrypt 口令 + HMAC 无状态令牌</li>
+        <li data-zh="蜜罐假密钥诱捕 + IP 自动封禁 + 出网脱敏" data-en="Honeypot canary keys + auto IP bans + egress sanitization">蜜罐假密钥诱捕 + IP 自动封禁 + 出网脱敏</li>
+        <li data-zh="CSP 沙箱 + 角色感知限流（标准限流头）" data-en="CSP sandbox + identity-aware rate limiting (standard headers)">CSP 沙箱 + 角色感知限流（标准限流头）</li>
+        <li data-zh="<code>459 条 E2E 攻击用例</code>全绿（SQLi / XSS / CRLF / 溢出）" data-en="459 E2E attack tests green (SQLi / XSS / CRLF / overflow)">459 条 E2E 攻击用例全绿（SQLi / XSS / CRLF / 溢出）</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 快速开始 ================= -->
+<section id="quickstart">
+  <div class="sec-head">
+    <h2 data-zh="快速开始" data-en="Quick Start">快速开始</h2>
+    <p data-zh="三步跑起来，本地体验完整能力" data-en="Three steps to a fully working local setup">三步跑起来，本地体验完整能力</p>
+  </div>
+  <div class="qs">
+    <div class="qs-steps">
+      <div class="qs-step">
+        <h3 data-zh="克隆仓库" data-en="Clone the repo">克隆仓库</h3>
+        <div class="code-block"><span class="c"># Gitee（国内快）</span>
+git clone https://gitee.com/deng-he-ziyan/lihui.git
+<span class="c"># 或 GitHub</span>
+git clone https://github.com/DENGHEZI/lihui.git</div>
+      </div>
+      <div class="qs-step">
+        <h3 data-zh="配置百度地图 AK" data-en="Configure your Baidu AK">配置百度地图 AK</h3>
+        <div class="code-block">cd lihui/03-lh-server
+cp .env.example .env
+<span class="c"># 在 .env 中填写 BAIDU_AK（百度控制台创建「服务端」类型）</span>
+<span class="c"># 支持多把钥匙逗号分隔：BAIDU_AK=ak1,ak2,ak3</span></div>
+      </div>
+      <div class="qs-step">
+        <h3 data-zh="启动服务" data-en="Start the server">启动服务</h3>
+        <div class="code-block">node src/app.js
+<span class="c"># → http://localhost:8809   Web 仪表盘可直接打开</span>
+<span class="c"># 首次启动自动播种管理员：admin（务必改口令）</span></div>
+      </div>
+    </div>
+    <p class="qs-note" data-zh="小程序端用微信开发者工具导入 02-lh-wechat-mp 目录即可 · 详细文档见仓库 README 与 00-设计文档" data-en="Import 02-lh-wechat-mp into WeChat DevTools for the mini program · Full docs in README &amp; 00-设计文档">小程序端用微信开发者工具导入 02-lh-wechat-mp 目录即可 · 详细文档见仓库 README 与 00-设计文档</p>
+  </div>
+</section>
+
+<!-- ================= 页脚 ================= -->
+<footer>
+  <div class="f-logo">🐟 鲤慧 LiHui</div>
+  <p><span class="footer-kv" data-zh="15 分钟生活圈智能体检与规划助手" data-en="The 15-minute neighborhood health-check &amp; planning assistant">15 分钟生活圈智能体检与规划助手</span></p>
+  <div class="f-links">
+    <a href="https://github.com/DENGHEZI/lihui" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://gitee.com/deng-he-ziyan/lihui" target="_blank" rel="noopener">Gitee</a>
+    <a href="#features" data-zh="核心能力" data-en="Features">核心能力</a>
+    <a href="#quickstart" data-zh="快速开始" data-en="Quick Start">快速开始</a>
+  </div>
+  <p>© 2026 鲤慧 LiHui · <span data-zh="基于百度地图开放能力构建" data-en="Built on Baidu Map Open Capabilities">基于百度地图开放能力构建</span> · MIT License</p>
+</footer>
+
+</div>
+
+<script>
+/* ---------------- 主题切换 ---------------- */
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('thDark').classList.toggle('on', t === 'dark');
+  document.getElementById('thLight').classList.toggle('on', t === 'light');
+  try { localStorage.setItem('lh_theme', t); } catch (e) {}
+}
+(function initTheme() {
+  var t = 'light';
+  try { t = localStorage.getItem('lh_theme') || 'light'; } catch (e) {}
+  setTheme(t);
+})();
+
+/* ---------------- 中英切换 ---------------- */
+function setLang(l) {
+  document.documentElement.lang = l === 'en' ? 'en' : 'zh-CN';
+  document.querySelectorAll('[data-zh]').forEach(function (el) {
+    var v = el.getAttribute(l === 'en' ? 'data-en' : 'data-zh');
+    // 用 innerHTML 而非 textContent：个别条目内嵌 <code> 等标记，需按 HTML 渲染
+    if (v !== null) el.innerHTML = v;
+  });
+  document.getElementById('langZh').classList.toggle('on', l === 'zh');
+  document.getElementById('langEn').classList.toggle('on', l === 'en');
+  try { localStorage.setItem('lh_lang', l); } catch (e) {}
+}
+(function initLang() {
+  var l = 'zh';
+  try { l = localStorage.getItem('lh_lang') || 'zh'; } catch (e) {}
+  setLang(l);
+})();
+</script>
+</body>
+</html>
