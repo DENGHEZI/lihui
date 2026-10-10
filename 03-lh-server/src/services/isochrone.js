@@ -157,9 +157,17 @@ function isMatrixBlocked() {
   return Date.now() < matrixBlockedUntil;
 }
 function noteMatrixError(e) {
-  if (e && (e.baiduStatus === 302 || e.baiduStatus === 401)) {
+  /* V1.0.27：401 并发超限是瞬时的，45 秒短熔断即恢复（此前一律 10 分钟，
+   * 算路熔断期间等时圈被迫降级理想圆，与检索熔断叠加造成"全页没数据"观感）；
+   * 302 天配额仍熔断 10 分钟。 */
+  if (e && e.baiduStatus === 302) {
     matrixBlockedUntil = Date.now() + 10 * 60 * 1000;
-    logger.warn('isochrone', `matrix quota blocked (status=${e.baiduStatus}), 算路熔断 10 分钟`);
+    logger.warn('isochrone', 'matrix quota blocked (status=302 天配额), 算路熔断 10 分钟');
+    return true;
+  }
+  if (e && e.baiduStatus === 401) {
+    matrixBlockedUntil = Date.now() + 45 * 1000;
+    logger.warn('isochrone', 'matrix quota blocked (status=401 并发超限), 算路短熔断 45 秒');
     return true;
   }
   return false;

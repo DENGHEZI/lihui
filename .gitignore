@@ -72,6 +72,7 @@ docs/readme/frames/*
 !docs/readme/frames/mp-g*.jpg
 !docs/readme/frames/mp-panorama.jpg
 !docs/readme/frames/mp-panorama.gif
+!docs/readme/frames/web-*.png
 
 # 本地运行时/临时（不入库）
 .push_url_gitee

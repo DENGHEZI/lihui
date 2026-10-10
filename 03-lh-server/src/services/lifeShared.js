@@ -23,16 +23,25 @@ const CATEGORIES = [
 ];
 
 /* ------------------------------------------------------------------ */
-/* 配额熔断：百度 302(天配额超限)/401(并发超限) 后 10 分钟内短路检索     */
+/* 配额熔断：百度 302(天配额超限)/401(并发超限) 后短路易过               */
+/* V1.0.27 修复：401 是「瞬时并发超限」，并发风暴退去即恢复，此前一律    */
+/* 熔断 10 分钟导致体检/等时圈检索受限类迟迟不恢复（用户看到「暂无」）。  */
+/* 401 → 45 秒短熔断（恰好覆盖一次并发风暴）；302 → 10 分钟（天配额，   */
+/* 0 点才恢复，长短熔断分开处理）。                                     */
 /* ------------------------------------------------------------------ */
 let quotaBlockedUntil = 0;
 function isQuotaBlocked() {
   return Date.now() < quotaBlockedUntil;
 }
 function noteQuotaError(e) {
-  if (e && (e.baiduStatus === 302 || e.baiduStatus === 401)) {
+  if (e && e.baiduStatus === 302) {
     quotaBlockedUntil = Date.now() + 10 * 60 * 1000;
-    logger.warn('life', `baidu quota blocked (status=${e.baiduStatus}), 熔断 10 分钟`);
+    logger.warn('life', 'baidu quota blocked (status=302 天配额), 熔断 10 分钟');
+    return true;
+  }
+  if (e && e.baiduStatus === 401) {
+    quotaBlockedUntil = Date.now() + 45 * 1000;
+    logger.warn('life', 'baidu quota blocked (status=401 并发超限), 短熔断 45 秒');
     return true;
   }
   return false;

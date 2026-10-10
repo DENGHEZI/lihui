@@ -1284,6 +1284,7 @@ async function loadLife() {
   $('#lifeBox').innerHTML = '<div class="spin"></div><div class="empty">正在体检你的 15 分钟生活圈</div>';
   try {
     const r = await api('/life/report', { lng: state.lng, lat: state.lat, city: state.city || '' });
+    const quotaFailed = (r.categories || []).some((c) => c.failed);
     const cats = (r.categories || []).map((c) => {
       const pct = c.score == null ? 0 : c.score;
       const near = c.nearest ? (c.nearest.name || '') + (c.nearest.distance ? ' · ' + fmtM(c.nearest.distance) : '') : '暂无';
@@ -1297,11 +1298,19 @@ async function loadLife() {
       ? '<div class="shortboards">⚠️ 短板：' + (r.shortboards || []).map(esc).join('；') + '</div>' : '';
     const hint = r.hint
       ? '<div class="shortboards" style="color:#AD6800;background:rgba(255,199,0,.08)">ℹ️ ' + esc(r.hint) + '</div>' : '';
+    /* 百度 401 并发限流的类：不再让用户对着「暂无」发呆——50s 后自动重拉一次 */
+    let retryNote = '';
+    if (quotaFailed) {
+      retryNote = '<div class="shortboards" style="color:#AD6800;background:rgba(255,199,0,.08)">⏳ 部分类目被百度检索限流，' +
+        '约 1 分钟内自动重试恢复…</div>';
+      clearTimeout(loadLife._retryTimer);
+      loadLife._retryTimer = setTimeout(() => { if (document.getElementById('lifeBox')) loadLife(); }, 50000);
+    }
     $('#lifeBox').innerHTML =
       '<div class="score-row"><div class="ring" style="--pct:' + (r.score || 0) + '"><div class="in"><b>' +
       (r.score == null ? '--' : r.score) + '</b><span>总分</span></div></div>' +
       '<div><div class="level">' + esc(r.level || '—') + '</div>' +
-      '<div class="muted" style="margin-top:8px;font-size:12.5px">七类设施加权评分<br>满分 100 · 达标线 60</div></div></div>' + hint + sb +
+      '<div class="muted" style="margin-top:8px;font-size:12.5px">七类设施加权评分<br>满分 100 · 达标线 60</div></div></div>' + retryNote + hint + sb +
       '<div class="cats">' + cats + '</div>';
     const hs = document.getElementById('hScore');
     if (hs) hs.textContent = (r.score == null ? '--' : r.score) + ' 分';
@@ -1323,7 +1332,7 @@ const ENG_NAME = {
 function loadIsochrone() {
   if (state.lng == null) { $('#isoBox').innerHTML = '<div class="empty">等待定位…</div>'; return; }
   $('#isoBox').innerHTML = '<div class="spin"></div><div class="empty">正在沿真实路网计算 ' + ISO_MINUTES() + ' 分钟步行等时圈…</div>';
-  api('/life/isochrone', { lng: state.lng, lat: state.lat, minutes: ISO_MINUTES(), grid: 5 })
+  api('/life/isochrone', { lng: state.lng, lat: state.lat, minutes: ISO_MINUTES() })
     .then(renderIsochrone)
     .catch((e) => { $('#isoBox').innerHTML = '<div class="empty">等时圈计算失败：' + esc(e.message) + '</div>'; });
 }
@@ -1867,7 +1876,9 @@ document.querySelectorAll('#isoCtl .mtab').forEach((t) => {
   };
 });
 
-function loadAll() { loadWeather(); loadLife(); loadIsochrone(); loadQuick(); loadShop(); }
+function loadAll() { loadWeather(); loadLife(); loadQuick(); loadShop(); setTimeout(loadIsochrone, 4000); }
+/* 等时圈延后 4s：体检 7 类检索 + 等时圈 36 路矩阵同时打百度会触发 401 并发超限，
+ * 串行错峰后体检先落定（结果进共享 POI 缓存），等时圈再起跑。 */
 
 /* ---------- 卡片滚动渐入（Premium 动效） ---------- */
 document.documentElement.classList.add('js');

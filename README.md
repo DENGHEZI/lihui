@@ -71,9 +71,16 @@
 
 ## 2. 功能一览
 
-### 💻 网页版工作台（V1.0.18~V1.0.26 · 白金高级化）
+### 💻 网页版工作台（V1.0.18~V1.0.27 · 白金高级化）
 
 **👉 在线体验：<https://lihui-landing.app.workbuddy.host/>**（与小程序同一后端、同一套数据）
+
+<p align="center"><img src="docs/readme/frames/web-workbench.png" width="860" alt="网页版工作台：白色主题 + 金色主色 · 8 独立视图 · 智能助手与 AI 状态徽标"></p>
+<p align="center">
+  <img src="docs/readme/frames/web-life.png" width="420" alt="网页版生活圈体检：七类加权评分 · 真实最近距离">&nbsp;&nbsp;
+  <sub>八项设施全部实查落位，限流自愈后无「检索受限」</sub>
+</p>
+<p align="center"><sub>↑ 白色主题 · 金 #b98629 主色 · Linear/Apple 式细线边框与留白</sub></p>
 
 - **白色 + 金色为主色调**：白底细线边框、金色 `#b98629` 点睛，Linear / Apple 式克制留白的高级感；
 - **8 个独立视图**：工作台（AI 对话首屏）· 生活圈体检 · 步行等时圈 · 便民速查 · 账号管理 · **模型接口** · 安全运维 · API 接口手册，侧栏切换不再滚动锚点；
