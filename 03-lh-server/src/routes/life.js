@@ -6,7 +6,7 @@
 const { ok, fail } = require('../utils/http');
 const hub = require('../mcp/hub');
 const logger = require('../utils/logger');
-const { CATEGORIES, isQuotaBlocked, noteQuotaError, fetchCategory, scoreCategory, scoreSummary } = require('../services/lifeShared');
+const { CATEGORIES, isQuotaBlocked, noteQuotaError, fetchCategory, scoreCategory, scoreSummary, catStagger } = require('../services/lifeShared');
 const { buildIsochrone } = require('../services/isochrone');
 const standards = require('../services/standards');
 
@@ -51,7 +51,7 @@ async function localDiagnose({ lng, lat, radius = 1200, city = '' }) {
 
   const cats = await Promise.all(
     CATEGORIES.map(async (c, i) => {
-      const { items, failed } = await fetchCategory(c, lng, lat, radius, i * 150);
+      const { items, failed } = await fetchCategory(c, lng, lat, radius, catStagger(i));
       // 检索失败的类不参与计分（区别于"确实没有"），避免偶发网络错误把总分拉穿
       const { hitTypes, score, count } = scoreCategory(c, items, failed);
       return {

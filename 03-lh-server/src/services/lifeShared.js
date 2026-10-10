@@ -69,6 +69,18 @@ function poiCacheSet(key, val) {
  *  - 二次确认只发前 2 个关键词（受控并发，防百度 401 并发超限后的重试雪崩）
  *  - 出口统一 POI 去重（uid 优先 + 同名同址合并），评分计数不再受脏数据影响
  */
+/* ------------------------------------------------------------------ */
+/* 类间错峰节奏：按百度 QPS 上限动态计算（环境变量 BAIDU_QPS，默认 3）   */
+/* —— 2026-10-10 七类口径后 150ms 错峰 = 瞬时 ~6.7 QPS，超 3 QPS 上限   */
+/*    触发百度 401 并发超限 → 10 分钟熔断 → 类目失败（地图黑点主因）。   */
+/*    334ms × 7 类 ≈ 3 QPS 贴上限内；配额提升后可调大 BAIDU_QPS 自动加速 */
+/* ------------------------------------------------------------------ */
+const BAIDU_QPS = Math.max(1, Number(process.env.BAIDU_QPS) || 3);
+const CAT_STAGGER_MS = Math.ceil(1000 / BAIDU_QPS);
+function catStagger(i) {
+  return i * CAT_STAGGER_MS;
+}
+
 const CAT_TIMEOUT_MS = 12 * 1000;
 function withCatTimeout(p) {
   return Promise.race([
@@ -183,4 +195,4 @@ function scoreSummary(cats) {
   return { score, level, shortboards };
 }
 
-module.exports = { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, fetchCategory, dedupePOIs, scoreCategory, scoreSummary };
+module.exports = { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, fetchCategory, dedupePOIs, scoreCategory, scoreSummary, catStagger, CAT_STAGGER_MS };

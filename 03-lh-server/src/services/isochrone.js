@@ -29,7 +29,7 @@ const logger = require('../utils/logger');
 const { Cache } = require('../utils/cache');
 const { gcj02ToBd09 } = require('../utils/coord');
 const config = require('../config');
-const { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, dedupePOIs } = require('./lifeShared');
+const { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, dedupePOIs, catStagger } = require('./lifeShared');
 
 /* ---------------- 常量（官方口径） ---------------- */
 const SPEED_M_PER_MIN = 80;            // 步行速度 80 m/min
@@ -303,7 +303,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
   const catsPromise = Promise.all(
     CATEGORIES.map(async (c, i) => {
       if (isQuotaBlocked()) return { ...c, items: [], failed: true, quota: true };
-      await new Promise((r) => setTimeout(r, i * 150)); // 类间错峰，防百度 QPS 瞬时超限
+      await new Promise((r) => setTimeout(r, catStagger(i))); // 类间错峰（按百度 QPS 上限动态节奏，防 401 并发超限）
       const ck = `lite:${c.key}:${center.lng.toFixed(4)},${center.lat.toFixed(4)}:${preRadius}`;
       const cached = poiCacheGet(ck);
       if (cached) return { ...c, items: cached, failed: false };

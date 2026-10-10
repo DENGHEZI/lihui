@@ -1,14 +1,21 @@
 /**
  * 鲤慧 LiHui · Token 计量与配额路由
  */
-const { ok, fail, clientIp } = require('../utils/http');
+const { ok, fail } = require('../utils/http');
 const tokenMeter = require('../services/tokenMeter');
+const auth = require('../services/auth');
 
 module.exports = {
-  /** GET /api/v1/token/stats?range=7d */
+  /** GET /api/v1/token/stats?range=7d
+   *  2026-10-10 账号锚定修复：计量写入（agent/vision → resolveOwner.ownerKey，
+   *  登录= user:<uid>）与统计读取此前口径不一致——登录后用的 Token 按设备查全为 0，
+   *  端上「花费不更新」。现读取与写入同锚：登录按账号聚合，未登录按设备兜底。 */
   'GET /token/stats': async (req, res, q) => {
-    const deviceId = q.deviceId || req.headers['x-device-id'] || '';
-    return ok(res, tokenMeter.stats({ range: q.range || '7d', deviceId }));
+    const owner = auth.resolveOwner(req);
+    return ok(res, {
+      ...tokenMeter.stats({ range: (q && q.range) || '7d', deviceId: owner.ownerKey }),
+      ownerType: owner.ownerType,
+    });
   },
 
   /** GET /api/v1/token/quota */

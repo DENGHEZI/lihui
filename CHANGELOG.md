@@ -5,6 +5,19 @@
 
 ---
 
+## [V1.0.16] · 2026-10-10 · 花费统计账号锚定修复 + 检索节奏适配百度 QPS（地图黑点治理）
+
+### 💰 花费不更新修复（`routes/token.js`）
+- **根因**：V1.0.14 账号锚定只改了计量**写入**（agent/vision → `resolveOwner().ownerKey`，登录= `user:<uid>`），`GET /token/stats` **读取**仍按裸 deviceId 过滤——登录后的用量全记在账号下，端上「Token 消耗 / 预估花费」恒为 0。
+- **修复**：统计读取与写入同锚——登录按账号聚合（`user:<uid>`），未登录按设备兜底；响应新增 `ownerType` 供端上感知口径。
+
+### 🗺 地图黑点治理（`services/lifeShared.js` + `routes/life.js` + `services/isochrone.js`）
+- **根因**：七类口径后类间 150ms 错峰 = 瞬时 ~6.7 QPS，超百度 QPS=3 上限 → 401 并发超限 → 10 分钟配额熔断 → 类目检索失败 → 地图出现黑点/盲区误判。
+- **修复**：新增 `catStagger()` 按环境变量 `BAIDU_QPS`（默认 3）动态计算类间节奏（334ms × 7 类 ≈ 3 QPS 贴上限内）；体检与等时圈两处调用同步替换；**提升百度配额后调大 BAIDU_QPS 即自动加速**。
+
+### 📱 小程序端
+- 无需改动（request 已带 Authorization，统计自动按登录账号聚合）；手机上仍显示未登录 ID 的话是旧版本包，重新编译/上传新版本即可。
+
 ## [V1.0.15] · 2026-10-10 · 养老设施检测维度 + 文档体系补齐（贡献指南/路线图）
 
 ### 👵 新增第七类「养老」设施检测（`services/lifeShared.js` + `data/standards.json`）
