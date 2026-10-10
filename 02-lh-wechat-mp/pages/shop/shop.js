@@ -57,7 +57,18 @@ Page({
   onShow() {
     theme.apply(this)
     // 切回页面时若定位已更新，重新算一次距离（只在「附近」tab，热门 tab 与定位无关）
-    if (this.data.curSource === 'near' && this.data.list.length && app.globalData.location) this.load()
+    // 2026-10-10：列表为空且带空态提示时也重拉 —— 限流窗口期拉空过的页面，切回来自动自愈，
+    // 不再「空一次就一直空」（原条件 list.length 为空时永远不重试）
+    if (this.data.curSource === 'near' && !this.data.loading &&
+        (this.data.list.length || this.data.emptyHint)) this.load()
+  },
+
+  /** 下拉刷新：只清商城相关缓存（shop 前缀），不动其他业务数据 */
+  async onPullDownRefresh() {
+    try { const { clearCachePrefix } = require('../../utils/request.js'); clearCachePrefix('/shop/') } catch (e) {}
+    this.setData({ curCat: this.data.curCat })
+    await this.load()
+    wx.stopPullDownRefresh()
   },
 
   onSourceTap(e) {

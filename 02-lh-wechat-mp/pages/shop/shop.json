@@ -1,4 +1,5 @@
 {
   "navigationBarTitleText": "鲤慧商城",
-  "enablePullDownRefresh": false
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
 }

@@ -131,7 +131,10 @@ function request(path, { method = 'GET', data = {}, loading = false, loadingText
       const body = res.data || {}
       if (body.code === 0) {
         lastTokenCost = Number((res.header && res.header['X-Token-Cost']) || (res.header && res.header['x-token-cost'])) || 0
-        if (cacheKey) cacheSet(cacheKey, body.data, cacheTtl)
+        // 2026-10-10：空列表不写缓存 —— 限流窗口期端上缓存了「0 个店」，服务端恢复后手机还要再空 5 分钟
+        if (cacheKey && !(body.data && Array.isArray(body.data.items) && body.data.items.length === 0)) {
+          cacheSet(cacheKey, body.data, cacheTtl)
+        }
         resolve(body.data)
         return
       }
@@ -209,7 +212,32 @@ function request(path, { method = 'GET', data = {}, loading = false, loadingText
   })
 }
 
-const get = (path, data, opts) => request(path, Object.assign({ method: 'GET', data }, opts || {}))
+const get = (path, data, opts) => {
+  const o = Object.assign({ method: 'GET', data }, opts || {})
+  return request(path, o).catch((err) => {
+    // 2026-10-10：GET 网络级失败（无业务 code）自动静默重试 1 次 —— 瞬时抖动不再让端上白屏/空列表
+    if (err && err.code === undefined && !o._retried) {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          request(path, Object.assign({}, o, { silent: true, _retried: true })).then(resolve, reject)
+        }, 900)
+      })
+    }
+    throw err
+  })
+}
 const post = (path, data, opts) => request(path, Object.assign({ method: 'POST', data }, opts || {}))
 
-module.exports = { request, get, post, getLastTokenCost: () => lastTokenCost, clearBizCache, getCacheSizeKB }
+/** 按前缀清业务缓存（下拉刷新用：只清一类，不动 deviceId/plan 等存储） */
+function clearCachePrefix(prefix) {
+  const drop = []
+  memCache.forEach((v, k) => { if (k.indexOf(prefix) === 0) drop.push(k) })
+  drop.forEach((k) => memCache.delete(k))
+  try {
+    const info = wx.getStorageInfoSync()
+    ;(info.keys || []).filter((k) => k.indexOf(CACHE_PREFIX) === 0 && k.indexOf(prefix) !== -1)
+      .forEach((k) => wx.removeStorageSync(k))
+  } catch (e) {}
+}
+
+module.exports = { request, get, post, getLastTokenCost: () => lastTokenCost, clearBizCache, clearCachePrefix, getCacheSizeKB }
