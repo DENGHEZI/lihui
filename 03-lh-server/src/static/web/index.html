@@ -1396,16 +1396,17 @@ const BaiduTileLayer = L.TileLayer.extend({
 });
 
 let isoMapInst = null;
-let isoProvider = 'baidu';        // 当前底图：baidu（默认）| gaode（兜底）
+let isoProvider = 'gaode';        // 当前底图：gaode（默认·稳定）| baidu（预留：需浏览器端 AK 才能稳定出图）
 let isoTileErrors = 0;            // 连续瓦片错误计数（成功即清零）
+let isoTileLoads = 0;             // 瓦片成功加载计数（0 = 底图整片未出图）
 
 function renderIsoMap(d, provider) {
   window.__isoPending = null;
   if (provider) { isoProvider = provider; isoTileErrors = 0; }
   const isBaidu = isoProvider === 'baidu';
-  /* GCJ-02 数据点 → 底图坐标系（百度=BD-09；高德同 GCJ-02 直用） */
+  /* GCJ-02 数据点 → 底图坐标系（高德同 GCJ-02 直用；百度=BD-09 转换） */
   const conv = (p) => isBaidu ? gcj02ToBd09(Number(p.lng), Number(p.lat)) : { lng: Number(p.lng), lat: Number(p.lat) };
-  const label = isBaidu ? '真实地图（百度底图 · BD-09 对齐）' : '真实地图（高德影像底图 · GCJ-02）';
+  const label = isBaidu ? '真实地图（百度底图 · BD-09 对齐）' : '真实地图（底图：高德 · 数据：百度 POI · GCJ-02）';
 
   $('#isoBox').innerHTML =
     '<div class="iso-map-wrap"><div id="isoMap"></div>' +
@@ -1475,24 +1476,38 @@ function renderIsoMap(d, provider) {
 
     isoMapInst.fitBounds(poly.getBounds(), { padding: [42, 42] });
 
-    /* 瓦片健康监控：百度瓦片连续失败 ≥8 → 自动回落高德（徽标提示），成功一次即清零 */
-    isoTileErrors = 0;
-    isoMapInst.on('tileload', () => { isoTileErrors = 0; });
+    /* 瓦片健康监控：连续失败 ≥3 → 换兜底底图；6s 内 0 张成功（透明图/改版类静默失效）→ 同样换。
+       顺序：百度 → 高德 → 示意图，任何情况下不出灰屏空图。 */
+    isoTileErrors = 0; isoTileLoads = 0;
+    isoMapInst.on('tileload', () => { isoTileLoads += 1; isoTileErrors = 0; });
     isoMapInst.on('tileerror', () => {
       isoTileErrors += 1;
-      if (isoTileErrors >= 8 && isBaidu) {
-        banner('百度底图瓦片暂不可用，已自动切换高德底图（数据仍为百度 POI，不受影响）。');
-        renderIsoMap(d, 'gaode');
-      }
+      if (isoTileErrors >= 3) switchIsoProvider(d);
     });
+    setTimeout(() => { if (isoTileLoads === 0 && isoTileErrors < 3) switchIsoProvider(d); }, 6000);
 
     isoMapInst.whenReady(() => {
       const l = document.getElementById('isoMapLoad');
       if (l) l.classList.add('off');
     });
   } catch (e) {
-    if (isBaidu) return renderIsoMap(d, 'gaode'); /* 底图初始化异常 → 高德兜底 */
+    if (isoProvider === 'baidu') return renderIsoMap(d, 'gaode'); /* 底图初始化异常 → 高德兜底 */
     renderIsoSvg(state.isoData || d); /* 高德也异常 → 示意图兜底 */
+  }
+}
+
+/* 底图降级链：baidu → gaode → svg（V1.0.21：百度免费栅格瓦片已随平台改版失效，
+   浏览器端稳定显示百度底图需「百度开放平台浏览器端 AK + JS API GL」，接入后此处切回默认百度） */
+function switchIsoProvider(d) {
+  const now = Date.now();
+  if (now - (window.__isoSwitchAt || 0) < 2000) return; /* 节流：2s 内只降级一次 */
+  window.__isoSwitchAt = now;
+  if (isoProvider === 'baidu') {
+    banner('百度底图瓦片暂不可用，已自动切换高德底图（数据仍为百度 POI，不受影响）。');
+    renderIsoMap(d, 'gaode');
+  } else if (state.isoData) {
+    banner('地图底图加载异常，已切换为示意图（数据不变）。');
+    renderIsoSvg(state.isoData);
   }
 }
 
