@@ -5,6 +5,13 @@
 
 ---
 
+## [V1.0.27] · 2026-10-10 · 安全头全局加固 + 等时圈多档环算法
+
+### 服务端
+
+- **CSP/helmet 全局加固**（`src/app.js`）：安全头注入从「仅静态文件」升级为 **res.writeHead 统一包裹全量覆盖**（API JSON / 404 / 静态全带上）；CSP img-src 补 `blob:` 与百度瓦片域（AK 配置后随时切回）；frame-ancestors 'none' → 'self'（X-Frame-Options 同步 SAMEORIGIN）；新增 `Cross-Origin-Opener-Policy: same-origin`、`X-Permitted-Cross-Domain-Policies: none`、`interest-cohort=()`；HTTPS（反代 x-forwarded-proto）自动附带 **HSTS**（max-age 1 年 + includeSubDomains）。
+- **等时圈多档环算法**（`src/services/isochrone.js`）：二分探针的每方向全部 (距离, 耗时) 实测样本留档（`samples`），子预算（15 分钟 → 5/10 分钟档）用**分段线性插值**直接得出每方向可达半径——**一次算路产出三档等时圈，零额外算路请求**；`interpolateReach` 纯函数（区间内插值 / 两侧外推 / 主档单调性约束 ±5%），并发降级路径同样留样本，理想圆降级按时间比等比缩小。响应新增 `rings: [{minutes, polygon, areaKm2}]`。测试 20 → **23 项**全过；网页版 SVG 叠加虚线金环 + 分钟标注。
+
 ## [V1.0.21 ~ V1.0.26] · 2026-10-10 · 地图灰屏修复 · API 手机端手册 · 模型接口 · 白金配色 · 盲区能力升级
 
 ### 网页版（03-lh-server/src/static/web/index.html）

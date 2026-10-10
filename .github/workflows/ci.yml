@@ -29,7 +29,7 @@ jobs:
           echo "checked $(git -c core.quotepath=off ls-files '*.js' | wc -l) files, $fails failed"
           exit $fails
 
-      - name: 等时圈数学性质自测（20 项）
+      - name: 等时圈数学性质自测（23 项）
         run: node 03-lh-server/tests/isochrone.test.js
 
       - name: 模块图完整性（require 链 / 循环依赖 / 导出缺失）

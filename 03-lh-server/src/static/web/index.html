@@ -1397,6 +1397,16 @@ function renderIsoSvg(d) {
       '" height="' + ((gy1 - gy0) * scale).toFixed(1) + '" fill="' + fill + '"' +
       (stroke ? ' stroke="' + stroke + '" stroke-width="1"' : '') + ' rx="2"/>';
   });
+  /* 多档等时圈内环（V1.0.27：5/10 分钟子档，虚线金环，一次算路零额外成本） */
+  (d.rings || []).forEach((rg) => {
+    if (!rg.polygon || rg.polygon.length < 3) return;
+    const rPts = rg.polygon.map((p) => { const m = proj(p.lng, p.lat); return X(m.x) + ',' + Y(m.y); }).join(' ');
+    svg += '<polygon points="' + rPts + '" fill="rgba(185,134,41,.05)" stroke="#b98629" stroke-opacity=".55" stroke-width="1.4" stroke-dasharray="6 4" stroke-linejoin="round"/>';
+    /* 环上标注分钟数（顶部采样点） */
+    const top = rg.polygon.reduce((a, b) => (b.lat > a.lat ? b : a), rg.polygon[0]);
+    const tm = proj(top.lng, top.lat);
+    svg += '<text x="' + X(tm.x).toFixed(1) + '" y="' + (Y(tm.y) - 5).toFixed(1) + '" font-size="10" fill="#9a7020" text-anchor="middle" font-weight="600">' + esc(String(rg.minutes)) + ' min</text>';
+  });
   /* 等时圈多边形（渐变填充 + 柔影） */
   const pts = d.polygon.map((p) => { const m = proj(p.lng, p.lat); return X(m.x) + ',' + Y(m.y); }).join(' ');
   svg += '<polygon points="' + pts + '" fill="url(#isoGrad)" stroke="#b98629" stroke-width="2.5" stroke-linejoin="round" filter="url(#isoShadow)"/>';

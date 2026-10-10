@@ -341,6 +341,40 @@ function clusterLacking(comp, coverageCats, minutesN) {
     .slice(0, 3);
 }
 
+/**
+ * 子预算可达半径插值（多档等时圈核心，纯函数，CI 可测）：
+ * 用该方向二分过程中全部 (dist, duration) 实测样本做分段线性插值，
+ * 样本不覆盖目标预算时按均匀速度从最近样本外推，最后用主预算半径约束单调性
+ * （时间更短 → 可达距离不得反超主档，±5% 容差防插值毛刺）。
+ * @returns 半径（米）；无任何有效样本时返回 null
+ */
+function interpolateReach(samples, budgetSec, maxRadius) {
+  const pts = (samples || [])
+    .filter((s) => s && s.dist > 0 && s.duration > 0)
+    .sort((a, b) => a.duration - b.duration);
+  if (!pts.length) return null;
+  let est;
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  if (budgetSec <= first.duration) {
+    est = first.dist * (budgetSec / first.duration); // 样本全部超时 → 向内推
+  } else if (budgetSec >= last.duration) {
+    est = last.dist * (budgetSec / last.duration); // 样本全部可达 → 向外推
+  } else {
+    for (let k = 1; k < pts.length; k++) {
+      if (pts[k].duration >= budgetSec) {
+        const a = pts[k - 1];
+        const b = pts[k];
+        const t = (budgetSec - a.duration) / (b.duration - a.duration);
+        est = a.dist + t * (b.dist - a.dist); // 区间内分段线性插值
+        break;
+      }
+    }
+  }
+  if (Number.isFinite(maxRadius)) est = Math.min(est, maxRadius * 1.05);
+  return Math.max(est, 0);
+}
+
 /* ------------------------------------------------------------------ */
 /* 主流程：buildIsochrone                                              */
 /* ------------------------------------------------------------------ */
@@ -370,6 +404,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
   const lo = new Array(BEARINGS).fill(0);
   const hi = new Array(BEARINGS).fill(rMax0);
   const lastProbe = new Array(BEARINGS).fill(null); // {dist, duration} 每方向最近一次实测
+  const samples = Array.from({ length: BEARINGS }, () => []); // 每方向全部实测样本（多档等时圈插值用）
 
   let engine = null;
   let matrixRounds = 0;
@@ -423,6 +458,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
           if (!it || !(it.duration > 0)) continue; // 该方向本轮失败 → 区间不动
           okCount++;
           lastProbe[i] = { dist: mids[i], duration: it.duration };
+          samples[i].push({ dist: mids[i], duration: it.duration });
           if (it.duration <= budget) lo[i] = mids[i];
           else hi[i] = mids[i];
         }
@@ -465,8 +501,9 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
       const { results, okCount } = await walkConcurrent(center, dests);
       if (okCount > 0) {
         engine = 'directionlite-concurrent';
-        radii = results.map((r) => {
+        radii = results.map((r, i) => {
           if (!r || !(r.duration > 0)) return idealR;
+          samples[i].push({ dist: idealR, duration: r.duration }); // 并发降级路径也留样本，多档环同样可用
           const est = idealR * (budget / r.duration); // 实测耗时反推真实可达距离
           return Math.min(Math.max(est, idealR * 0.2), idealR * 2.5);
         });
@@ -491,6 +528,28 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
     bearings.map((b) => ({ lng: b.lng, lat: b.lat })),
     8
   );
+
+  /* —— 多档等时圈（V1.0.27 算法升级）：一次算路，多档环零额外成本 ——
+   * 二分探针已实测每方向多个 (距离, 耗时) 样本，子预算用分段线性插值直接得出，
+   * 不再发任何算路请求；理想圆降级时按时间比等比缩小。 */
+  const ringSteps = [...new Set([Math.round(minutesN / 3), Math.round((minutesN * 2) / 3)])]
+    .filter((m) => m >= 3 && m < minutesN)
+    .sort((a, b) => a - b);
+  const rings = ringSteps.map((m) => {
+    const sec = m * 60;
+    const radii2 =
+      engine === 'ideal-circle-degraded'
+        ? radii.map((r) => r * (m / minutesN))
+        : radii.map((r, i) => {
+            const est = interpolateReach(samples[i], sec, r);
+            return est === null ? r * (m / minutesN) : est;
+          });
+    const poly = catmullRomClosed(
+      radii2.map((r, i) => destination(center.lng, center.lat, (360 / BEARINGS) * i, r)),
+      8
+    );
+    return { minutes: m, polygon: poly, areaKm2: Math.round((polygonArea(poly, center.lat) / 1e6) * 100) / 100 };
+  });
 
   /* —— 阶段 2：七类设施检索（已在阶段 1 前并行发起，此处仅收割结果） —— */
   const maxR = Math.max(...radii);
@@ -752,6 +811,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
       nearestWalkMin: c.nearestWalkMin,
     })),
     cells, // 全部网格（前端画覆盖热力 / 盲区标注）
+    rings, // 多档等时圈（主档外的子档环，零额外算路成本）
     summary: {
       minutes: minutesN,
       gridInside: insideCells.length,
@@ -804,6 +864,7 @@ module.exports = {
   resolveGridN,
   clusterBlindCells,
   clusterLacking,
+  interpolateReach,
   SPEED_M_PER_MIN,
   DETOUR_FACTOR,
   BLIND_SCORE_THRESHOLD,

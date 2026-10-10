@@ -116,30 +116,44 @@ setInterval(() => {
 /* ---------------- 静态资源 ---------------- */
 const MIME = { '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.json': 'application/json', '.txt': 'text/plain', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.map': 'application/json' };
 
-/* 浏览器沙箱隔离（2026-10-09）：
+/* 浏览器沙箱隔离（2026-10-09，2026-10-10 V1.0.27 加固）：
  * CSP 限定脚本/样式/连接只能同源+内联，外域注入脚本/iframe 嵌套全部被浏览器拒绝；
- * img-src 只放行高德瓦片（等时圈底图）与 data:，第三方追踪像素进不来。
- * frame-ancestors 'none' + X-Frame-Options DENY = 防点击劫持（页面不可被任何站点内嵌）。
+ * img-src 只放行高德瓦片（等时圈底图）、data:/blob: 与百度瓦片域（AK 配置后随时可切回），
+ * 第三方追踪像素进不来。
+ * frame-ancestors 'self' + X-Frame-Options SAMEORIGIN = 仅允许本站内嵌（防点击劫持）。
  * 注意：页面含内联 script/style，故 'unsafe-inline' 保留（无 nonce 机制下的务实取衡），
- * 外域脚本仍被 default-src 'self' 挡死。 */
+ * 外域脚本仍被 default-src 'self' 挡死。若后续接入百度 JS API（api.map.baidu.com），
+ * 需在 script-src 追加 https://api.map.baidu.com。 */
 const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https://*.is.autonavi.com",
+  "img-src 'self' data: blob: https://*.is.autonavi.com https://*.bdimg.com https://*.map.baidu.com",
   "connect-src 'self'",
   "font-src 'self' data:",
-  "frame-ancestors 'none'",
+  "frame-ancestors 'self'",
   "base-uri 'self'",
   "form-action 'self'",
 ].join('; ');
 const SANDBOX_HEADERS = {
   'Content-Security-Policy': CSP,
-  'X-Frame-Options': 'DENY',
+  'X-Frame-Options': 'SAMEORIGIN',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'geolocation=(self), camera=(), microphone=()',
+  'Permissions-Policy': 'geolocation=(self), camera=(), microphone=(), payment=(), interest-cohort=()',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'X-Permitted-Cross-Domain-Policies': 'none',
 };
+
+/* helmet 式全局安全头注入：包一层 res.writeHead，让 API JSON / 404 / 静态全部带上
+ * （此前只有静态文件带了，API 响应是裸的）。HTTPS（反代 x-forwarded-proto）时加 HSTS。 */
+function applySecurityHeaders(req, res) {
+  const proto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+  const isHttps = (!!req.socket && req.socket.encrypted) || proto === 'https';
+  const extra = isHttps ? { 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains' } : {};
+  const wh = res.writeHead.bind(res);
+  res.writeHead = (code, headers) => wh(code, { ...SANDBOX_HEADERS, ...extra, ...(headers || {}) });
+}
 
 function serveStatic(req, res, urlPath) {
   // /static/** → 03-lh-server/data/**
@@ -175,6 +189,7 @@ function serveVendor(req, res, urlPath) {
 const server = http.createServer(async (req, res) => {
   const traceId = TRACE();
   const t0 = Date.now();
+  applySecurityHeaders(req, res); // helmet 式安全头：API/静态/404 全覆盖
   const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = decodeURIComponent(u.pathname);
 

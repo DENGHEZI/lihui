@@ -18,7 +18,7 @@
 
 <p align="center">
   <a href="https://github.com/DENGHEZI/lihui/actions/workflows/ci.yml"><img alt="CI（GitHub Actions）" src="https://github.com/DENGHEZI/lihui/actions/workflows/ci.yml/badge.svg"></a>
-  <img alt="引擎测试" src="https://img.shields.io/badge/%E7%AD%89%E6%97%B6%E5%9C%88%E5%BC%95%E6%93%8E%E6%B5%8B%E8%AF%95-20%E9%A1%B9%E9%80%9A%E8%BF%87-00B96B">
+  <img alt="引擎测试" src="https://img.shields.io/badge/%E7%AD%89%E6%97%B6%E5%9C%88%E5%BC%95%E6%93%8E%E6%B5%8B%E8%AF%95-23%E9%A1%B9%E9%80%9A%E8%BF%87-00B96B">
   <img alt="多城实测" src="https://img.shields.io/badge/%E5%A4%9A%E5%9F%8E%E5%AE%9E%E6%B5%8B-8_%E5%9F%8E_%E7%9C%9F%E5%AE%9E%E8%B7%AF%E7%BD%91-b98629">
   <a href="https://lihui-landing.app.workbuddy.host/"><img alt="网页版在线" src="https://img.shields.io/badge/%F0%9F%92%BB_%E7%BD%91%E9%A1%B5%E7%89%88%E5%9C%A8%E7%BA%BF-%E9%B2%A4%E6%85%A7%E5%B7%A5%E4%BD%9C%E5%8F%B0-b98629"></a>
 </p>
@@ -230,8 +230,9 @@
 
 > 苏州实测抓到一个 **7.18ha 中度盲区热点（缺餐饮）**——网格密度自适应后 6×6 栅格的分辨率收益，5×5 旧口径下会被平均掉。
 
-**盲区判断能力升级（V1.0.26）：**
+**盲区判断能力升级（V1.0.26~V1.0.27）：**
 
+- **多档等时圈**：一次算路同时产出 5 / 10 / 15 分钟三档嵌套环（二分探针样本分段线性插值，零额外算路成本），网页版叠加虚线金环 + 分钟标注；
 - **网格密度自适应**：≤10 分钟圈自动加密到 7×7、11~20 分钟 6×6、更大 5×5——小半径格距 260~400m，细碎盲区不再被平均掉（显式传 `grid` 仍优先）；
 - **盲区分级**：覆盖分 <25 判「严重盲区」（七类几乎全缺，红色深染），25~40 为「中度」（明显短板）——改造优先级一眼可辨；
 - **治理等级**：盲区占比 <10% 良好 · 10~25% 一般 · ≥25% 待改善，报告直接给出结论词；

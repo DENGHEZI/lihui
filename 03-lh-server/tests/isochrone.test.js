@@ -116,7 +116,7 @@ t('官方口径常量：步速 80m/min、弯曲系数 1.3', () => {
 });
 
 /* ---- 盲区分级（V1.0.26 能力升级） ---- */
-const { blindLevel, blindGrade, resolveGridN, clusterBlindCells, clusterLacking, BLIND_SEVERE_THRESHOLD } = require('../src/services/isochrone');
+const { blindLevel, blindGrade, resolveGridN, clusterBlindCells, clusterLacking, interpolateReach, BLIND_SEVERE_THRESHOLD } = require('../src/services/isochrone');
 t('blindLevel: <25 严重 · 25~40 中度 · ≥40 非盲区 · null 安全', () => {
   assert.strictEqual(blindLevel(10), 'severe');
   assert.strictEqual(blindLevel(BLIND_SEVERE_THRESHOLD - 0.5), 'severe');
@@ -164,6 +164,41 @@ t('clusterLacking: 占比 ≥50% 才归因为缺该类 · 按 gapPct 降序 · �
   const lacking = clusterLacking(comp, cats, 15);
   assert.deepStrictEqual(lacking.map((x) => x.key), ['a', 'b']); // a 全缺 100%、b 2/3≥50%、c 0%
   assert.ok(lacking[0].gapPct >= lacking[1].gapPct);
+});
+
+/* ---- 多档等时圈插值（V1.0.27） ---- */
+t('interpolateReach: 区间内分段线性插值', () => {
+  const s = [
+    { dist: 500, duration: 300 },
+    { dist: 900, duration: 600 },
+    { dist: 1300, duration: 900 },
+  ];
+  // 450s 落在 300~600 之间：t=0.5 → 500+0.5×400=700
+  const r = interpolateReach(s, 450, 1300);
+  assert.ok(Math.abs(r - 700) < 1, 'got ' + r);
+});
+t('interpolateReach: 样本全部超时 → 向内推 · 全部可达 → 向外推（受主档约束钳制）', () => {
+  const s = [
+    { dist: 500, duration: 600 },
+    { dist: 900, duration: 900 },
+  ];
+  assert.ok(Math.abs(interpolateReach(s, 300, 900) - 250) < 1); // 500×300/600
+  assert.ok(Math.abs(interpolateReach(s, 1200, 900) - 945) < 1); // 外推 1200 被钳到 900×1.05=945
+});
+t('interpolateReach: 单调性（预算越小半径越小）+ 主档约束 + 空样本 null', () => {
+  const s = [
+    { dist: 400, duration: 240 },
+    { dist: 800, duration: 480 },
+    { dist: 1200, duration: 720 },
+  ];
+  const r5 = interpolateReach(s, 300, 1200);
+  const r10 = interpolateReach(s, 600, 1200);
+  const r15 = interpolateReach(s, 900, 1200);
+  assert.ok(r5 < r10 && r10 < r15, `not monotonic: ${r5} ${r10} ${r15}`);
+  assert.ok(r15 <= 1200 * 1.05, '超出主档约束');
+  assert.strictEqual(interpolateReach([], 600, 1200), null);
+  assert.strictEqual(interpolateReach(null, 600, 1200), null);
+  assert.strictEqual(interpolateReach([{ dist: 0, duration: 0 }], 600, 1200), null); // 无效样本过滤
 });
 
 /* ---- 模块图完整性（循环依赖/导出缺失自检） ---- */
