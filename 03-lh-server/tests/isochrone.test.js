@@ -118,7 +118,7 @@ t('官方口径常量：步速 80m/min、弯曲系数 1.3', () => {
 /* ---- 模块图完整性（循环依赖/导出缺失自检） ---- */
 t('模块图完整：lifeShared 与 isochrone 可互相协作', () => {
   const shared = require('../src/services/lifeShared');
-  assert.strictEqual(shared.CATEGORIES.length, 6);
+  assert.strictEqual(shared.CATEGORIES.length, 7); // 2026-10-10 六类+养老
   assert.ok(typeof shared.fetchCategory === 'function');
   assert.ok(typeof shared.isQuotaBlocked === 'function');
   const routes = require('../src/routes/life');

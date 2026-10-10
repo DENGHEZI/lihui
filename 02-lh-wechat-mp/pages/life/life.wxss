@@ -27,7 +27,7 @@
   background: var(--lh-primary-soft);
 }
 
-/* 六类设施覆盖 · 雷达图 */
+/* 七类设施覆盖 · 雷达图 */
 .radar-head {
   display: flex;
   align-items: baseline;

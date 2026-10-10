@@ -35,7 +35,7 @@
 
   <view class="lh-card cat-card" wx:if="{{report}}">
     <view class="radar-head">
-      <text class="lh-h2">六类设施覆盖</text>
+      <text class="lh-h2">七类设施覆盖</text>
       <text class="lh-mini">雷达图 · 各维度 0-100 分</text>
     </view>
     <canvas type="2d" id="radar" class="radar-canvas"></canvas>

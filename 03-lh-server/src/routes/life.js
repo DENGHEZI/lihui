@@ -1,7 +1,7 @@
 /**
  * 鲤慧 LiHui · 15 分钟生活圈体检路由
  * 通过 MCP Hub 调起 life-circle MCP Server；失败时服务端本地兜底计算。
- * 六类口径 / 配额熔断 / 单类检索抽至 services/lifeShared.js（与等时圈引擎共享）。
+ * 七类口径 / 配额熔断 / 单类检索抽至 services/lifeShared.js（与等时圈引擎共享）。
  */
 const { ok, fail } = require('../utils/http');
 const hub = require('../mcp/hub');
@@ -23,13 +23,13 @@ function withTimeout(promise, ms, fallback) {
   ]);
 }
 
-/** 服务端本地兜底计算（不依赖 MCP；六类互相隔离，单类故障不拖垮总分）
+/** 服务端本地兜底计算（不依赖 MCP；七类互相隔离，单类故障不拖垮总分）
  *  2026-10-10 评分修复：
  *  - POI 去重计数（scoreCategory 内统一 dedupePOIs，同 uid/同名同址合并，count 不再虚高）
  *  - 真实权重：city 命中 standards 库中的城市规范且带 categoryWeights 时按标准权重计分
  *    （来源标注在 weightSource / weightNote；未命中回落内置默认口径） */
 async function localDiagnose({ lng, lat, radius = 1200, city = '' }) {
-  /* 真实权重：按城市匹配适用规范；categoryWeights 键 = 六类 key */
+  /* 真实权重：按城市匹配适用规范；categoryWeights 键 = 七类 key */
   let weightMap = null;
   let weightSource = '内置默认口径';
   let weightNote = '';
@@ -113,7 +113,7 @@ function reportCacheKey(lng, lat, radius, city) {
 /** 体检重建作业（本地引擎优先 → MCP 兜底），成功后写缓存 */
 function buildReportJob(lng, lat, radius, ck, city) {
   const job = (async () => {
-    // ① 本地引擎（六类并行 + 类间错峰 + 共享 POI 缓存 + 城市标准真实权重）
+    // ① 本地引擎（七类并行 + 类间错峰 + 共享 POI 缓存 + 城市标准真实权重）
     try {
       const data = await localDiagnose({ lng, lat, radius, city });
       if (reportCache.size >= 64) reportCache.delete(reportCache.keys().next().value);
@@ -181,7 +181,7 @@ module.exports = {
   },
 
   /** GET /api/v1/life/isochrone?lng=&lat=&minutes=15&grid=5
-   *  步行等时圈 + 六类覆盖 + 服务盲区（命题一核心能力：真实路网而非直线圆）。
+   *  步行等时圈 + 七类覆盖 + 服务盲区（命题一核心能力：真实路网而非直线圆）。
    *  降级链内建：批量矩阵 → 并发单点算路 → 理想圆（engine 字段显式标注）。 */
   'GET /life/isochrone': async (req, res, q) => {
     const lng = numOr(q.lng, NaN);

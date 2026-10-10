@@ -29,13 +29,14 @@
         "walkCoverageTarget": 85,
         "blindScoreThreshold": 40,
         "categoryWeights": {
-          "medical": 0.25,
-          "transit": 0.2,
-          "market": 0.2,
-          "education": 0.15,
-          "food": 0.1,
+          "medical": 0.22,
+          "transit": 0.18,
+          "market": 0.18,
+          "education": 0.13,
+          "food": 0.09,
           "leisure": 0.1,
-          "note": "依据 TD/T 1062—2021 服务要素分级（基础保障型：医疗/教育/交通优先，商业服务次之，品质提升型兜底）与商务部「一刻钟便民生活圈」业态优先级折算"
+          "elder": 0.1,
+          "note": "依据 TD/T 1062—2021 服务要素分级（基础保障型：医疗/教育/交通/养老服务优先，商业服务次之，品质提升型兜底）与商务部「一刻钟便民生活圈」业态优先级折算；养老服务按《国家积极应对人口老龄化中长期规划》纳入基础保障型"
         }
       },
       "source": "mnr.gov.cn"
@@ -66,13 +67,14 @@
         "walkCoverageTarget": 85,
         "blindScoreThreshold": 40,
         "categoryWeights": {
-          "medical": 0.25,
-          "transit": 0.25,
-          "market": 0.2,
-          "education": 0.12,
-          "food": 0.1,
-          "leisure": 0.08,
-          "note": "依据《上海市 15 分钟社区生活圈规划导则》：公共交通与社区级公共服务（医疗）双高权重，商业服务次之"
+          "medical": 0.23,
+          "transit": 0.23,
+          "market": 0.18,
+          "education": 0.11,
+          "food": 0.09,
+          "leisure": 0.07,
+          "elder": 0.09,
+          "note": "依据《上海市 15 分钟社区生活圈规划导则》：公共交通与社区级公共服务（医疗）双高权重，商业服务次之；导则将日间照料中心/长者照护之家列入社区级必配设施，养老权重居中"
         }
       },
       "source": "shanghai.gov.cn"
@@ -103,13 +105,14 @@
         "walkCoverageTarget": 85,
         "blindScoreThreshold": 40,
         "categoryWeights": {
-          "medical": 0.23,
-          "transit": 0.22,
-          "market": 0.25,
-          "education": 0.12,
-          "food": 0.1,
-          "leisure": 0.08,
-          "note": "依据长沙「一圈两场三道」行动计划：「两场」（停车场/市场）与「三道」强调商业与交通设施配置权重"
+          "medical": 0.21,
+          "transit": 0.2,
+          "market": 0.23,
+          "education": 0.11,
+          "food": 0.09,
+          "leisure": 0.07,
+          "elder": 0.09,
+          "note": "依据长沙「一圈两场三道」行动计划：「两场」（停车场/市场）与「三道」强调商业与交通设施配置权重；居家养老服务中心每百户 ≥30㎡ 配建要求折入养老权重"
         }
       },
       "source": "changsha.gov.cn"
@@ -140,13 +143,14 @@
         "walkCoverageTarget": 90,
         "blindScoreThreshold": 40,
         "categoryWeights": {
-          "medical": 0.24,
-          "transit": 0.28,
-          "market": 0.2,
-          "education": 0.12,
-          "food": 0.09,
-          "leisure": 0.07,
-          "note": "依据《深圳市国土空间总体规划（2020-2035）》社区生活圈专项：高密度轨道主导城市，公共交通权重最高"
+          "medical": 0.22,
+          "transit": 0.26,
+          "market": 0.18,
+          "education": 0.11,
+          "food": 0.08,
+          "leisure": 0.06,
+          "elder": 0.09,
+          "note": "依据《深圳市国土空间总体规划（2020-2035）》社区生活圈专项：高密度轨道主导城市，公共交通权重最高；养老按社区老年人日间照料中心配建标准折入"
         }
       },
       "source": "sz.gov.cn"
@@ -177,13 +181,14 @@
         "walkCoverageTarget": 85,
         "blindScoreThreshold": 40,
         "categoryWeights": {
-          "medical": 0.24,
-          "transit": 0.2,
-          "market": 0.2,
-          "education": 0.14,
-          "food": 0.11,
-          "leisure": 0.11,
-          "note": "依据《苏州社区品质提升专项规划（2021-2025）》：品质提升导向，休闲与餐饮权重较国家标准上浮"
+          "medical": 0.22,
+          "transit": 0.18,
+          "market": 0.18,
+          "education": 0.12,
+          "food": 0.1,
+          "leisure": 0.1,
+          "elder": 0.1,
+          "note": "依据《苏州社区品质提升专项规划（2021-2025）》：品质提升导向，休闲与餐饮权重较国家标准上浮；养老助餐点/日间照料中心覆盖要求折入养老权重"
         }
       },
       "source": "suzhou.gov.cn"

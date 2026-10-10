@@ -15,7 +15,7 @@
  *  3. 降级链：批量矩阵 → 并发 directionlite/walking（令牌桶限流）
  *     → 理想圆（engine = ideal-circle-degraded，显式标注不冒充真算路）。
  *  4. 空间插值：36 个可达点用 Catmull-Rom 闭合样条连成平滑等时圈多边形。
- *  5. 盲区判定（BLIND_RULE）：等时圈内部 N×N 网格，格中心到六类最近设施的
+ *  5. 盲区判定（BLIND_RULE）：等时圈内部 N×N 网格，格中心到七类最近设施的
  *     步行时间 = haversine × 路网弯曲系数 1.3 ÷ 步速 80m/min（官方允许口径）；
  *     加权覆盖分 < 40 判盲区；候选盲区格再用一次批量矩阵实测「家→格中心」复核，
  *     实测超时 15% 以上说明插值多边形偏乐观，剔除该格。
@@ -295,7 +295,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
   let matrixRounds = 0;
   let matrixOkRounds = 0;
 
-  /* —— 阶段 2 提前并行：六类设施检索不依赖真实 radii，用保守半径 idealR×2
+  /* —— 阶段 2 提前并行：七类设施检索不依赖真实 radii，用保守半径 idealR×2
    *    （理论 maxR ≤ 1.575×idealR，×1.25 = 1.97×idealR < 2×idealR 必然覆盖），
    *    与批量矩阵同时发起 —— 省掉原先串行等待的整个阶段 2（约 1.5~2s）。
    *    检索半径略大只会让「每类最近设施」找得更准，盲区判定无副作用。 —— */
@@ -412,7 +412,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid = 5 } = {}) {
     8
   );
 
-  /* —— 阶段 2：六类设施检索（已在阶段 1 前并行发起，此处仅收割结果） —— */
+  /* —— 阶段 2：七类设施检索（已在阶段 1 前并行发起，此处仅收割结果） —— */
   const maxR = Math.max(...radii);
   const cats = await catsPromise;
 

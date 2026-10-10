@@ -21,8 +21,8 @@ const FALLBACK = {
         walkMinutes: 15, radiusM: [800, 1000], walkCoverageTarget: 85, blindScoreThreshold: 40,
         // 数据缺失兜底也要给「真实权重」（与 data/standards.json national-2021 同源）
         categoryWeights: {
-          medical: 0.25, transit: 0.2, market: 0.2, education: 0.15, food: 0.1, leisure: 0.1,
-          note: '依据 TD/T 1062—2021 服务要素分级（基础保障型：医疗/教育/交通优先，商业服务次之，品质提升型兜底）与商务部「一刻钟便民生活圈」业态优先级折算',
+          medical: 0.22, transit: 0.18, market: 0.18, education: 0.13, food: 0.09, leisure: 0.1, elder: 0.1,
+          note: '依据 TD/T 1062—2021 服务要素分级（基础保障型：医疗/教育/交通/养老服务优先，商业服务次之，品质提升型兜底）与商务部「一刻钟便民生活圈」业态优先级折算；养老服务按《国家积极应对人口老龄化中长期规划》纳入基础保障型',
         },
       },
       source: 'mnr.gov.cn',

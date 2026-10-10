@@ -529,7 +529,7 @@
   <div class="card cap-card">
     <h2>🧩 能力全景 <span class="sub">网页版 + 微信小程序 · 同一后端</span></h2>
     <div class="cap-grid">
-      <div class="cap"><div class="ic">🩺</div><div class="nm">生活圈体检</div><div class="ds">六类设施加权评分 · 最近距离 · 短板提示</div><span class="st ok">✅ 网页版已支持</span></div>
+      <div class="cap"><div class="ic">🩺</div><div class="nm">生活圈体检</div><div class="ds">七类设施加权评分 · 最近距离 · 短板提示</div><span class="st ok">✅ 网页版已支持</span></div>
       <div class="cap"><div class="ic">⏱</div><div class="nm">步行等时圈</div><div class="ds">真实路网算路 · 百度地图实景渲染 · 盲区网格</div><span class="st ok">✅ 网页版已支持</span></div>
       <div class="cap"><div class="ic">🧭</div><div class="nm">便民速查</div><div class="ds">吃饭 / 买菜 / 看病 / 公交 / 公园 1.5km POI</div><span class="st ok">✅ 网页版已支持</span></div>
       <div class="cap"><div class="ic">🛒</div><div class="nm">真实店源</div><div class="ds">百度真实门店 + 参考价 · 附近 / 本城热门</div><span class="st ok">✅ 网页版已支持</span></div>
@@ -837,7 +837,7 @@ async function loadWeather() {
 }
 
 /* ================= 生活圈体检 ================= */
-const CAT_ICON = { market: '🛒', medical: '🏥', food: '🍜', transit: '🚌', leisure: '🌳', edu: '📚', education: '📚' };
+const CAT_ICON = { market: '🛒', medical: '🏥', food: '🍜', transit: '🚌', leisure: '🌳', elder: '🧓', edu: '📚', education: '📚' };
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 async function loadLife() {
@@ -862,7 +862,7 @@ async function loadLife() {
       '<div class="score-row"><div class="ring" style="--pct:' + (r.score || 0) + '"><div class="in"><b>' +
       (r.score == null ? '--' : r.score) + '</b><span>总分</span></div></div>' +
       '<div><div class="level">' + esc(r.level || '—') + '</div>' +
-      '<div class="muted" style="margin-top:8px;font-size:12.5px">六类设施加权评分<br>满分 100 · 达标线 60</div></div></div>' + hint + sb +
+      '<div class="muted" style="margin-top:8px;font-size:12.5px">七类设施加权评分<br>满分 100 · 达标线 60</div></div></div>' + hint + sb +
       '<div class="cats">' + cats + '</div>';
     const hs = document.getElementById('hScore');
     if (hs) hs.textContent = (r.score == null ? '--' : r.score) + ' 分';
@@ -873,7 +873,7 @@ async function loadLife() {
 function fmtM(m) { return m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m) + ' m'; }
 
 /* ================= 步行等时圈 + 服务盲区 ================= */
-/* 零依赖手绘 SVG：等时圈多边形 + 盲区网格 + 参考圈 + 六类覆盖雷达图 */
+/* 零依赖手绘 SVG：等时圈多边形 + 盲区网格 + 参考圈 + 七类覆盖雷达图 */
 const ISO_MINUTES = () => Number(document.querySelector('#isoCtl .mtab.on').dataset.m) || 15;
 const ENG_NAME = {
   'routematrix-batch': '批量矩阵算路 1×36',
@@ -996,7 +996,7 @@ function isoStatsHtml(d) {
     '<div class="iso-stat"><b>' + (s.circleAreaKm2 == null ? '--' : s.circleAreaKm2) + '<small style="font-size:11px"> km²</small></b><span>等时圈面积</span></div>' +
     '<div class="iso-stat"><b>' + (s.maxReachM ? fmtM(s.maxReachM) : '--') + '</b><span>最远可达半径</span></div>';
 
-  /* 雷达图（六类覆盖） */
+  /* 雷达图（七类覆盖） */
   const RADAR_R = 74, RC = 108;
   const axes = (d.coverage || []).map((cov, i, arr) => {
     const ang = -Math.PI / 2 + (i * 2 * Math.PI) / arr.length;
@@ -1124,6 +1124,7 @@ const QUICK = [
   { key: 'medical', name: '🏥 看病买药', query: '医院|药店' },
   { key: 'transit', name: '🚌 公交', query: '公交站' },
   { key: 'leisure', name: '🌳 公园广场', query: '公园|广场' },
+  { key: 'elder', name: '🧓 养老', query: '养老院|敬老院|老年食堂' },
   { key: 'hotel', name: '🏨 住宿', query: '酒店|宾馆' },
 ];
 function renderQuickTabs() {

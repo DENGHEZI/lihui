@@ -91,6 +91,32 @@ t('同名同址脏数据计入前被合并（count 不虚高）', () => {
   assert.strictEqual(r.score, 73);
 });
 
+/* ---------- 2.5 养老类检测（2026-10-10 新增） ---------- */
+console.log('scoreCategory: elder');
+t('养老类：名称含「养老」宽词干即命中（养老服务中心/康养中心等）', () => {
+  const elder = CATEGORIES.find((c) => c.key === 'elder');
+  const r = scoreCategory(elder, [
+    { uid: 'e1', name: '幸福养老服务中心', lng: 112.9, lat: 28.2 },
+    { uid: 'e2', name: '夕阳红康养中心', tag: '生活服务;养老服务', lng: 112.91, lat: 28.21 },
+  ], false);
+  assert.ok(r.hitTypes.includes('养老'), '「养老」宽词干应命中');
+  assert.strictEqual(r.score, 68); // 数量达标 1.0*0.6 + 类型覆盖(1/5)*0.4 → 68
+});
+t('养老类：敬老院/老年食堂/日间照料各业态分别计入类型覆盖度', () => {
+  const elder = CATEGORIES.find((c) => c.key === 'elder');
+  const r = scoreCategory(elder, [
+    { uid: 'a', name: '市第一敬老院', lng: 112.9, lat: 28.2 },
+    { uid: 'b', name: '社区老年食堂', lng: 112.91, lat: 28.21 },
+    { uid: 'c', name: '居家养老日间照料中心', lng: 112.92, lat: 28.22 },
+  ], false);
+  assert.deepStrictEqual(r.hitTypes.sort(), ['养老', '日间照料', '敬老院', '老年食堂'].sort());
+});
+t('CATEGORIES 含养老类且七类权重和=1', () => {
+  assert.ok(CATEGORIES.some((c) => c.key === 'elder' && c.name === '养老'));
+  const sum = CATEGORIES.reduce((a, c) => a + c.weight, 0);
+  assert.ok(Math.abs(sum - 1) < 1e-9, `权重和 ${sum} ≠ 1`);
+});
+
 /* ---------- 3. scoreSummary（真实权重归一化） ---------- */
 console.log('scoreSummary');
 t('按传入真实权重加权（medical 0.5 / market 0.3 / food 0.2）', () => {
@@ -118,7 +144,7 @@ t('全部失败 → 0 分不抛错', () => {
 
 /* ---------- 4. 真实权重数据校验 ---------- */
 console.log('standards categoryWeights');
-const KEYS = ['medical', 'transit', 'market', 'education', 'food', 'leisure'];
+const KEYS = ['medical', 'transit', 'market', 'education', 'food', 'leisure', 'elder'];
 for (const s of standardsData.items) {
   t(`${s.id} categoryWeights 键完整且和=1`, () => {
     const w = s.metrics && s.metrics.categoryWeights;
@@ -139,12 +165,12 @@ t('standards.resolve() 透出 categoryWeights（城市命中链路）', () => {
   let r = standards.resolve('深圳市');
   assert.ok(r.standard.metrics.categoryWeights, 'resolve 未透出权重');
   if (r.matched) {
-    // 数据层可用时应命中深圳标准（轨道主导，transit 权重最高 0.28）
+    // 数据层可用时应命中深圳标准（轨道主导，transit 权重最高 0.26）
     assert.strictEqual(r.standard.id, 'shenzhen-2035');
-    assert.strictEqual(r.standard.metrics.categoryWeights.transit, 0.28);
+    assert.strictEqual(r.standard.metrics.categoryWeights.transit, 0.26);
   } else {
-    // 数据缺失时回落国家标准权重（transit 0.2），仍是有出处的真实权重
-    assert.strictEqual(r.standard.metrics.categoryWeights.transit, 0.2);
+    // 数据缺失时回落国家标准权重（transit 0.18），仍是有出处的真实权重
+    assert.strictEqual(r.standard.metrics.categoryWeights.transit, 0.18);
     console.log('  ℹ standards 数据未入隔离目录，验证的是 FALLBACK 权重链路');
   }
 });
