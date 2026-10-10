@@ -782,7 +782,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
     gridCellM,
     blindScoreThreshold: BLIND_SCORE_THRESHOLD,
     severeScoreThreshold: BLIND_SEVERE_THRESHOLD,
-    method: `栅格 ${gridCellM}m · 判定阈值 覆盖分<${BLIND_SCORE_THRESHOLD}（严重<${BLIND_SEVERE_THRESHOLD}）· 36 方向真实路网标定`,
+    method: `栅格 ${gridCellM}m · 判定阈值 覆盖分<${BLIND_SCORE_THRESHOLD}（严重<${BLIND_SEVERE_THRESHOLD}）· 36 方向真实路网标定 · 口径提示：分钟数越大标准越宽松（覆盖分=1−步行分钟÷N），30 分钟档盲区天然少于 15 分钟档，属正常现象`,
   };
 
   /* ===== 百度底图静态图 =====
