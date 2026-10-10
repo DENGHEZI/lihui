@@ -1,7 +1,7 @@
 const app = getApp()
 const config = require('../../utils/config.js')
 const api = require('../../utils/api.js')
-const { getDeviceId, getPlan, getCareMode, setCareMode, getAuth, setAuth, clearAuth, patchAuthUser } = require('../../utils/token.js')
+const { getPlan, getCareMode, setCareMode, getAuth, setAuth, clearAuth, patchAuthUser } = require('../../utils/token.js')
 const { clearBizCache, getCacheSizeKB } = require('../../utils/request.js')
 const { parseCity, parseDistrict } = require('../../utils/city.js')
 
@@ -42,7 +42,6 @@ Page({
     theme.apply(this)
     const plan = getPlan()
     this.setData({
-      deviceShort: 'ID ' + getDeviceId().slice(-8),
       planName: plan === 'pro' ? '增强版（已接入 API）' : '免费基础版',
       careMode: getCareMode(),
       cacheKB: getCacheSizeKB()
@@ -62,15 +61,23 @@ Page({
 
   /* ---------------- 登录态 / 个人资料 ----------------
    * 昵称与头像存在服务端用户记录（RBAC），本地缓存一份离线可显示；
-   * 换头像 = wx.chooseMedia 压缩后读 base64 走 JSON 通道（免 uploadFile 域名校验）。 */
+   * 换头像 = wx.chooseMedia 压缩后读 base64 走 JSON 通道（免 uploadFile 域名校验）。
+   * 用户 ID 仅在登录后编排：取账号 uid 去掉 u_ 前缀的尾 8 位，不再展示设备指纹。 */
+  shortCode(id) {
+    const s = String(id || '').replace(/^u_/, '')
+    return s ? s.slice(-8) : ''
+  },
   syncProfile() {
     const a = getAuth()
     const u = a && a.user
+    const uidShort = u ? this.shortCode(u.id) : ''
     this.setData({
       logged: !!a,
       nickname: (u && (u.nickname || u.username)) || '',
       avatarUrl: (u && u.avatar) || '',
-      roleText: u ? (u.role === 'admin' ? '管理员' : '已登录') : ''
+      roleText: u ? (u.role === 'admin' ? '管理员' : '已登录') : '',
+      // 登录后才显示 ID；未登录一律为空（副标题只显示套餐名）
+      deviceShort: a && uidShort ? 'ID ' + uidShort : ''
     })
     if (!a) return
     // 静默拉最新资料：令牌过期/他端改过资料都能同步；401 就地清登录态
@@ -133,6 +140,14 @@ Page({
         })
         .catch((e) => {
           wx.hideLoading()
+          // 登录态过期/失效：就地清登录态并引导重新登录，而不是报「头像更新失败」
+          if (e && (e.code === 4010 || e.status === 401 || e.code === 401)) {
+            clearAuth()
+            this.syncProfile()
+            wx.showToast({ title: '请先登录后更换头像', icon: 'none', duration: 2500 })
+            this.setData({ loginShow: true })
+            return
+          }
           wx.showToast({ title: (e && e.msg) || '头像更新失败', icon: 'none', duration: 2500 })
         })
     }

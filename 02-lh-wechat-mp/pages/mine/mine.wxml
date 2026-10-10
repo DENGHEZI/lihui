@@ -10,7 +10,7 @@
         <text class="p-name">{{logged ? nickname : '点击登录'}}</text>
         <text wx:if="{{logged}}" class="p-name-edit">✎</text>
       </view>
-      <text class="lh-cap">{{logged ? roleText + ' · ' + deviceShort : deviceShort + ' · ' + planName}}</text>
+      <text class="lh-cap">{{logged ? roleText + ' · ' + deviceShort : planName}}</text>
       <text wx:if="{{logged}}" class="lh-mini p-hint">点头像换头像 · 点昵称改名字</text>
     </view>
     <text wx:if="{{logged}}" class="p-logout" catchtap="onLogout">退出</text>
