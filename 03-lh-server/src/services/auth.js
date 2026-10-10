@@ -215,6 +215,28 @@ function fromRequest(req) {
   return null; // 未登录或令牌无效 → 视为 guest
 }
 
+/* ---------------- 账号锚定（V1.0.14） ----------------
+ * 用户数据的归属键：登录用户按「账号」锚定（user:<uid>），未登录按设备兜底（裸 deviceId，
+ * 兼容历史 profiles/consents/tokenMeter 数据，零迁移）。
+ * 效果：注册用户拥有独立数据沙箱——画像 / 同意 / Token 用量全部计入账号，
+ * 换设备登录同一账号数据不丢；设备/联网信号只影响匿名态，不再锚定注册用户。
+ * @param {object} req 已经过 app.js 鉴权中间件（req.auth 已挂载）
+ * @param {object} [body] POST body（匿名时兜底取 body.deviceId）
+ * @returns {{ ownerKey:string, ownerType:'user'|'device', userId:string|null, deviceId:string, username:string }}
+ */
+function resolveOwner(req, body) {
+  const deviceId = String(
+    (req.headers && req.headers['x-device-id']) ||
+    (body && body.deviceId) ||
+    ''
+  ).trim() || 'anonymous';
+  const a = req && req.auth;
+  if (a && a.uid && a.uid !== 'loopback') {
+    return { ownerKey: 'user:' + a.uid, ownerType: 'user', userId: a.uid, username: a.username || '', deviceId };
+  }
+  return { ownerKey: deviceId, ownerType: 'device', userId: null, username: '', deviceId };
+}
+
 module.exports = {
   ROLE,
   ROLE_NAME,
@@ -229,5 +251,6 @@ module.exports = {
   getUserById,
   publicUser,
   fromRequest,
+  resolveOwner,
   bootstrapSeed,
 };

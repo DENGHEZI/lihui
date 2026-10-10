@@ -6,6 +6,7 @@ const agent = require('../services/agent');
 const hub = require('../mcp/hub');
 const vision = require('../services/vision');
 const standards = require('../services/standards');
+const auth = require('../services/auth');
 
 module.exports = {
   /**
@@ -15,7 +16,7 @@ module.exports = {
     const b = body || {};
     const text = String(b.text || '').trim();
     if (!text) return fail(res, 1001, 'text 必填');
-    const deviceId = b.deviceId || req.headers['x-device-id'] || 'anonymous';
+    const deviceId = auth.resolveOwner(req, b).ownerKey; // 账号锚定：登录= user:<uid>
     try {
       const data = await agent.chat({
         text,
@@ -41,7 +42,7 @@ module.exports = {
   'POST /agent/vision': async (req, res, q, body) => {
     const b = body || {};
     if (!b.image) return fail(res, 1001, 'image 必填（base64 图片）');
-    const deviceId = b.deviceId || req.headers['x-device-id'] || 'anonymous';
+    const deviceId = auth.resolveOwner(req, b).ownerKey; // 账号锚定：登录= user:<uid>
     try {
       const data = await vision.recognize({
         image: b.image,

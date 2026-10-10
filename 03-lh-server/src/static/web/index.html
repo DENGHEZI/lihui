@@ -306,6 +306,21 @@
   .city-pick { position: fixed; inset: 0; z-index: 50; display: none;
     background: rgba(27,33,41,.38); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
   .city-pick.show { display: flex; align-items: center; justify-content: center; padding: 20px; }
+
+  /* ---------- 账号 / 头像（V1.0.14 账号锚定） ---------- */
+  .user-chip { display: flex; align-items: center; gap: 8px; }
+  .au-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--primary); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700;
+    cursor: pointer; overflow: hidden; flex: none; user-select: none; }
+  .au-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .au-me { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+  .au-meinfo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .au-meinfo b { font-size: 15px; }
+  .au-meinfo small { color: var(--text-3); font-size: 12px; }
+  #userChip .u-avatar-mini { width: 30px; height: 30px; border-radius: 50%; object-fit: cover;
+    border: 1.5px solid var(--line); cursor: pointer; display: block; }
+  #userChip .u-name { font-size: 13px; color: var(--text); max-width: 96px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
   .cp-card { width: 100%; max-width: 360px; background: var(--card); border-radius: 18px;
     padding: 20px; box-shadow: 0 24px 60px -16px rgba(27,33,41,.35); }
   .cp-card .cp-t { font-size: 16px; font-weight: 650; margin-bottom: 4px; }
@@ -435,6 +450,9 @@
   </div>
   <div class="loc-chip" id="locChip" title="点击选择城市 / 手动纠正定位">
     <span class="dot off" id="locDot"></span><span id="locText">定位中…</span>
+  </div>
+  <div class="user-chip" id="userChip" title="登录 / 注册 · 数据计入账号沙箱">
+    <button class="btn" id="btnAuth" style="padding:6px 14px;font-size:13px">登录 / 注册</button>
   </div>
 </div></header>
 
@@ -587,6 +605,37 @@
     </div>
   </div>
 </div>
+
+<!-- 登录 / 注册 / 账号沙箱浮层（账号锚定：登录后画像/配额/同意计入账号，换设备不丢） -->
+<div class="city-pick" id="authPick">
+  <div class="cp-card">
+    <div class="cp-t" id="auT">登录鲤慧账号</div>
+    <div class="cp-hint" id="auHint">登录后拥有独立数据沙箱：画像、配额、隐私同意全部计入账号，换设备登录数据不丢。</div>
+    <div id="auForm">
+      <input id="auUser" placeholder="用户名" autocomplete="username" />
+      <input id="auPass" type="password" placeholder="密码" autocomplete="current-password" style="margin-top:8px" />
+      <div class="cp-row" style="margin-top:12px">
+        <button class="btn" id="auSwitch">没有账号？去注册</button>
+        <button class="btn primary" id="auGo">登录</button>
+      </div>
+    </div>
+    <div id="auProfile" style="display:none">
+      <div class="au-me">
+        <div class="au-avatar" id="auAvatar" title="点击更换头像">鲤</div>
+        <div class="au-meinfo">
+          <b id="auNick">—</b>
+          <small id="auMeta"></small>
+        </div>
+      </div>
+      <input type="file" id="auFile" accept="image/png,image/jpeg,image/webp" style="display:none" />
+      <div class="cp-row" style="margin-top:12px">
+        <button class="btn" id="auLogout">退出登录</button>
+        <button class="btn primary" id="auAvatarBtn">📷 更换头像</button>
+      </div>
+      <div class="cp-hint" style="margin-top:10px">头像支持 png/jpg/webp，≤190KB，上传后计入账号（小程序端同步显示）。</div>
+    </div>
+  </div>
+</div>
 </div>
 
 <script src="/vendor/leaflet.js"></script>
@@ -607,11 +656,25 @@ function deviceId() {
   return id;
 }
 
+/* ---------------- 账号会话（V1.0.14 账号锚定） ----------------
+ * 登录后画像/配额/隐私同意全部计入账号沙箱（换设备登录数据不丢）；
+ * 未登录按设备匿名键（历史行为不变）。 */
+function authState() {
+  try { return JSON.parse(localStorage.getItem('lh_auth') || 'null') || null; } catch (e) { return null; }
+}
+function setAuthState(v) {
+  try { v ? localStorage.setItem('lh_auth', JSON.stringify(v)) : localStorage.removeItem('lh_auth'); } catch (e) {}
+}
+function authHeaders() {
+  const a = authState();
+  return a && a.token ? { Authorization: 'Bearer ' + a.token } : {};
+}
+
 async function api(path, params) {
   const qs = params ? '?' + Object.entries(params)
     .filter(([, v]) => v !== undefined && v !== null && v !== '')
     .map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&') : '';
-  const r = await fetch(API + path + qs, { headers: { 'X-Device-Id': deviceId() } });
+  const r = await fetch(API + path + qs, { headers: { 'X-Device-Id': deviceId(), ...authHeaders() } });
   const body = await r.json();
   if (body.code !== 0) throw Object.assign(new Error(body.msg || '请求失败'), body);
   return body.data;
@@ -621,7 +684,7 @@ async function api(path, params) {
 async function apiPost(path, body) {
   const r = await fetch(API + path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId() },
+    headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId(), ...authHeaders() },
     body: JSON.stringify(body || {}),
   });
   const b = await r.json();
@@ -1423,6 +1486,131 @@ document.documentElement.classList.add('js');
 })();
 </script>
 <script>
+/* ================= 账号：登录 / 注册 / 头像上传（V1.0.14 账号锚定） ================= */
+const authPick = $('#authPick');
+let auMode = 'login'; // login | register
+
+function renderUserChip() {
+  const chip = $('#userChip');
+  const a = authState();
+  if (!a || !a.token) {
+    chip.innerHTML = '<button class="btn" id="btnAuth" style="padding:6px 14px;font-size:13px">登录 / 注册</button>';
+    $('#btnAuth').onclick = () => { showAuthForm(); authPick.classList.add('show'); };
+    return;
+  }
+  const u = a.user || {};
+  const av = u.avatar
+    ? '<img class="u-avatar-mini" src="' + u.avatar + '" alt="头像">'
+    : '<div class="au-avatar" style="width:30px;height:30px;font-size:13px">' + (u.nickname || u.username || '鲤').slice(0, 1) + '</div>';
+  chip.innerHTML = av + '<span class="u-name" title="点击管理账号">' + (u.nickname || u.username || '已登录') + '</span>';
+  chip.querySelector('.u-avatar-mini, .au-avatar').onclick = () => { renderProfile(); authPick.classList.add('show'); };
+  chip.querySelector('.u-name').onclick = () => { renderProfile(); authPick.classList.add('show'); };
+}
+
+function showAuthForm() {
+  auMode = 'login';
+  $('#auT').textContent = '登录鲤慧账号';
+  $('#auGo').textContent = '登录';
+  $('#auSwitch').textContent = '没有账号？去注册';
+  $('#auForm').style.display = '';
+  $('#auProfile').style.display = 'none';
+  $('#auHint').textContent = '登录后拥有独立数据沙箱：画像、配额、隐私同意全部计入账号，换设备登录数据不丢。';
+}
+
+function renderProfile() {
+  const a = authState();
+  if (!a || !a.token) { showAuthForm(); return; }
+  const u = a.user || {};
+  $('#auT').textContent = '我的账号';
+  $('#auHint').textContent = '独立数据沙箱生效中：画像 / 配额 / 隐私同意均计入本账号（user:' + String(u.id || '').slice(0, 8) + '…），换设备登录不丢。';
+  $('#auForm').style.display = 'none';
+  $('#auProfile').style.display = '';
+  $('#auNick').textContent = u.nickname || u.username || '—';
+  $('#auMeta').textContent = '角色 ' + (u.role || 'user') + ' · 头像与昵称小程序端同步';
+  const box = $('#auAvatar');
+  box.innerHTML = u.avatar ? '<img src="' + u.avatar + '" alt="头像">' : '鲤';
+}
+
+$('#auSwitch').onclick = () => {
+  auMode = auMode === 'login' ? 'register' : 'login';
+  $('#auT').textContent = auMode === 'login' ? '登录鲤慧账号' : '注册鲤慧账号';
+  $('#auGo').textContent = auMode === 'login' ? '登录' : '注册并登录';
+  $('#auSwitch').textContent = auMode === 'login' ? '没有账号？去注册' : '已有账号？去登录';
+};
+
+$('#auGo').onclick = async () => {
+  const username = $('#auUser').value.trim();
+  const password = $('#auPass').value;
+  if (!username || !password) return banner('请输入用户名和密码');
+  $('#auGo').disabled = true;
+  try {
+    const path = auMode === 'login' ? '/auth/login' : '/auth/register';
+    const u = await apiPost(path, { username, password });
+    setAuthState({ token: u.token, user: u.user });
+    banner(auMode === 'login' ? '登录成功：画像 / 配额 / 隐私同意已计入账号沙箱' : '注册成功，已自动登录（独立数据沙箱已创建）');
+    authPick.classList.remove('show');
+    renderUserChip();
+  } catch (e) {
+    banner((e.message || '操作失败') + (auMode === 'register' && /注册/.test(e.message) ? '（服务端可能已关闭自注册，请改用登录）' : ''));
+  } finally {
+    $('#auGo').disabled = false;
+  }
+};
+
+$('#auLogout').onclick = () => {
+  setAuthState(null);
+  authPick.classList.remove('show');
+  renderUserChip();
+  banner('已退出登录，后续数据回到设备匿名模式');
+};
+
+/* 头像上传：选图 → canvas 压缩到 256px → dataURL（≤190KB）→ POST /auth/profile */
+$('#auAvatarBtn').onclick = () => $('#auFile').click();
+$('#auAvatar').onclick = () => $('#auFile').click();
+$('#auFile').onchange = async () => {
+  const f = $('#auFile').files && $('#auFile').files[0];
+  $('#auFile').value = '';
+  if (!f) return;
+  if (!/^image\/(png|jpe?g|webp)$/.test(f.type)) return banner('仅支持 png/jpg/webp 图片');
+  try {
+    const dataUrl = await compressAvatar(f, 256);
+    if (dataUrl.length > 190 * 1024) return banner('图片压缩后仍超过 190KB，请换小图');
+    const r = await apiPost('/auth/profile', { avatar: dataUrl });
+    const a = authState();
+    if (a) { a.user = r.user || a.user; setAuthState(a); }
+    renderProfile();
+    renderUserChip();
+    banner('头像已更新（计入账号，小程序端同步显示）');
+  } catch (e) {
+    banner(e.message || '头像上传失败');
+  }
+};
+
+function compressAvatar(file, size) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = size; c.height = size;
+        const ctx = c.getContext('2d');
+        /* 居中裁剪成正方形再缩放，避免头像被拉伸 */
+        const s = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+        URL.revokeObjectURL(url);
+        let out = c.toDataURL('image/webp', 0.85);
+        if (!out.startsWith('data:image/webp') || out.length > 190 * 1024) out = c.toDataURL('image/jpeg', 0.85);
+        resolve(out);
+      } catch (e) { reject(e); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('图片读取失败')); };
+    img.src = url;
+  });
+}
+
+renderUserChip();
+
 /* ===== 隐私同意横幅（合规：画像采集需同意；同意状态本地+服务端双记）
    2026-10-09 修复：此前本段代码未包裹在脚本标签内，浏览器将其当 HTML 文本
    渲染——页面底部出现代码原文、按钮被解析成真实元素但无任何事件绑定，
@@ -1434,7 +1622,7 @@ document.documentElement.classList.add('js');
   function askServer() {
     try {
       if (typeof deviceId !== 'function') return;
-      fetch('/api/v1/privacy/consent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId() }, body: JSON.stringify({ deviceId: deviceId() }) });
+      fetch('/api/v1/privacy/consent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId(), ...authHeaders() }, body: JSON.stringify({ deviceId: deviceId() }) });
     } catch (e) {}
   }
   if (agreed) { askServer(); return; } // 本地已同意 → 静默补登服务端（幂等）

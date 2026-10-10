@@ -28,6 +28,7 @@ try {
 } catch (_) {}
 const config = require('../config');
 const security = require('../utils/security');
+const auth = require('../services/auth');
 const userProfile = require('../services/userProfile');
 const POI_MEM = new Map();
 const POI_FILE = 'poi';
@@ -164,7 +165,7 @@ module.exports = {
       city: q.city || '',
     };
     const key = poiKey(q);
-    const devId = req.headers['x-device-id'] || '';
+    const devId = auth.resolveOwner(req).ownerKey; // 账号锚定：登录= user:<uid>，匿名= 设备键
     try {
       // 行为埋点:搜索入画像(自动学习用户常搜类目/关键词)
       userProfile.track(devId, 'search', { query: q.query, category: q.category });

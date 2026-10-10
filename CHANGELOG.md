@@ -5,6 +5,22 @@
 
 ---
 
+## [V1.0.14] · 2026-10-10 · 账号锚定 + 用户数据独立沙箱 + 网页端头像上传
+
+### 🔑 账号锚定（`services/auth.js resolveOwner` + 四路由）
+- **数据归属重构**：登录用户一律按 `user:<uid>` 锚定（独立沙箱），未登录按设备匿名键兜底（裸 deviceId，**历史数据零迁移**）；设备/联网信号不再锚定注册用户——换设备登录同一账号，画像 / 配额 / 隐私同意全部跟随账号。
+- 接入面：用户画像（`/profile/track|me|reset`）、搜索埋点与个性化排序（`/map/poi/search`）、Agent 对话与识图（`/agent/chat|vision`，含 Token 用量 `tokenMeter`）、隐私同意/撤回/导出/删除（`/privacy/*`，登录态 body.deviceId 被忽略）。
+- 响应新增 `ownerType`（user/device）字段，端上可感知当前数据归属。
+- 小程序端零改动自动生效（request 已带 Authorization）；网页端此前无登录体系，本次补齐。
+
+### 🌐 网页端：登录 / 注册 / 头像上传（`static/web/index.html`）
+- **登录注册浮层**：header 新增「登录 / 注册」入口；登录后展示头像 + 昵称，可退出。api() / apiPost() / 隐私同意横幅自动附带 `Authorization`。
+- **头像上传**：点击头像 → 选图 → canvas 居中裁剪压缩 256px（webp 优先/jpeg 回落，≤190KB）→ `POST /auth/profile`；默认「鲤」字回落，头像与昵称小程序端同步显示。
+- 服务端头像校验回归：MIME 白名单（png/jpg/webp dataURL）+ 190KB 上限 + 空串清空（`tests/owner.test.js` 10 条全绿：锚定矩阵 6 条 + 头像校验 4 条）。
+
+### 📱 小程序端
+- 无需改动：头像上传（wx.chooseMedia→base64→`/auth/profile`）与账号锚定（request 已带 Authorization）均已在 V1.0.12 前具备，服务端升级后自动按账号沙箱生效。
+
 ## [V1.0.13] · 2026-10-10 · 评分真实权重 + POI 去重计数 + 体检提速 + README 重写
 
 ### ⚖️ 评分修复（`services/lifeShared.js` + `routes/life.js` + `data/standards.json`）
