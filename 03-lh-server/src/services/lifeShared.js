@@ -113,7 +113,25 @@ async function fetchCategory(c, lng, lat, radius, stagger = 0) {
   try {
     const r = await withCatTimeout(baiduMap.poiSearch({ query: c.keywords.join('|'), lng, lat, radius, pageSize: 20 }));
     if (r === null) return { items: [], failed: true, timeout: true }; // 超时：不再叠加二次确认
-    if ((r.items || []).length) return finish(r.items);
+    const items = (r.items || []);
+    if (items.length) {
+      /* V1.0.27 数据完整性补查：联合词融合上限 20 条会截断靠后的关键词
+       * （如教育 3 词各 10 条融合取 20，「中学」整段被挤掉 → 学校数据严重缺失）。
+       * 对结果名称未覆盖的关键词逐个补查（pageSize 20），401 短熔断随时打断。 */
+      const nameText = items.map((it) => String((it && it.name) || '')).join('¦');
+      const missing = c.keywords.filter((k) => !nameText.includes(k));
+      for (const k of missing) {
+        if (isQuotaBlocked()) break;
+        try {
+          const extra = await withCatTimeout(baiduMap.poiSearch({ query: k, lng, lat, radius, pageSize: 20 }));
+          if (extra && (extra.items || []).length) items.push(...extra.items);
+        } catch (e) {
+          noteQuotaError(e);
+          if (isQuotaBlocked()) break;
+        }
+      }
+      return finish(items);
+    }
   } catch (e) {
     noteQuotaError(e);
   }
