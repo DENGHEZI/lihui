@@ -495,6 +495,56 @@
   .cap .st.ok { color: #00794A; background: #E8F8EE; border: 1px solid #C5EED8; }
   .cap .st.mp { color: var(--primary-deep); background: var(--primary-weak); border: 1px solid var(--primary-line); }
   .cap .st.dual { color: var(--gold); background: var(--gold-weak); border: 1px solid var(--gold-line); }
+
+  /* ---------- 独立视图切换（侧栏导航驱动，非滚动锚点） ---------- */
+  .view { display: none; }
+  .view.on { display: block; animation: viewIn .32s cubic-bezier(.22,.8,.36,1); }
+  @keyframes viewIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .view-head { padding: 34px 0 2px; }
+  .view-head h1 { font-family: var(--serif); font-weight: 700; font-size: clamp(21px, 3vw, 28px); color: #1B2622; letter-spacing: .02em; }
+  .view-head p { font-size: 13px; color: var(--text-3); margin-top: 5px; }
+  .view .card:first-of-type { margin-top: 16px; }
+
+  /* ---------- 账号管理视图 ---------- */
+  .acc-me { display: flex; gap: 18px; align-items: center; margin-top: 16px; }
+  .acc-avatar { flex: none; width: 76px; height: 76px; border-radius: 24px; background: linear-gradient(135deg, #0fa693, #4EC7B4);
+    color: #fff; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700;
+    cursor: pointer; overflow: hidden; user-select: none; box-shadow: 0 8px 22px -8px rgba(15,166,147,.5); position: relative; }
+  .acc-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .acc-avatar .cam { position: absolute; right: -4px; bottom: -4px; width: 26px; height: 26px; border-radius: 50%;
+    background: #fff; border: 1px solid var(--line); font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  .acc-info b { font-size: 18px; }
+  .acc-info .meta { font-size: 12.5px; color: var(--text-3); margin-top: 4px; line-height: 1.7; }
+  .acc-form { display: grid; gap: 12px; margin-top: 18px; max-width: 460px; }
+  .acc-field label { display: block; font-size: 12px; font-weight: 650; color: var(--text-2); margin-bottom: 6px; }
+  .acc-field label small { font-weight: 400; color: var(--text-3); margin-left: 6px; }
+  .acc-field input { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px;
+    font-size: 14px; outline: none; background: #FAFBFC; color: var(--text); transition: border-color .2s, box-shadow .2s; }
+  .acc-field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15,166,147,.12); background: #fff; }
+  .acc-field input[readonly] { background: #F4F6F5; color: var(--text-3); cursor: not-allowed; }
+  .acc-tip { font-size: 12.5px; color: var(--primary-deep); background: var(--primary-weak);
+    border: 1px solid var(--primary-line); border-radius: 12px; padding: 9px 13px; margin-top: 14px; line-height: 1.7; }
+  .sync-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 650;
+    color: var(--primary-deep); background: var(--primary-weak); border: 1px solid var(--primary-line);
+    border-radius: 999px; padding: 2px 11px; }
+
+  /* ---------- API 接口卡 ---------- */
+  .api-group { margin-top: 16px; }
+  .api-group .gt { font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--text-3); margin-bottom: 8px; }
+  .api-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px;
+    font-size: 12.5px; transition: background .15s; }
+  .api-row:hover { background: #F5FAF8; }
+  .api-row .m { flex: none; width: 46px; text-align: center; font-size: 10.5px; font-weight: 700;
+    border-radius: 6px; padding: 2px 0; font-family: ui-monospace, Consolas, monospace; }
+  .m-get { color: #0B7A5A; background: #E5F5EF; border: 1px solid #C3E8D8; }
+  .m-post { color: #8A6210; background: var(--gold-weak); border: 1px solid var(--gold-line); }
+  .api-row .p { flex: none; font-family: ui-monospace, Consolas, "Courier New", monospace; color: var(--text); font-weight: 550; }
+  .api-row .d { margin-left: auto; text-align: right; color: var(--text-3); font-size: 12px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .api-note { margin-top: 14px; font-size: 12px; color: var(--text-3); background: #F7FAF8;
+    border: 1px dashed var(--line); border-radius: 12px; padding: 10px 13px; line-height: 1.8; }
+  .api-note code { font-family: ui-monospace, Consolas, monospace; color: var(--primary-deep);
+    background: var(--primary-weak); border-radius: 5px; padding: 0 5px; font-size: 11px; }
 </style>
 <meta name="theme-color" content="#0fa693">
 </head>
@@ -511,12 +561,14 @@
       <span class="dot off" id="locDot" style="width:6px;height:6px;border-radius:50%;background:var(--text-3);flex:none"></span><span id="locText">定位中…</span>
     </div>
   </div>
-  <a class="nav-item on" href="#top" data-sec="top"><span class="ic">🏠</span>工作台</a>
-  <a class="nav-item" href="#sec-life" data-sec="sec-life"><span class="ic">🩺</span>生活圈体检</a>
-  <a class="nav-item" href="#sec-iso" data-sec="sec-iso"><span class="ic">⏱</span>步行等时圈</a>
-  <a class="nav-item" href="#sec-quick" data-sec="sec-quick"><span class="ic">🧭</span>便民速查</a>
-  <a class="nav-item" href="#sec-mem" data-sec="sec-mem"><span class="ic">🧠</span>安全运维</a>
-  <a class="nav-item" href="#sec-cap" data-sec="sec-cap"><span class="ic">🧩</span>能力全景</a>
+  <a class="nav-item on" data-view="top"><span class="ic">🏠</span>工作台</a>
+  <a class="nav-item" data-view="life"><span class="ic">🩺</span>生活圈体检</a>
+  <a class="nav-item" data-view="iso"><span class="ic">⏱</span>步行等时圈</a>
+  <a class="nav-item" data-view="quick"><span class="ic">🧭</span>便民速查</a>
+  <a class="nav-item" data-view="account"><span class="ic">👤</span>账号管理</a>
+  <a class="nav-item" data-view="mem"><span class="ic">🧠</span>安全运维</a>
+  <a class="nav-item" data-view="cap"><span class="ic">🧩</span>能力全景</a>
+  <a class="nav-item" data-view="api"><span class="ic">🔌</span>API 接口</a>
   <div class="side-cap">数据源</div>
   <div class="ds-box">
     <span class="dot"></span>真实数据 · 在线<br>
@@ -541,10 +593,12 @@
   <span class="u-mini" id="mobUserSlot"></span>
 </div>
 
-<div class="main" id="top">
+<div class="main">
 <div class="wrap">
   <div class="banner" id="banner"></div>
 
+  <!-- ═══ 视图：工作台 ═══ -->
+  <div class="view on" id="view-top">
   <!-- 工作台首屏 -->
   <section class="stage">
     <span class="stage-badge">🐟 智能规划助手 · 网页版全新上线</span>
@@ -575,7 +629,7 @@
       <textarea id="aiText" rows="2" placeholder="输入中心点地名（区 / 街道 / 小区 / 景区），或直接问我：附近哪家菜市场最近？体检短板在哪？"></textarea>
       <div class="ask-bar">
         <span class="hint">回车发送 · Shift + 回车换行 · 回答引用真实 POI 与标准编号</span>
-        <a class="jump" href="#sec-life">直达生活圈体检 ↓</a>
+        <a class="jump" id="jumpLife" style="cursor:pointer">直达生活圈体检 ↓</a>
         <button class="ai-send" id="aiSend" title="发送">↑</button>
       </div>
     </div>
@@ -625,15 +679,21 @@
       <div class="hstat"><b id="hTemp">--</b><span>实时气温</span></div>
     </div>
   </div>
+  </div><!-- /view-top -->
 
-  <section class="grid">
-  <div class="colA">
+  <!-- ═══ 视图：生活圈体检 ═══ -->
+  <div class="view" id="view-life">
+  <div class="view-head"><h1>生活圈体检</h1><p>七类设施加权评分 · 真实最近距离 · 短板逐项列清</p></div>
   <!-- 生活圈体检 -->
   <div class="card" id="sec-life">
     <h2>🩺 生活圈体检 <span class="sub">数据 · 百度地图开放平台</span></h2>
     <div id="lifeBox"><div class="spin"></div><div class="empty">正在体检你的 15 分钟生活圈</div></div>
   </div>
+  </div><!-- /view-life -->
 
+  <!-- ═══ 视图：步行等时圈 ═══ -->
+  <div class="view" id="view-iso">
+  <div class="view-head"><h1>步行等时圈 · 服务盲区</h1><p>36 方向真实路网收敛 · 盲区网格实测复核 · 真实地图 / 示意图切换</p></div>
   <!-- 步行等时圈 + 服务盲区 -->
   <div class="card" id="sec-iso">
     <h2>⏱ 步行等时圈 · 服务盲区 <span class="sub">真实路网算路 · 批量矩阵</span></h2>
@@ -651,16 +711,21 @@
     </div>
     <div id="isoBox"><div class="spin"></div><div class="empty">正在计算你的步行等时圈…</div></div>
   </div>
+  </div><!-- /view-iso -->
 
-  </div>
-  <div class="colB" id="sec-quick">
+  <!-- ═══ 视图：便民速查 ═══ -->
+  <div class="view" id="view-quick">
+  <div class="view-head"><h1>便民速查 · 真实店源</h1><p>1.5km POI 速查与附近 / 本城热门店源，全部来自百度真实门店</p></div>
+  <div class="grid">
+  <div class="colA">
   <!-- 便民速查 -->
   <div class="card">
     <h2>🧭 便民速查 <span class="sub" id="quickFrom"></span></h2>
     <div class="tabs" id="quickTabs"></div>
     <div class="list" id="quickList"><div class="spin"></div></div>
   </div>
-
+  </div>
+  <div class="colB">
   <!-- 真实店源 -->
   <div class="card">
     <h2>🛒 附近真实店源 <span class="sub" id="shopFrom"></span></h2>
@@ -671,13 +736,15 @@
     <div class="list" id="shopList"><div class="spin"></div></div>
     <div class="muted" style="margin-top:12px">下单与支付在第三方平台完成（携程 / 美团），鲤慧负责选品与留痕；标「参考」的价格为估算，实际以平台为准。</div>
   </div>
-
   </div>
-  </section>
+  </div>
+  </div><!-- /view-quick -->
 
+  <!-- ═══ 视图：安全运维 ═══ -->
+  <div class="view" id="view-mem">
+  <div class="view-head"><h1>Memory · 安全运维</h1><p>蜜罐诱捕 · IP 封禁 · AI 只建议，绝不自动执行</p></div>
   <!-- 🧠 Memory · 人机协同安全运维：AI 只建议不执行，批准产出工件由人合并 -->
   <div class="card" id="memCard">
-    <a id="sec-mem" style="position:relative;top:-80px;display:block"></a>
     <h2>🧠 Memory · 安全运维记忆 <span class="sub">人机协同 · AI 只建议，绝不自动执行</span></h2>
     <div class="mem-top">
       <div class="mem-events">
@@ -698,9 +765,13 @@
     <div class="mem-cap" style="margin-top:16px">历史建议与人工决定（学习记忆）</div>
     <div id="memList"><div style="font-size:13px;color:var(--text-3)">暂无记录</div></div>
   </div>
+  </div><!-- /view-mem -->
 
+  <!-- ═══ 视图：能力全景 ═══ -->
+  <div class="view" id="view-cap">
+  <div class="view-head"><h1>能力全景</h1><p>网页版 + 微信小程序 · 同一后端</p></div>
   <!-- 能力全景：网页版 + 小程序 三端能力一览 -->
-  <div class="card cap-card" id="sec-cap">
+  <div class="card cap-card">
     <h2>🧩 能力全景 <span class="sub">网页版 + 微信小程序 · 同一后端</span></h2>
     <div class="cap-grid">
       <div class="cap"><div class="ic">🧠</div><div class="nm">智能规划助手</div><div class="ds">自然语言问答 · 体检解读 · 规划 · 标准检索</div><span class="st ok">✅ 网页版已支持</span></div>
@@ -716,6 +787,116 @@
       <div class="cap"><div class="ic">🛡️</div><div class="nm">Memory 安全运维</div><div class="ds">蜜罐诱捕 · 封禁 · AI 建议 · 人机协同</div><span class="st dual">双端共用</span></div>
     </div>
   </div>
+  </div><!-- /view-cap -->
+
+  <!-- ═══ 视图：账号管理（可填写 · 两端同一套账号） ═══ -->
+  <div class="view" id="view-account">
+  <div class="view-head">
+    <h1>账号管理</h1>
+    <p>与微信小程序<strong>同一套账号体系</strong>：这里改昵称 / 头像，小程序端下次打开即同步；同一用户名全服务唯一，不会重复注册。</p>
+  </div>
+  <div class="card">
+    <h2>👤 我的账号 <span class="sub"><span class="sync-badge">🔄 双端同步 · user 沙箱</span></span></h2>
+
+    <!-- 未登录：登录 / 注册表单 -->
+    <div id="auForm" style="max-width:460px">
+      <div class="cp-hint" id="auHint" style="margin:14px 0 12px">登录后拥有独立数据沙箱：画像、配额、隐私同意全部计入账号，换设备登录数据不丢。</div>
+      <div class="acc-field">
+        <label>用户名 <small>3 个字符以上，全服务唯一</small></label>
+        <input id="auUser" placeholder="用户名" autocomplete="username" />
+      </div>
+      <div class="acc-field">
+        <label>密码</label>
+        <input id="auPass" type="password" placeholder="密码" autocomplete="current-password" />
+      </div>
+      <div class="cp-row" style="margin-top:14px;max-width:460px">
+        <button class="btn" id="auSwitch">没有账号？去注册</button>
+        <button class="btn primary" id="auGo">登录</button>
+      </div>
+      <div class="cp-hint" id="auT" style="margin-top:10px;display:none">登录鲤慧账号</div>
+    </div>
+
+    <!-- 已登录：资料卡（可填写） -->
+    <div id="auProfile" style="display:none">
+      <div class="acc-me">
+        <div class="acc-avatar" id="auAvatar" title="点击更换头像">鲤<span class="cam">📷</span></div>
+        <div class="acc-info">
+          <b id="auNick">—</b>
+          <div class="meta" id="auMeta"></div>
+        </div>
+      </div>
+      <input type="file" id="auFile" accept="image/png,image/jpeg,image/webp" style="display:none" />
+      <div class="acc-form">
+        <div class="acc-field">
+          <label>昵称 <small>1~24 字 · 保存后小程序端同步显示</small></label>
+          <input id="accNickInput" placeholder="给自己起个名字，如：湘江漫步者" maxlength="24" />
+        </div>
+        <div class="acc-field">
+          <label>用户名 <small>注册后不可修改</small></label>
+          <input id="accUser" readonly />
+        </div>
+        <div class="acc-field">
+          <label>角色</label>
+          <input id="accRole" readonly />
+        </div>
+        <div class="cp-row">
+          <button class="btn" id="auLogout">退出登录</button>
+          <button class="btn" id="auAvatarBtn">📷 更换头像</button>
+          <button class="btn primary" id="accNickSave">保存资料</button>
+        </div>
+      </div>
+      <div class="acc-tip" id="auHint2">
+        ✅ <b>双端同步</b>：昵称 / 头像存服务端账号记录，网页与小程序读同一份——任一端修改，另一端重新打开即生效。<br>
+        ℹ️ 资料接口 <code style="font-family:ui-monospace,Consolas,monospace">POST /auth/profile</code> 支持 nickname / avatar；账号沙箱（画像 · 配额 · 同意）随账号而非设备。
+      </div>
+    </div>
+  </div>
+  </div><!-- /view-account -->
+
+  <!-- ═══ 视图：API 接口 ═══ -->
+  <div class="view" id="view-api">
+  <div class="view-head"><h1>API 接口</h1><p>本页所有功能都走同一套 REST 接口，前缀 /api/v1，网页与小程序完全同源</p></div>
+  <div class="card">
+    <h2>🔌 接口一览 <span class="sub">零外部依赖 · JSON · code=0 成功</span></h2>
+
+    <div class="api-group"><div class="gt">鉴权 · 账号</div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/auth/login</span><span class="d">登录，返回 token + user</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/auth/register</span><span class="d">自注册（仅 user 角色，用户名唯一）</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/auth/me</span><span class="d">当前身份实时资料（昵称/头像）</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/auth/profile</span><span class="d">改昵称 / 头像（双端同步）</span></div>
+    </div>
+
+    <div class="api-group"><div class="gt">生活圈 · 地图</div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/life/report</span><span class="d">七类体检报告（加权评分 + 短板）</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/life/isochrone</span><span class="d">步行等时圈 + 盲区网格</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/map/poi/search</span><span class="d">POI 检索（便民速查数据源）</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/map/reverse-geocode</span><span class="d">坐标 → 地址（逆地理）</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/map/geocode</span><span class="d">地址 → 坐标（城市切换）</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/map/weather</span><span class="d">实时天气</span></div>
+    </div>
+
+    <div class="api-group"><div class="gt">店源 · 助手</div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/shop/source</span><span class="d">真实店源（附近 3km / 本城热门）</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/agent/chat</span><span class="d">智能规划助手（带位置上下文）</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/agent/vision</span><span class="d">多模态识图（小程序端）</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/agent/standards?q=</span><span class="d">标准知识库 RRF 检索</span></div>
+    </div>
+
+    <div class="api-group"><div class="gt">隐私 · 运维</div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/privacy/policy</span><span class="d">版本化隐私政策全文</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/privacy/consent</span><span class="d">记录同意（幂等）</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/privacy/withdraw</span><span class="d">撤回同意（停采 + 删画像）</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/privacy/export</span><span class="d">数据导出（可携权）</span></div>
+      <div class="api-row"><span class="m m-post">POST</span><span class="p">/privacy/delete</span><span class="d">数据删除（被遗忘权）</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/memory/overview</span><span class="d">安全事件 + 建议 + 学习记忆</span></div>
+      <div class="api-row"><span class="m m-get">GET</span><span class="p">/token/stats</span><span class="d">Token 消耗 / 预估花费</span></div>
+    </div>
+
+    <div class="api-note">
+      调用方式：请求头带 <code>X-Device-Id: 设备号</code>；已登录接口再带 <code>Authorization: Bearer &lt;token&gt;</code>（网页端登录后自动携带，小程序 request 封装同款）。响应统一 <code>{"code":0,"msg":"ok","data":…}</code>，非 0 见 msg。限流 429 时响应含 <code>X-RateLimit-*</code> 头。
+    </div>
+  </div>
+  </div><!-- /view-api -->
 
   <footer>
     <div class="pills"><span>🐟 鲤慧 LiHui</span><span>lihui-tech.online</span></div>
@@ -736,36 +917,7 @@
   </div>
 </div>
 
-<!-- 登录 / 注册 / 账号沙箱浮层（账号锚定：登录后画像/配额/同意计入账号，换设备不丢） -->
-<div class="city-pick" id="authPick">
-  <div class="cp-card">
-    <div class="cp-t" id="auT">登录鲤慧账号</div>
-    <div class="cp-hint" id="auHint">登录后拥有独立数据沙箱：画像、配额、隐私同意全部计入账号，换设备登录数据不丢。</div>
-    <div id="auForm">
-      <input id="auUser" placeholder="用户名" autocomplete="username" />
-      <input id="auPass" type="password" placeholder="密码" autocomplete="current-password" style="margin-top:8px" />
-      <div class="cp-row" style="margin-top:12px">
-        <button class="btn" id="auSwitch">没有账号？去注册</button>
-        <button class="btn primary" id="auGo">登录</button>
-      </div>
-    </div>
-    <div id="auProfile" style="display:none">
-      <div class="au-me">
-        <div class="au-avatar" id="auAvatar" title="点击更换头像">鲤</div>
-        <div class="au-meinfo">
-          <b id="auNick">—</b>
-          <small id="auMeta"></small>
-        </div>
-      </div>
-      <input type="file" id="auFile" accept="image/png,image/jpeg,image/webp" style="display:none" />
-      <div class="cp-row" style="margin-top:12px">
-        <button class="btn" id="auLogout">退出登录</button>
-        <button class="btn primary" id="auAvatarBtn">📷 更换头像</button>
-      </div>
-      <div class="cp-hint" style="margin-top:10px">头像支持 png/jpg/webp，≤190KB，上传后计入账号（小程序端同步显示）。</div>
-    </div>
-  </div>
-</div>
+<!-- 登录 / 注册已移入「账号管理」独立视图（V1.0.19）：可填写昵称/头像，双端同步 -->
 </div>
 </div>
 
@@ -1536,28 +1688,24 @@ document.documentElement.classList.add('js');
   cards.forEach((c) => io.observe(c));
 })();
 
-/* ---------- 侧栏导航激活态 + 模式卡跳转 ---------- */
+/* ---------- 独立视图切换（侧栏导航驱动） ---------- */
+function switchView(name) {
+  document.querySelectorAll('.view').forEach((v) => v.classList.toggle('on', v.id === 'view-' + name));
+  document.querySelectorAll('.nav-item[data-view]').forEach((n) => n.classList.toggle('on', n.dataset.view === name));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 (function () {
-  const items = document.querySelectorAll('.nav-item[data-sec]');
-  if ('IntersectionObserver' in window && items.length) {
-    const io = new IntersectionObserver((es) => {
-      es.forEach((e) => {
-        if (!e.isIntersecting) return;
-        items.forEach((it) => it.classList.toggle('on', it.dataset.sec === e.target.id));
-      });
-    }, { rootMargin: '-30% 0px -60% 0px' });
-    ['top', 'sec-life', 'sec-iso', 'sec-quick', 'sec-mem', 'sec-cap'].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) io.observe(el);
-    });
-  }
-  const go = (id) => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  document.querySelectorAll('.nav-item[data-view]').forEach((n) => {
+    n.onclick = () => switchView(n.dataset.view);
+  });
   const modeAi = document.getElementById('modeAi');
-  if (modeAi) modeAi.onclick = () => { const t = document.getElementById('aiText'); if (t) { t.focus(); t.scrollIntoView({ behavior: 'smooth', block: 'center' }); } };
+  if (modeAi) modeAi.onclick = () => { const t = document.getElementById('aiText'); if (t) t.focus(); };
   const modeLife = document.getElementById('modeLife');
-  if (modeLife) modeLife.onclick = () => go('sec-life');
+  if (modeLife) modeLife.onclick = () => switchView('life');
   const modeIso = document.getElementById('modeIso');
-  if (modeIso) modeIso.onclick = () => go('sec-iso');
+  if (modeIso) modeIso.onclick = () => switchView('iso');
+  const jumpLife = document.getElementById('jumpLife');
+  if (jumpLife) jumpLife.onclick = () => switchView('life');
 })();
 
 (async function init() {
@@ -1636,8 +1784,7 @@ document.documentElement.classList.add('js');
 </script>
 
 <script>
-/* ================= 账号：登录 / 注册 / 头像上传（V1.0.14 账号锚定） ================= */
-const authPick = $('#authPick');
+/* ================= 账号：登录 / 注册 / 资料编辑（V1.0.19 账号管理视图 · 双端同步） ================= */
 let auMode = 'login'; // login | register
 
 function renderUserChip() {
@@ -1645,7 +1792,7 @@ function renderUserChip() {
   const a = authState();
   if (!a || !a.token) {
     chip.innerHTML = '<button class="btn" id="btnAuth" style="padding:6px 14px;font-size:13px">登录 / 注册</button>';
-    $('#btnAuth').onclick = () => { showAuthForm(); authPick.classList.add('show'); };
+    $('#btnAuth').onclick = () => { showAuthForm(); switchView('account'); };
     return;
   }
   const u = a.user || {};
@@ -1653,13 +1800,12 @@ function renderUserChip() {
     ? '<img class="u-avatar-mini" src="' + u.avatar + '" alt="头像">'
     : '<div class="au-avatar" style="width:30px;height:30px;font-size:13px">' + (u.nickname || u.username || '鲤').slice(0, 1) + '</div>';
   chip.innerHTML = av + '<span class="u-name" title="点击管理账号">' + (u.nickname || u.username || '已登录') + '</span><span class="u-hint">管理 ›</span>';
-  chip.querySelector('.u-avatar-mini, .au-avatar').onclick = () => { renderProfile(); authPick.classList.add('show'); };
-  chip.querySelector('.u-name').onclick = () => { renderProfile(); authPick.classList.add('show'); };
+  chip.querySelector('.u-avatar-mini, .au-avatar').onclick = () => { renderProfile(); switchView('account'); };
+  chip.querySelector('.u-name').onclick = () => { renderProfile(); switchView('account'); };
 }
 
 function showAuthForm() {
   auMode = 'login';
-  $('#auT').textContent = '登录鲤慧账号';
   $('#auGo').textContent = '登录';
   $('#auSwitch').textContent = '没有账号？去注册';
   $('#auForm').style.display = '';
@@ -1671,19 +1817,22 @@ function renderProfile() {
   const a = authState();
   if (!a || !a.token) { showAuthForm(); return; }
   const u = a.user || {};
-  $('#auT').textContent = '我的账号';
-  $('#auHint').textContent = '独立数据沙箱生效中：画像 / 配额 / 隐私同意均计入本账号（user:' + String(u.id || '').slice(0, 8) + '…），换设备登录不丢。';
   $('#auForm').style.display = 'none';
   $('#auProfile').style.display = '';
   $('#auNick').textContent = u.nickname || u.username || '—';
-  $('#auMeta').textContent = '角色 ' + (u.role || 'user') + ' · 头像与昵称小程序端同步';
+  $('#auMeta').textContent = '登录后数据计入账号沙箱 · 换设备登录不丢';
+  const ni = document.getElementById('accNickInput');
+  if (ni) ni.value = u.nickname || '';
+  const cu = document.getElementById('accUser');
+  if (cu) cu.value = u.username || '';
+  const cr = document.getElementById('accRole');
+  if (cr) cr.value = u.role === 'admin' ? '管理员 admin' : '普通用户 user';
   const box = $('#auAvatar');
-  box.innerHTML = u.avatar ? '<img src="' + u.avatar + '" alt="头像">' : '鲤';
+  box.innerHTML = (u.avatar ? '<img src="' + u.avatar + '" alt="头像">' : '鲤') + '<span class="cam">📷</span>';
 }
 
 $('#auSwitch').onclick = () => {
   auMode = auMode === 'login' ? 'register' : 'login';
-  $('#auT').textContent = auMode === 'login' ? '登录鲤慧账号' : '注册鲤慧账号';
   $('#auGo').textContent = auMode === 'login' ? '登录' : '注册并登录';
   $('#auSwitch').textContent = auMode === 'login' ? '没有账号？去注册' : '已有账号？去登录';
 };
@@ -1698,10 +1847,10 @@ $('#auGo').onclick = async () => {
     const u = await apiPost(path, { username, password });
     setAuthState({ token: u.token, user: u.user });
     banner(auMode === 'login' ? '登录成功：画像 / 配额 / 隐私同意已计入账号沙箱' : '注册成功，已自动登录（独立数据沙箱已创建）');
-    authPick.classList.remove('show');
+    renderProfile();
     renderUserChip();
   } catch (e) {
-    banner((e.message || '操作失败') + (auMode === 'register' && /注册/.test(e.message) ? '（服务端可能已关闭自注册，请改用登录）' : ''));
+    banner((e.message || '操作失败') + (auMode === 'register' && /已存在/.test(e.message) ? '（同一用户名全服务唯一，网页与小程序共用账号库；换一个名字或直接登录）' : auMode === 'register' ? '（服务端可能已关闭自注册，请改用登录）' : ''));
   } finally {
     $('#auGo').disabled = false;
   }
@@ -1709,9 +1858,31 @@ $('#auGo').onclick = async () => {
 
 $('#auLogout').onclick = () => {
   setAuthState(null);
-  authPick.classList.remove('show');
+  showAuthForm();
   renderUserChip();
   banner('已退出登录，后续数据回到设备匿名模式');
+};
+
+/* 资料保存：昵称可填写（V1.0.19），与头像同一接口，双端同步 */
+$('#accNickSave').onclick = async () => {
+  const a = authState();
+  if (!a || !a.token) return banner('请先登录');
+  const nickname = ($('#accNickInput').value || '').trim();
+  if (!nickname) return banner('昵称不能为空（1~24 字）');
+  const btn = $('#accNickSave');
+  btn.disabled = true; btn.textContent = '保存中…';
+  try {
+    const r = await apiPost('/auth/profile', { nickname });
+    const na = authState();
+    if (na) { na.user = r.user || na.user; setAuthState(na); }
+    renderProfile();
+    renderUserChip();
+    banner('昵称已保存 ✅ 小程序端重新打开「我的」页即同步显示');
+  } catch (e) {
+    banner(e.message || '保存失败');
+  } finally {
+    btn.disabled = false; btn.textContent = '保存资料';
+  }
 };
 
 /* 头像上传：选图 → canvas 压缩到 256px → dataURL（≤190KB）→ POST /auth/profile */
@@ -1760,6 +1931,22 @@ function compressAvatar(file, size) {
 }
 
 renderUserChip();
+
+/* 双端同步（V1.0.19）：启动时静默拉取服务端实时资料 GET /auth/me——
+   小程序端改的昵称/头像，网页端刷新即同步；令牌失效则退回匿名模式 */
+(async function syncMe() {
+  const a = authState();
+  if (!(a && a.token)) return;
+  try {
+    const u = await api('/auth/me');
+    if (u && u.username) {
+      const na = authState();
+      if (na) { na.user = u; setAuthState(na); renderProfile(); renderUserChip(); }
+    }
+  } catch (e) {
+    if (e && (e.code === 4010 || /令牌|登录/.test(e.message || ''))) { setAuthState(null); renderUserChip(); }
+  }
+})();
 
 /* ===== 隐私同意横幅（合规：画像采集需同意；同意状态本地+服务端双记）
    2026-10-09 修复：此前本段代码未包裹在脚本标签内，浏览器将其当 HTML 文本
