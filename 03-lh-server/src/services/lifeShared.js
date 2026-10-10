@@ -222,4 +222,63 @@ function scoreSummary(cats) {
   return { score, level, shortboards };
 }
 
-module.exports = { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, fetchCategory, dedupePOIs, scoreCategory, scoreSummary, catStagger, CAT_STAGGER_MS };
+/* ------------------------------------------------------------------ */
+/* 短板解决方案（V1.0.32）：按类定制的可行动建议，替换千篇一律的模板话术   */
+/* 每个短板两条：①现状（分/达标线/最近设施步行分钟）②怎么补（替代方案 +  */
+/* 反馈渠道 + 该类特有的生活技巧）。纯函数，CI 可测。                     */
+/* ------------------------------------------------------------------ */
+const PLAN_TPL = {
+  medical: {
+    alt: '小病先去社区卫生服务中心/药店，慢病续方可用互联网医院',
+    feedback: '向街道办或 12345 反映增设社区卫生服务站',
+    tip: '体检报告/疫苗记录同步到家庭医生，减少跑腿',
+  },
+  transit: {
+    alt: '用共享单车/电动车接驳到最近公交站，把 15 分钟圈扩成 3 公里',
+    feedback: '向交通运输服务热线 12328 反映公交线网与站点覆盖',
+    tip: '百度地图开「实时公交」看下一班再出门，不等车',
+  },
+  education: {
+    alt: '关注同片区其他公办/普惠幼儿园的插班名额',
+    feedback: '学位紧张可向区教育局登记统筹需求',
+    tip: '步行范围外可查校车/定制助学线路',
+  },
+  market: {
+    alt: '生鲜电商/社区团购次日达可先顶上菜篮子',
+    feedback: '向 12345 反映补建菜市场或便民商业网点',
+    tip: '连锁便利店大多 24h，应急采购优先',
+  },
+  food: {
+    alt: '外卖平台可覆盖 3 公里内的正餐需求',
+    feedback: '沿主干道方向扩大搜索半径，通常 1~2 个路口就有餐饮带',
+    tip: '写字楼/学校周边的餐饮密度普遍更高',
+  },
+  leisure: {
+    alt: '社区健身角/学校操场（开放时段）可替代公园锻炼',
+    feedback: '向 12345 反映补建口袋公园与健身设施',
+    tip: '沿河步道/绿道常在地图「风景」图层里，值得找找',
+  },
+  elder: {
+    alt: '先咨询社区居委会的居家养老服务与助餐点',
+    feedback: '养老服务热线 12349 / 民政局反映养老设施缺口',
+    tip: '老年食堂多数对全龄开放，家属可陪同',
+  },
+};
+/** 单类短板的解决方案（两条字符串，端上 tip-row 直接渲染） */
+function suggestionFor(cat) {
+  const c = cat || {};
+  const tpl = PLAN_TPL[c.key] || {
+    alt: '用共享单车把出行半径扩展到 3 公里',
+    feedback: '向 12345 反映配套缺口',
+    tip: '沿主干道方向步行扩大搜索半径',
+  };
+  const nearest = c.nearest && c.nearest.name
+    ? `最近「${c.nearest.name}」步行约 ${Math.max(1, Math.round(Number(c.nearest.distance) / 80 / 1.3))} 分钟`
+    : '周边暂未检出该类设施';
+  return [
+    `${c.name}短板（${c.score} 分）：15 分钟步行可达 ${c.count} 处、达标线 ${c.need} 处，${nearest}。`,
+    `怎么补：${tpl.alt}；${tpl.feedback}；${tpl.tip}。`,
+  ];
+}
+
+module.exports = { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, fetchCategory, dedupePOIs, scoreCategory, scoreSummary, suggestionFor, catStagger, CAT_STAGGER_MS };

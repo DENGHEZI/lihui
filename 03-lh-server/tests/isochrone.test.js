@@ -201,6 +201,26 @@ t('interpolateReach: 单调性（预算越小半径越小）+ 主档约束 + 空
   assert.strictEqual(interpolateReach([{ dist: 0, duration: 0 }], 600, 1200), null); // 无效样本过滤
 });
 
+/* ---- 短板解决方案（V1.0.32）---- */
+t('suggestionFor：按类定制且带最近设施步行分钟', () => {
+  const shared = require('../src/services/lifeShared');
+  const lines = shared.suggestionFor({
+    key: 'transit', name: '交通', score: 42, count: 0, need: 1,
+    nearest: { name: '神农城公交站', distance: 1040 },
+  });
+  assert.ok(Array.isArray(lines) && lines.length === 2);
+  assert.ok(lines[0].includes('交通短板（42 分）') && lines[0].includes('1040'.slice(0, 0) + '神农城公交站'));
+  assert.ok(/10 分钟/.test(lines[0]), '应含 1040m ÷ 80 ÷ 1.3 ≈ 10 分钟');
+  assert.ok(lines[1].includes('12328'), '交通类应含 12328 反馈渠道');
+  assert.ok(lines[1].includes('共享单车'));
+  // 未知类回退通用模板，不抛错
+  const generic = shared.suggestionFor({ key: 'xxx', name: '神秘类', score: 10, count: 0, need: 1, nearest: null });
+  assert.ok(generic.length === 2 && generic[1].includes('12345'));
+  // 医疗类含 12345/社区卫生反馈
+  const med = shared.suggestionFor({ key: 'medical', name: '医疗', score: 30, count: 0, need: 2, nearest: null });
+  assert.ok(med[1].includes('12345'));
+});
+
 /* ---- 模块图完整性（循环依赖/导出缺失自检） ---- */
 t('模块图完整：lifeShared 与 isochrone 可互相协作', () => {
   const shared = require('../src/services/lifeShared');

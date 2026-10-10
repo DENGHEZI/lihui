@@ -6,7 +6,7 @@
 const { ok, fail } = require('../utils/http');
 const hub = require('../mcp/hub');
 const logger = require('../utils/logger');
-const { CATEGORIES, isQuotaBlocked, noteQuotaError, fetchCategory, scoreCategory, scoreSummary, catStagger } = require('../services/lifeShared');
+const { CATEGORIES, isQuotaBlocked, noteQuotaError, fetchCategory, scoreCategory, scoreSummary, suggestionFor, catStagger } = require('../services/lifeShared');
 const { buildIsochrone } = require('../services/isochrone');
 const standards = require('../services/standards');
 
@@ -71,10 +71,11 @@ async function localDiagnose({ lng, lat, radius = 1200, city = '' }) {
 
   // 只用"成功检索"的类做加权（权重归一化），杜绝偶发故障导致的评分跳水
   const { score, level, shortboards } = scoreSummary(cats);
-  const suggestions = shortboards.map((s) => {
-    const name = s.split('：')[0];
-    return `${name}是短板，建议沿主干道方向步行扩大搜索半径，或考虑使用共享单车将出行半径扩展到 3 公里。`;
-  });
+  // V1.0.32：短板解决方案 —— 按类定制（现状 + 最近设施步行分钟 + 替代方案/反馈渠道/生活技巧），
+  // 替换原先千篇一律的模板话术；agent 兜底回复与端上 tip-row 同步受益
+  const suggestions = cats
+    .filter((c) => c.score !== null && c.score !== undefined && c.score < 60)
+    .flatMap((c) => suggestionFor(c));
 
   return {
     score,
