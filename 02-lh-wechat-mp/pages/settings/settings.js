@@ -121,11 +121,13 @@ Page({
     const i = Number(e.currentTarget.dataset.i)
     if (i >= 0 && this.data.models[i]) {
       const m = this.data.models[i]
+      // V1.0.20：Key 明文永不回显（服务端脱敏），但必须让用户知道「已配置」——
+      // 否则重登录后打开编辑框看到空白会误以为 Key 丢了（实际存在服务端，留空保存不变）
       this.setData({
-        editor: { show: true, id: m.id, name: m.name, provider: m.provider, baseUrl: m.baseUrl, apiKey: '', model: m.model }
+        editor: { show: true, id: m.id, name: m.name, provider: m.provider, baseUrl: m.baseUrl, apiKey: '', hasKey: !!m.apiKey, model: m.model }
       })
     } else {
-      this.setData({ editor: { show: true, id: '', name: '', provider: 'openai-compatible', baseUrl: '', apiKey: '', model: '' } })
+      this.setData({ editor: { show: true, id: '', name: '', provider: 'openai-compatible', baseUrl: '', apiKey: '', hasKey: false, model: '' } })
     }
     this.refreshProviderIndex()
   },

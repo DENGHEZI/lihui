@@ -1374,41 +1374,85 @@ function isoStatsHtml(d) {
     '<div class="iso-bottom"><div class="iso-radar">' + radar + '</div><div class="iso-legend">' + legend + '</div></div>';
 }
 
-/* ---------- 真实地图渲染：Leaflet + 高德 GCJ-02 栅格瓦片 ---------- */
+/* ---------- 真实地图渲染：默认百度底图（V1.0.20）+ 高德兜底 ----------
+ * 百度瓦片：BD-09 自研墨卡托——投影同标准球面墨卡托（米），y 向北为正、原点在 (0,0)；
+ * 分辨率 res(z)=2^(18-z) 米/像素（z=18→1m），z 有效 3~21；瓦片号=floor(米/(256*res))，x/y 可为负。
+ * Leaflet 适配：transformation a=1/(256·2^18)（y 取负翻转），scale=256·2^z；
+ * 瓦片 y 号 = -coord.y - 1（Leaflet 像素 y 向下=南正，与百度向北正相反）。
+ * 全站数据统一 GCJ-02：画到百度底图前逐点 gcj02ToBd09（函数已具备）。
+ * 若百度瓦片接口失效（qt=vtile 2026-10 曾改版的前车之鉴）：tileerror 连续 ≥8 → 自动回落高德，绝不黑屏。 */
+const BaiduCRS = L.extend({}, L.CRS.Earth, {
+  code: 'Baidu',
+  projection: L.Projection.SphericalMercator,
+  transformation: new L.Transformation(1 / (256 * Math.pow(2, 18)), 0, -1 / (256 * Math.pow(2, 18)), 0),
+  scale: function (zoom) { return 256 * Math.pow(2, zoom); },
+});
+
+const BaiduTileLayer = L.TileLayer.extend({
+  getTileUrl: function (coords) {
+    return 'https://api' + this._getSubdomain(coords) + '.map.bdimg.com/onlinelabel/' +
+      '?qt=tile&x=' + coords.x + '&y=' + (-coords.y - 1) + '&z=' + coords.z + '&styles=pl&udt=latest';
+  },
+});
+
 let isoMapInst = null;
-function renderIsoMap(d) {
+let isoProvider = 'baidu';        // 当前底图：baidu（默认）| gaode（兜底）
+let isoTileErrors = 0;            // 连续瓦片错误计数（成功即清零）
+
+function renderIsoMap(d, provider) {
   window.__isoPending = null;
+  if (provider) { isoProvider = provider; isoTileErrors = 0; }
+  const isBaidu = isoProvider === 'baidu';
+  /* GCJ-02 数据点 → 底图坐标系（百度=BD-09；高德同 GCJ-02 直用） */
+  const conv = (p) => isBaidu ? gcj02ToBd09(Number(p.lng), Number(p.lat)) : { lng: Number(p.lng), lat: Number(p.lat) };
+  const label = isBaidu ? '真实地图（百度底图 · BD-09 对齐）' : '真实地图（高德影像底图 · GCJ-02）';
+
   $('#isoBox').innerHTML =
     '<div class="iso-map-wrap"><div id="isoMap"></div>' +
-    '<div class="iso-map-badge">⏱ ' + esc(String(d.minutes)) + ' 分钟步行圈 · 真实地图（高德影像底图）</div>' +
+    '<div class="iso-map-badge">⏱ ' + esc(String(d.minutes)) + ' 分钟步行圈 · ' + label + '</div>' +
     '<div class="iso-map-loading" id="isoMapLoad"><div class="spin"></div>地图底图加载中…</div></div>' +
     isoStatsHtml(d);
   try {
     const el = document.getElementById('isoMap');
     if (!el || typeof L === 'undefined') throw new Error('Leaflet 未就绪');
     if (isoMapInst) { isoMapInst.remove(); isoMapInst = null; }
-    isoMapInst = L.map(el, { zoomControl: true, attributionControl: true, scrollWheelZoom: true });
+    isoMapInst = L.map(el, {
+      zoomControl: true, attributionControl: true, scrollWheelZoom: true,
+      crs: isBaidu ? BaiduCRS : L.CRS.EPSG3857,
+      minZoom: isBaidu ? 3 : 3,
+      maxZoom: isBaidu ? 21 : 18,
+    });
     isoMapInst.attributionControl.setPrefix('');
-    L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=7&x={x}&y={y}&z={z}', {
-      subdomains: ['1', '2', '3', '4'],
-      maxZoom: 18,
-      attribution: '© 高德地图 · 数据统一 GCJ-02',
-    }).addTo(isoMapInst);
 
-    const LL = (p) => [Number(p.lat), Number(p.lng)];
-    const ring = (d.polygon || []).map(LL);
+    if (isBaidu) {
+      new BaiduTileLayer('', {
+        subdomains: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+        maxZoom: 21, minZoom: 3, maxNativeZoom: 21,
+        attribution: '© 百度地图',
+      }).addTo(isoMapInst);
+    } else {
+      L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=7&x={x}&y={y}&z={z}', {
+        subdomains: ['1', '2', '3', '4'],
+        maxZoom: 18,
+        attribution: '© 高德地图',
+      }).addTo(isoMapInst);
+    }
+
+    const ring = (d.polygon || []).map(conv);
     if (!ring.length) throw new Error('无多边形数据');
-    const home = LL(d.center);
+    const home = conv(d.center);
 
     /* 盲区/覆盖网格：地图上画盲区（红）与圈内正常格（淡青），j=0 最南 */
     let mnLng = 1e9, mxLng = -1e9, mnLat = 1e9, mxLat = -1e9;
     (d.polygon || []).forEach((p) => {
-      mnLng = Math.min(mnLng, Number(p.lng)); mxLng = Math.max(mxLng, Number(p.lng));
-      mnLat = Math.min(mnLat, Number(p.lat)); mxLat = Math.max(mxLat, Number(p.lat));
+      const q = conv(p);
+      mnLng = Math.min(mnLng, q.lng); mxLng = Math.max(mxLng, q.lng);
+      mnLat = Math.min(mnLat, q.lat); mxLat = Math.max(mxLat, q.lat);
     });
     const n = d.grid || 5;
     (d.cells || []).forEach((cell) => {
       if (!cell.insideCircle) return;
+      /* 网格角点用「转换后 bbox」线性插值（小区块内 BD-09 偏移近似线性，误差可忽略） */
       const l0 = mnLng + (cell.i / n) * (mxLng - mnLng), l1 = mnLng + ((cell.i + 1) / n) * (mxLng - mnLng);
       const a0 = mnLat + (cell.j / n) * (mxLat - mnLat), a1 = mnLat + ((cell.j + 1) / n) * (mxLat - mnLat);
       const blind = !!cell.blind;
@@ -1430,12 +1474,25 @@ function renderIsoMap(d) {
       .bindTooltip('🏠 家', { direction: 'bottom', offset: [0, 8] });
 
     isoMapInst.fitBounds(poly.getBounds(), { padding: [42, 42] });
+
+    /* 瓦片健康监控：百度瓦片连续失败 ≥8 → 自动回落高德（徽标提示），成功一次即清零 */
+    isoTileErrors = 0;
+    isoMapInst.on('tileload', () => { isoTileErrors = 0; });
+    isoMapInst.on('tileerror', () => {
+      isoTileErrors += 1;
+      if (isoTileErrors >= 8 && isBaidu) {
+        banner('百度底图瓦片暂不可用，已自动切换高德底图（数据仍为百度 POI，不受影响）。');
+        renderIsoMap(d, 'gaode');
+      }
+    });
+
     isoMapInst.whenReady(() => {
       const l = document.getElementById('isoMapLoad');
       if (l) l.classList.add('off');
     });
   } catch (e) {
-    renderIsoSvg(state.isoData || d); /* 任何异常 → 示意图兜底 */
+    if (isBaidu) return renderIsoMap(d, 'gaode'); /* 底图初始化异常 → 高德兜底 */
+    renderIsoSvg(state.isoData || d); /* 高德也异常 → 示意图兜底 */
   }
 }
 

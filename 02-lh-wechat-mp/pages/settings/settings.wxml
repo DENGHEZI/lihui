@@ -16,7 +16,7 @@
           <text class="m-badge off" wx:elif="{{!item.enabled}}">已停用</text>
         </view>
         <text class="m-meta">{{item.provider}} · {{item.model}}</text>
-        <text class="m-meta">{{item.baseUrl || '（默认地址）'}} · Key {{item.apiKey || '未设置'}}</text>
+        <text class="m-meta">{{item.baseUrl || '（默认地址）'}} · {{item.apiKey ? 'Key 已配置 ' + item.apiKey : 'Key 未设置'}}</text>
       </view>
       <view class="m-ops">
         <text class="op" bindtap="testItem" data-id="{{item.id}}">测试</text>
@@ -136,7 +136,7 @@
       </view>
       <view class="e-row">
         <text class="lh-cap">API Key</text>
-        <input class="e-inp" value="{{editor.apiKey}}" placeholder="sk-…" placeholder-class="ph" password data-k="apiKey" bindinput="onEditInput" />
+        <input class="e-inp" value="{{editor.apiKey}}" placeholder="{{editor.hasKey ? '已配置（留空保持现有 Key 不变）' : 'sk-…'}}" placeholder-class="ph" password data-k="apiKey" bindinput="onEditInput" />
       </view>
       <view class="e-row">
         <text class="lh-cap">模型名</text>

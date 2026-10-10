@@ -5,6 +5,20 @@
 
 ---
 
+## [V1.0.20] · 2026-10-10 · 等时圈默认百度底图 + 重登录不丢统计/KEY 误读修复
+
+### 🗺 等时圈底图默认百度（`static/web/index.html`）
+- 新增 **百度 BD-09 米制 CRS 适配**（`BaiduCRS`：transformation `1/(256·2^18)`、scale `256·2^z`；`BaiduTileLayer` 瓦片 `y=-coord.y-1`，`onlinelabel qt=tile` 栅格瓦片），等时圈真实地图**默认百度底图**；全站数据 GCJ-02 逐点 `gcj02ToBd09` 后叠加。
+- **三级兜底链**：百度瓦片连续失败 ≥8 → 自动切换高德并横幅提示；底图初始化异常 → 高德；高德也异常 → SVG 示意图。默认百度、绝不黑屏。
+
+### 💰 重登录后 Token 统计不再「归零」（`routes/token.js`）
+- **根因**：匿名期用量记在 device 键，登录后统计只读 `user:<uid>` 键——重登录/切换账号后旧段「看不见」，表现为统计归零。
+- **修复**：登录态自动聚合 **账号 + 本机匿名** 两段用量（total / allTime / usedToday / byDay / byModel 全合并），响应带 `mergedDevice` 标识；纯函数断言验证（420=20+400、calls、costCny、byDay/byModel 合并全过）。
+
+### 🔑 小程序「重登录后 DeepSeek KEY 没有了」误读修复（`pages/settings`）
+- **真相**：KEY 存服务端（`modelRegistry`，更新时未传新 Key 保留旧值），重登录不影响；但编辑框打开恒为空（明文永不回显是正确的安全设计），且列表只显脱敏串——用户误以为丢失。
+- **修复**：编辑框 placeholder 改「已配置（留空保持现有 Key 不变）」（依 `editor.hasKey` 动态）；列表行改「Key 已配置 sk-1**** / Key 未设置」——重登录后一眼确认 Key 还在。
+
 ## [V1.0.19] · 2026-10-10 · 独立视图 UI + 账号管理可填写 + API 接口页
 
 ### 🧭 独立视图 UI（不再是滚动长页）
