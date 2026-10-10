@@ -60,10 +60,11 @@ jobs:
 
       - name: README 图片引用完整性（防止图片语法被改写成纯文本）
         run: |
-          cnt_ref=$(grep -oE "docs/screenshots/[^)]+\.(jpg|png|jpeg)" README.md | sort -u | wc -l)
+          # 2026-10-10 修复：README 重构后图片目录是 docs/readme/frames（含 gif 主视觉），旧检查只 grep docs/screenshots 导致恒 0 恒失败
+          cnt_ref=$(grep -oE "docs/(screenshots|readme/frames)/[^)]+\.(jpg|jpeg|png|gif)" README.md | sort -u | wc -l)
           cnt_missing=0
-          for p in $(grep -oE "docs/screenshots/[^)]+\.(jpg|png|jpeg)" README.md | sort -u); do
+          for p in $(grep -oE "docs/(screenshots|readme/frames)/[^)]+\.(jpg|jpeg|png|gif)" README.md | sort -u); do
             [ -f "$p" ] || { echo "✗ MISSING: $p"; cnt_missing=$((cnt_missing+1)); }
           done
           echo "README 引用图片 $cnt_ref 张，缺失 $cnt_missing 张"
-          [ "$cnt_ref" -ge 1 ] && [ "$cnt_missing" -eq 0 ]
+          [ "$cnt_ref" -ge 10 ] && [ "$cnt_missing" -eq 0 ]
