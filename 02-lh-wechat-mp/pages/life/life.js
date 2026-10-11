@@ -126,7 +126,11 @@ Page({
           score: c.score === null || c.score === undefined ? (c.failed ? '—' : 0) : c.score,
           color: c.score === null || c.score === undefined ? '#8F959E' : colorOf(c.score),
           failedText: c.failed ? (r.quotaExhausted ? '（今日检索配额已用完，次日 0 点恢复）' : '（本次检索超时，不影响总分）') : '',
-          nearestText: c.nearest ? '，最近 ' + c.nearest.name + ' ' + this.fmtDist(c.nearest.distance) : '，范围内未查到'
+          nearestText: c.nearest ? '，最近 ' + c.nearest.name + ' ' + this.fmtDist(c.nearest.distance) : '，范围内未查到',
+          // V1.1 养老业态级细分（助餐/照料/康养）：拼进描述行展示
+          bizText: Array.isArray(c.biz) && c.biz.length
+            ? c.biz.map((b) => b.name + '×' + b.count + (b.nearest && b.nearest.name ? '（' + b.nearest.name.slice(0, 10) + '）' : '')).join(' ')
+            : ''
         })
       )
       r.shortboards = r.shortboards || []
@@ -469,6 +473,14 @@ Page({
   },
 
   onShareAppMessage() {
-    return { title: '我的 30 分钟生活圈体检报告', path: '/pages/life/life' }
+    // V1.1：分享卡片带上总分与达标等级（长图/海报由网页端「🖼 长图」导出，5:4 比例可复用为卡片底图）
+    const r = this.data.report
+    const score = r && Number.isFinite(Number(r.score)) ? Number(r.score) : null
+    return {
+      title: score != null
+        ? '我的 15 分钟生活圈体检 ' + score + ' 分（' + (r.level || '') + '），来看看你的'
+        : '15 分钟生活圈智能体检 · 鲤慧',
+      path: '/pages/life/life'
+    }
   }
 })

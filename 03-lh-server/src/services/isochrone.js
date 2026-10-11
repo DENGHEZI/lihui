@@ -33,6 +33,27 @@ const { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, de
 
 /* ---------------- 常量（官方口径） ---------------- */
 const SPEED_M_PER_MIN = 80;            // 步行速度 80 m/min
+/* V1.1 多出行方式等时圈：routematrix v2 原生支持 walking / riding（公交无批量矩阵接口，暂不提供）。
+ * speed 仅用于理想半径外推与插值换算；主耗时一律来自百度真实算路返回值。 */
+const TRAVEL_MODES = {
+  walking: {
+    name: '步行',
+    speed: SPEED_M_PER_MIN, // 80 m/min ≈ 4.8 km/h
+    endpoints: [
+      { path: '/routematrix/v2/walking', params: { coordtype: 'gcj02' } }, // 实测可用（GCJ-02）
+      { path: '/routematrix/v2/walking', params: { coordtype: 3 } }, // 数字风格也实测兼容
+      { path: '/direction/v2/matrix', params: { coordtype: 'gcj02' } }, // 备用端点
+    ],
+  },
+  riding: {
+    name: '骑行',
+    speed: 200, // 12 km/h 城市骑行；实际耗时以 routematrix/v2/riding 真实返回为准
+    endpoints: [
+      { path: '/routematrix/v2/riding', params: { coordtype: 'gcj02' } },
+      { path: '/routematrix/v2/riding', params: { coordtype: 3 } },
+    ],
+  },
+};
 const DETOUR_FACTOR = 1.3;             // 路网弯曲系数：实际步行距离 ≈ 直线 ×1.3
 const BEARINGS = 36;                   // 扇形采样方向数（10° 间隔）
 const BISECT_ROUNDS = 3;               // 二分收敛轮数
@@ -151,7 +172,7 @@ function median(arr) {
  *   place 302（天配额超限）时矩阵算路仍可用，反之亦然。因此矩阵层有独立的
  *   matrixBlockedUntil 短路器，不接入共享检索熔断，避免「检索挂了连累真算路」。
  */
-let matrixEndpoint = null;
+let matrixEndpointByMode = {}; // V1.1：按出行方式记忆端点（walking/riding 各自独立）
 let matrixBlockedUntil = 0;
 function isMatrixBlocked() {
   return Date.now() < matrixBlockedUntil;
@@ -177,20 +198,17 @@ function parseMatrixVal(v) {
   const n = Number(v && v.value !== undefined ? v.value : v);
   return Number.isFinite(n) ? n : 0;
 }
-async function walkMatrixBatch(origin, dests) {
+async function walkMatrixBatch(origin, dests, mode = 'walking') {
+  const MODES = TRAVEL_MODES[mode] ? mode : 'walking';
   if (isMatrixBlocked()) throw Object.assign(new Error('matrix quota blocked'), { matrixBlocked: true });
   const o = `${origin.lat},${origin.lng}`;
   const d = dests.map((p) => `${p.lat},${p.lng}`).join('|');
   // issue #3：记住的端点若以「非配额类」原因失败（改版/临时故障），立即失效缓存并
   // 回退完整候选列表重试一次（递归自带守卫：缓存已清空，第二轮不会再进本分支）。
-  const cached = matrixEndpoint;
+  const cached = matrixEndpointByMode[MODES];
   const candidates = cached
     ? [cached]
-    : [
-        { path: '/routematrix/v2/walking', params: { coordtype: 'gcj02' } }, // 实测可用（GCJ-02）
-        { path: '/routematrix/v2/walking', params: { coordtype: 3 } }, // 数字风格也实测兼容
-        { path: '/direction/v2/matrix', params: { coordtype: 'gcj02' } }, // 备用端点
-      ];
+    : TRAVEL_MODES[MODES].endpoints;
   let lastErr = null;
   for (const c of candidates) {
     try {
@@ -204,7 +222,7 @@ async function walkMatrixBatch(origin, dests) {
         duration: parseMatrixVal(it.duration),
       }));
       if (arr.length !== dests.length) throw new Error(`matrix size ${arr.length} != ${dests.length}`);
-      matrixEndpoint = c;
+      matrixEndpointByMode[MODES] = c;
       return arr;
     } catch (e) {
       lastErr = e;
@@ -212,8 +230,8 @@ async function walkMatrixBatch(origin, dests) {
       if (e.baiduStatus === 302 || e.baiduStatus === 401) throw e;
       logger.warn('isochrone', `matrix endpoint ${c.path}(${JSON.stringify(c.params)}) failed: ${e.message}`);
       if (cached && c === cached) {
-        matrixEndpoint = null; // 失效即重置，下次（含本轮递归）重新尝试全部候选端点
-        return walkMatrixBatch(origin, dests);
+        matrixEndpointByMode[MODES] = null; // 失效即重置，下次（含本轮递归）重新尝试全部候选端点
+        return walkMatrixBatch(origin, dests, MODES);
       }
     }
   }
@@ -400,7 +418,9 @@ function interpolateReach(samples, budgetSec, maxRadius) {
  * @param {number} [p.minutes=15] 等时圈分钟数（5~60）
  * @param {number} [p.grid] 盲区网格 N×N（3~9；缺省按分钟数自适应：≤10→7×7，≤20→6×6，更大→5×5）
  */
-async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
+async function buildIsochrone({ lng, lat, minutes = 15, grid, mode = 'walking' } = {}) {
+  const modeKey = TRAVEL_MODES[mode] ? mode : 'walking';
+  const modeDef = TRAVEL_MODES[modeKey];
   const center = { lng: Number(lng), lat: Number(lat) };
   if (!Number.isFinite(center.lng) || !Number.isFinite(center.lat)) {
     throw new Error('lng/lat invalid');
@@ -408,12 +428,13 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
   const minutesN = Math.min(60, Math.max(5, Number(minutes) || 15));
   const gridN = resolveGridN(grid, minutesN);
 
-  const cacheKey = `iso:${center.lng.toFixed(4)},${center.lat.toFixed(4)}:${minutesN}:${gridN}`;
+  const cacheKey = `iso:${center.lng.toFixed(4)},${center.lat.toFixed(4)}:${minutesN}:${gridN}:${modeKey}`;
   const cached = isoCache.get(cacheKey);
   if (cached) return cached;
 
   const budget = minutesN * 60; // 秒
-  const idealR = minutesN * SPEED_M_PER_MIN * DETOUR_FACTOR; // 理想直线可达半径
+  const speed = modeDef.speed;
+  const idealR = minutesN * speed * DETOUR_FACTOR; // 理想直线可达半径
   const rMax0 = idealR * 1.5; // 二分上限富余 1.5 倍
 
   const lo = new Array(BEARINGS).fill(0);
@@ -489,7 +510,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
         dests[i] = destination(center.lng, center.lat, (360 / BEARINGS) * i, mids[i]);
       }
       try {
-        const arr = await walkMatrixBatch(center, dests);
+        const arr = await walkMatrixBatch(center, dests, modeKey);
         matrixRounds++;
         let okCount = 0;
         for (let i = 0; i < BEARINGS; i++) {
@@ -632,7 +653,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
           const d = haversine(lngC, latC, it.lng, it.lat);
           if (best === null || d < best.d) best = { d, name: it.name };
         }
-        const walkMin = best ? (best.d * DETOUR_FACTOR) / SPEED_M_PER_MIN : null;
+        const walkMin = best ? (best.d * DETOUR_FACTOR) / speed : null;
         walkByCategory[c.key] = walkMin === null ? null : Math.round(walkMin * 10) / 10;
         if (c.failed) continue; // 检索异常类不参计分
         const cov = walkMin === null ? 0 : Math.max(0, 1 - walkMin / minutesN);
@@ -664,7 +685,8 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
     try {
       const arr = await walkMatrixBatch(
         center,
-        blindCandidates.map((c) => ({ lng: c.lng, lat: c.lat }))
+        blindCandidates.map((c) => ({ lng: c.lng, lat: c.lat })),
+        modeKey
       );
       blindCandidates.forEach((c, k) => {
         const it = arr[k];
@@ -726,7 +748,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
   const cellHM = ((bbox.maxLat - bbox.minLat) / gridN) * 110540;
   const cellHa = (cellWM * cellHM) / 10000;
   const blindAreaHa = Math.round(blindCells.length * cellHa * 100) / 100;
-  const idealRadius = minutesN * SPEED_M_PER_MIN;
+  const idealRadius = minutesN * speed;
   const detourIndex = idealR > 0 ? Math.round((maxR / idealRadius) * 100) / 100 : null;
 
   const categoryGaps = coverage
@@ -834,7 +856,9 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid } = {}) {
     center,
     minutes: minutesN,
     grid: gridN,
-    walkSpeed: SPEED_M_PER_MIN,
+    mode: modeKey, // V1.1 多出行方式：walking / riding（公交无批量矩阵接口暂缺）
+    modeName: modeDef.name,
+    walkSpeed: speed,
     detourFactor: DETOUR_FACTOR,
     polygon, // GCJ-02 平滑闭合多边形
     bearings, // 36 方向原始采样点
@@ -887,7 +911,8 @@ function buildIsochroneDedup(opts) {
   // issue #4：去重 key 与 buildIsochrone 内部 cacheKey 同口径 —— grid 未指定时
   // 用 resolveGridN(自适应 7/6/5) 而非固定 5，避免不同 minutes 的请求 key 碰撞语义混乱。
   const gridN = resolveGridN(opts.grid, opts.minutes || 15);
-  const key = `iso:${Number(opts.lng).toFixed(4)}:${Number(opts.lat).toFixed(4)}:${opts.minutes || 15}:${gridN}`;
+  const mk = TRAVEL_MODES[opts.mode] ? opts.mode : 'walking';
+  const key = `iso:${Number(opts.lng).toFixed(4)}:${Number(opts.lat).toFixed(4)}:${opts.minutes || 15}:${gridN}:${mk}`;
   return security.dedup(key, () => _buildIsochroneRaw(opts));
 }
 
@@ -908,6 +933,7 @@ module.exports = {
   clusterLacking,
   interpolateReach,
   SPEED_M_PER_MIN,
+  TRAVEL_MODES,
   DETOUR_FACTOR,
   BLIND_SCORE_THRESHOLD,
   BLIND_SEVERE_THRESHOLD,

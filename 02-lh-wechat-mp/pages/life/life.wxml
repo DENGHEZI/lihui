@@ -48,6 +48,7 @@
         <view class="bar-fg" style="width:{{item.score}}%;background:{{item.color}}"></view>
       </view>
       <text class="cat-desc">{{item.desc}} · 可达 {{item.count}} 处{{item.nearestText}}</text>
+      <text class="cat-desc biz-desc" wx:if="{{item.bizText}}">业态：{{item.bizText}}</text>
     </view>
   </view>
 

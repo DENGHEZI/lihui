@@ -538,3 +538,19 @@
   border-radius: 8rpx;
   padding: 4rpx 12rpx;
 }
+
+/* ═══ V1.1 养老业态级细分 + 关怀模式大字报告联动 ═══ */
+.biz-desc {
+  margin-top: 6rpx;
+  color: #8F959E;
+  font-size: 24rpx;
+}
+
+/* 关怀模式：体检报告整体放大一号（分数环、类目卡、短板/方案行） */
+.care-mode .ring-score { font-size: 96rpx; }
+.care-mode .cat-name   { font-size: 38rpx; }
+.care-mode .cat-score  { font-size: 38rpx; }
+.care-mode .cat-desc   { font-size: 32rpx; line-height: 1.6; }
+.care-mode .biz-desc   { font-size: 30rpx; }
+.care-mode .tip-row    { font-size: 34rpx; line-height: 1.65; }
+.care-mode .warn-row   { font-size: 34rpx; }

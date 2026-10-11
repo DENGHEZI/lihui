@@ -311,6 +311,16 @@
   .sugrow { font-size: 12.5px; line-height: 1.55; color: var(--text-2);
     background: rgba(127,127,127,.06); border: 1px solid rgba(127,127,127,.12);
     border-radius: 8px; padding: 7px 10px; }
+  /* V1.1 养老业态级细分行 */
+  .bizrows { margin-top: 5px; display: flex; flex-direction: column; gap: 3px; }
+  .bizrow { font-size: 11.5px; color: var(--text-3); padding-left: 8px; border-left: 2px solid var(--primary-line); }
+  /* V1.1 打印导出 PDF：只保留体检卡内容 */
+  @media print {
+    body * { visibility: hidden; }
+    #lifeBox, #lifeBox * { visibility: visible; }
+    #lifeBox { position: absolute; left: 0; top: 0; width: 100%; padding: 12px; }
+    #lifeExpImg, #lifeExpPdf { display: none; }
+  }
   .cats { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 22px; }
   @media (max-width: 430px) { .cats { grid-template-columns: 1fr; } }
   .cat { padding: 12px 0 2px; border-top: 1px solid var(--line); }
@@ -737,12 +747,15 @@
 
   <!-- ═══ 视图：步行等时圈 ═══ -->
   <div class="view" id="view-iso">
-  <div class="view-head"><h1>步行等时圈 · 服务盲区</h1><p>36 方向真实路网收敛 · 盲区网格实测复核 · 真实地图 / 示意图切换</p></div>
+  <div class="view-head"><h1>出行等时圈 · 服务盲区</h1><p>36 方向真实路网收敛 · 盲区网格实测复核 · 真实地图 / 示意图切换</p></div>
   <!-- 步行等时圈 + 服务盲区 -->
   <div class="card" id="sec-iso">
-    <h2>⏱ 步行等时圈 · 服务盲区 <span class="sub">真实路网算路 · 批量矩阵</span></h2>
+    <h2>⏱ 出行等时圈 · 服务盲区 <span class="sub">真实路网算路 · 批量矩阵</span></h2>
     <div class="iso-ctl" id="isoCtl">
-      <span class="lbl">步行</span>
+      <span class="lbl">方式</span>
+      <div class="mtab on" data-mode="walking">🚶 步行</div>
+      <div class="mtab" data-mode="riding">🚲 骑行</div>
+      <span class="lbl">时间档</span>
       <div class="mtab on" data-m="15">15 分钟</div>
       <div class="mtab" data-m="30">30 分钟</div>
       <div class="mtab" data-m="45">45 分钟</div>
@@ -753,7 +766,7 @@
       </div>
       <button class="btn primary go" id="isoGo">重新计算</button>
     </div>
-    <div id="isoBox"><div class="spin"></div><div class="empty">正在计算你的步行等时圈…</div></div>
+    <div id="isoBox"><div class="spin"></div><div class="empty">正在计算你的出行等时圈…</div></div>
   </div>
   </div><!-- /view-iso -->
 
@@ -892,6 +905,18 @@
       <div class="acc-tip" id="auHint2">
         ✅ <b>双端同步</b>：昵称 / 头像存服务端账号记录，网页与小程序读同一份——任一端修改，另一端重新打开即生效。<br>
         ℹ️ 资料接口 <code style="font-family:ui-monospace,Consolas,monospace">POST /auth/profile</code> 支持 nickname / avatar；账号沙箱（画像 · 配额 · 同意）随账号而非设备。
+      </div>
+    </div>
+
+    <!-- ═══ V1.1 管理端用户管理（仅 admin 登录后可见） ═══ -->
+    <div id="adminPanel" style="display:none;margin-top:28px">
+      <div class="card" style="margin-bottom:14px">
+        <h2>🛡 用户管理 <span class="sub">RBAC admin 专属 · 全部操作写审计日志</span></h2>
+        <div id="adminUsersBox"><div class="spin"></div></div>
+      </div>
+      <div class="card">
+        <h2>📜 RBAC 审计日志 <span class="sub">最近 30 条（新→旧）</span></h2>
+        <div id="adminAuditBox"><div class="spin"></div></div>
       </div>
     </div>
   </div>
@@ -1298,7 +1323,13 @@ async function loadLife() {
         '<div class="hd">' + (CAT_ICON[c.key] || '📍') + ' ' + esc(c.name) +
         '<span class="n">' + (c.failed ? '检索受限' : (c.score == null ? '—' : c.score + '分 · ' + c.count + '处')) + '</span></div>' +
         '<div class="track"><div class="fill" style="width:' + pct + '%"></div></div>' +
-        '<div class="near">最近：' + esc(near) + '</div></div>';
+        '<div class="near">最近：' + esc(near) + '</div>' +
+        /* V1.1 养老业态级细分：助餐 / 照料 / 康养 三层各自数量与最近设施 */
+        (c.biz ? '<div class="bizrows">' + c.biz.map((b) =>
+          '<div class="bizrow">' + esc(b.name) + ' ×' + b.count +
+          (b.nearest && b.nearest.name ? ' · 最近 ' + esc(String(b.nearest.name).slice(0, 16)) + (b.nearest.distance ? ' ' + fmtM(b.nearest.distance) : '') : ' · 未检出') + '</div>'
+        ).join('') + '</div>' : '') +
+        '</div>';
     }).join('');
     /* V1.0.34：短板/受限解决方案逐条渲染（此前网页端压根没显示 suggestions 字段） */
     const sugs = (r.suggestions || []).length
@@ -1320,8 +1351,17 @@ async function loadLife() {
       '<div class="score-row"><div class="ring" style="--pct:' + (r.score || 0) + '"><div class="in"><b>' +
       (r.score == null ? '--' : r.score) + '</b><span>总分</span></div></div>' +
       '<div><div class="level">' + esc(r.level || '—') + '</div>' +
-      '<div class="muted" style="margin-top:8px;font-size:12.5px">七类设施加权评分<br>满分 100 · 达标线 60</div></div></div>' + retryNote + hint + sb +
+      '<div class="muted" style="margin-top:8px;font-size:12.5px">七类设施加权评分<br>满分 100 · 达标线 60</div></div>' +
+      /* V1.1 报告导出：一键 PDF（打印样式）/ 长图（SVG→PNG，可作分享卡片底图） */
+      '<div style="margin-left:auto;display:flex;gap:6px;align-self:flex-start">' +
+      '<button class="btn" id="lifeExpImg" title="导出长图 PNG（可作小程序分享卡片底图）">🖼 长图</button>' +
+      '<button class="btn" id="lifeExpPdf" title="打印 / 另存为 PDF">🖨 PDF</button></div></div>' +
+      retryNote + hint + sb +
       '<div class="cats">' + cats + '</div>' + sugs;
+    const expImg = document.getElementById('lifeExpImg');
+    if (expImg) expImg.onclick = () => exportReportImage(r);
+    const expPdf = document.getElementById('lifeExpPdf');
+    if (expPdf) expPdf.onclick = () => window.print();
     const hs = document.getElementById('hScore');
     if (hs) hs.textContent = (r.score == null ? '--' : r.score) + ' 分';
   } catch (e) {
@@ -1330,9 +1370,81 @@ async function loadLife() {
 }
 function fmtM(m) { return m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m) + ' m'; }
 
+/* ================= V1.1 体检报告长图导出（SVG → Canvas → PNG） =================
+ * 同一张 750 宽 SVG 卡片：网页端下载为长图， ALSO 可直接作为小程序分享卡片底图（比例 5:4 裁切安全）。
+ * 零依赖：不用 html2canvas，中文字形由系统字体栅格化。 */
+function buildReportSvg(r) {
+  const W = 750, pad = 48;
+  const cats = r.categories || [];
+  const sugs = (r.suggestions || []).slice(0, 4);
+  const rowH = 78, sugH = 42;
+  const H = Math.round(pad + 168 + cats.length * rowH + (sugs.length ? sugs.length * sugH + 66 : 0) + 96);
+  let y = pad;
+  let s = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">';
+  s += '<rect width="100%" height="100%" fill="#FBF9F4"/>';
+  s += '<rect x="0" y="0" width="' + W + '" height="10" fill="#b98629"/>';
+  s += '<text x="' + pad + '" y="' + (y + 40) + '" font-size="38" font-weight="700" fill="#1f2937">鲤慧 · 15 分钟生活圈体检报告</text>';
+  y += 74;
+  s += '<text x="' + pad + '" y="' + y + '" font-size="22" fill="#6b7280">' + new Date().toLocaleString('zh-CN', { hour12: false }) + ' · 步行圈半径约 ' + (r.walkMinutes || 15) + ' 分钟</text>';
+  y += 64;
+  s += '<text x="' + pad + '" y="' + (y + 34) + '" font-size="84" font-weight="800" fill="#b98629">' + (r.score == null ? '--' : r.score) + '</text>';
+  s += '<text x="' + (pad + 168) + '" y="' + (y + 6) + '" font-size="30" fill="#374151">总分 / 100 · ' + esc(r.level || '') + '</text>';
+  s += '<text x="' + (pad + 168) + '" y="' + (y + 44) + '" font-size="22" fill="#6b7280">七类加权 · 达标线 60' + (r.weightSource ? ' · ' + esc(String(r.weightSource).slice(0, 16)) : '') + '</text>';
+  y += 104;
+  for (const c of cats) {
+    const pct = c.score == null ? 0 : Math.max(0, Math.min(100, c.score));
+    s += '<text x="' + pad + '" y="' + (y + 18) + '" font-size="27" fill="#1f2937">' + esc(c.name) + '</text>';
+    s += '<text x="' + (pad + 110) + '" y="' + (y + 18) + '" font-size="23" fill="#6b7280">' + (c.failed ? '检索受限 · 未评估' : c.score + ' 分 · ' + c.count + ' 处') + '</text>';
+    s += '<rect x="' + pad + '" y="' + (y + 28) + '" width="' + (W - pad * 2) + '" height="13" rx="6" fill="#E7E2D6"/>';
+    s += '<rect x="' + pad + '" y="' + (y + 28) + '" width="' + ((W - pad * 2) * pct / 100) + '" height="13" rx="6" fill="' + (c.failed ? '#E5B566' : '#5FB8A6') + '"/>';
+    const nearTxt = c.nearest && c.nearest.name ? '最近：' + String(c.nearest.name).slice(0, 20) + (c.nearest.distance ? ' · ' + fmtM(c.nearest.distance) : '') : (c.failed ? '受限未评估' : '周边未检出');
+    s += '<text x="' + pad + '" y="' + (y + 66) + '" font-size="21" fill="#9ca3af">' + esc(nearTxt) + '</text>';
+    y += rowH;
+  }
+  if (sugs.length) {
+    s += '<text x="' + pad + '" y="' + (y + 12) + '" font-size="26" font-weight="650" fill="#1f2937">🛠 怎么补</text>';
+    y += 50;
+    for (const t of sugs) {
+      s += '<text x="' + pad + '" y="' + y + '" font-size="22" fill="#4b5563">' + esc(String(t).slice(0, 38)) + '</text>';
+      y += sugH;
+    }
+  }
+  s += '<line x1="' + pad + '" y1="' + (H - 56) + '" x2="' + (W - pad) + '" y2="' + (H - 56) + '" stroke="#E7E2D6"/>';
+  s += '<text x="' + pad + '" y="' + (H - 22) + '" font-size="20" fill="#9ca3af">鲤慧 LiHui · 15 分钟生活圈智能体检与规划助手</text>';
+  s += '</svg>';
+  return s;
+}
+
+function exportReportImage(r) {
+  try {
+    const W = 750;
+    const svg = buildReportSvg(r);
+    const img = new Image();
+    img.onload = () => {
+      const cv = document.createElement('canvas');
+      cv.width = W * 2; cv.height = img.height * 2; // 2x 高清
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#FBF9F4'; ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.drawImage(img, 0, 0, cv.width, cv.height);
+      const a = document.createElement('a');
+      a.download = 'lihui-体检报告-' + new Date().toISOString().slice(0, 10) + '.png';
+      a.href = cv.toDataURL('image/png');
+      a.click();
+    };
+    img.onerror = () => alert('长图生成失败，请改用 PDF 导出');
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  } catch (e) {
+    alert('长图生成失败：' + e.message);
+  }
+}
+
 /* ================= 步行等时圈 + 服务盲区 ================= */
 /* 零依赖手绘 SVG：等时圈多边形 + 盲区网格 + 参考圈 + 七类覆盖雷达图 */
-const ISO_MINUTES = () => Number(document.querySelector('#isoCtl .mtab.on').dataset.m) || 15;
+const ISO_MINUTES = () => Number(document.querySelector('#isoCtl .mtab[data-m].on').dataset.m) || 15;
+const ISO_MODE = () => {
+  const t = document.querySelector('#isoCtl .mtab[data-mode].on');
+  return (t && t.dataset.mode) || 'walking';
+};
 const ENG_NAME = {
   'routematrix-batch': '批量矩阵算路 1×36',
   'directionlite-concurrent': '并发单点算路 ×36',
@@ -1341,8 +1453,9 @@ const ENG_NAME = {
 
 function loadIsochrone() {
   if (state.lng == null) { $('#isoBox').innerHTML = '<div class="empty">等待定位…</div>'; return; }
-  $('#isoBox').innerHTML = '<div class="spin"></div><div class="empty">正在沿真实路网计算 ' + ISO_MINUTES() + ' 分钟步行等时圈…</div>';
-  api('/life/isochrone', { lng: state.lng, lat: state.lat, minutes: ISO_MINUTES() })
+  const modeName = ISO_MODE() === 'riding' ? '骑行' : '步行';
+  $('#isoBox').innerHTML = '<div class="spin"></div><div class="empty">正在沿真实路网计算 ' + ISO_MINUTES() + ' 分钟' + modeName + '等时圈…</div>';
+  api('/life/isochrone', { lng: state.lng, lat: state.lat, minutes: ISO_MINUTES(), mode: ISO_MODE() })
     .then(renderIsochrone)
     .catch((e) => { $('#isoBox').innerHTML = '<div class="empty">等时圈计算失败：' + esc(e.message) + '</div>'; });
 }
@@ -1887,10 +2000,17 @@ document.querySelectorAll('#isoViewTgl span').forEach((t) => {
   };
 });
 
-/* ================= 等时圈时间档切换 ================= */
-document.querySelectorAll('#isoCtl .mtab').forEach((t) => {
+/* ================= 等时圈时间档 / 出行方式切换（V1.1） ================= */
+document.querySelectorAll('#isoCtl .mtab[data-m]').forEach((t) => {
   t.onclick = () => {
-    document.querySelectorAll('#isoCtl .mtab').forEach((x) => x.classList.remove('on'));
+    document.querySelectorAll('#isoCtl .mtab[data-m]').forEach((x) => x.classList.remove('on'));
+    t.classList.add('on');
+    loadIsochrone();
+  };
+});
+document.querySelectorAll('#isoCtl .mtab[data-mode]').forEach((t) => {
+  t.onclick = () => {
+    document.querySelectorAll('#isoCtl .mtab[data-mode]').forEach((x) => x.classList.remove('on'));
     t.classList.add('on');
     loadIsochrone();
   };
@@ -2231,6 +2351,69 @@ function renderProfile() {
   if (cr) cr.value = u.role === 'admin' ? '管理员 admin' : '普通用户 user';
   const box = $('#auAvatar');
   box.innerHTML = (u.avatar ? '<img src="' + u.avatar + '" alt="头像">' : '鲤') + '<span class="cam">📷</span>';
+  /* V1.1 管理面板：仅 admin 可见 */
+  const ap = document.getElementById('adminPanel');
+  if (ap) {
+    if (u.role === 'admin') { ap.style.display = ''; loadAdminPanel(); }
+    else ap.style.display = 'none';
+  }
+}
+
+/* ================= V1.1 管理端用户管理 + 审计日志 ================= */
+async function loadAdminPanel() {
+  loadAdminUsers();
+  loadAdminAudit();
+}
+async function loadAdminUsers() {
+  const box = document.getElementById('adminUsersBox');
+  if (!box) return;
+  try {
+    const d = await api('/admin/users');
+    box.innerHTML = '<div style="font-size:13px">' + (d.users || []).map((u) => {
+      const acts =
+        '<button class="btn" data-au-dis="' + esc(u.id) + '" data-au-name="' + esc(u.username) + '" data-au-cur="' + (u.disabled ? 1 : 0) + '">' + (u.disabled ? '▶ 恢复' : '⏸ 停用') + '</button>' +
+        '<button class="btn" data-au-del="' + esc(u.id) + '" data-au-name="' + esc(u.username) + '">🗑 删除</button>';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)">' +
+        '<b style="min-width:120px">' + esc(u.username) + '</b>' +
+        '<span class="muted" style="font-size:12px">' + esc(u.role) + (u.seeded ? ' · 播种' : '') + (u.disabled ? ' · <span style="color:#B42318">已停用</span>' : '') + '</span>' +
+        '<span style="margin-left:auto;display:flex;gap:6px">' + acts + '</span></div>';
+    }).join('') + '</div>';
+    box.querySelectorAll('[data-au-dis]').forEach((b) => {
+      b.onclick = async () => {
+        if (!confirm((b.dataset.auCur === '1' ? '恢复' : '停用') + '账号「' + b.dataset.auName + '」？（写入审计日志）')) return;
+        try {
+          await apiPost('/admin/users/disable', { id: b.dataset.auDis, disabled: b.dataset.auCur !== '1' });
+          loadAdminUsers(); loadAdminAudit();
+        } catch (e) { alert('操作失败：' + e.message); }
+      };
+    });
+    box.querySelectorAll('[data-au-del]').forEach((b) => {
+      b.onclick = async () => {
+        if (!confirm('⚠️ 彻底删除账号「' + b.dataset.auName + '」？该操作不可恢复（写入审计日志）。')) return;
+        try {
+          await apiPost('/admin/users/delete', { id: b.dataset.auDel });
+          loadAdminUsers(); loadAdminAudit();
+        } catch (e) { alert('删除失败：' + e.message); }
+      };
+    });
+  } catch (e) {
+    box.innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+  }
+}
+async function loadAdminAudit() {
+  const box = document.getElementById('adminAuditBox');
+  if (!box) return;
+  try {
+    const d = await api('/admin/audit?n=30');
+    box.innerHTML = (d.events || []).map((e) =>
+      '<div style="font-size:12.5px;padding:6px 0;border-top:1px solid var(--line);display:flex;gap:10px;flex-wrap:wrap">' +
+      '<b>' + esc(e.action) + '</b><span class="muted">' + esc(e.actor) + (e.actorRole ? '（' + esc(e.actorRole) + '）' : '') +
+      (e.target ? ' → ' + esc(e.target) : '') + (e.route ? ' · ' + esc(e.route) : '') +
+      ' · ' + esc((e.ts || '').replace('T', ' ').slice(0, 19)) + (e.ip ? ' · IP ' + esc(e.ip) : '') + '</span></div>'
+    ).join('') || '<div class="empty">暂无审计记录</div>';
+  } catch (e) {
+    box.innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+  }
 }
 
 $('#auSwitch').onclick = () => {

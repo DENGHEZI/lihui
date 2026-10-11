@@ -6,7 +6,7 @@
 const { ok, fail } = require('../utils/http');
 const hub = require('../mcp/hub');
 const logger = require('../utils/logger');
-const { CATEGORIES, isQuotaBlocked, noteQuotaError, fetchCategory, scoreCategory, scoreSummary, suggestionFor, limitedSuggestion, catStagger } = require('../services/lifeShared');
+const { CATEGORIES, isQuotaBlocked, noteQuotaError, fetchCategory, scoreCategory, scoreSummary, suggestionFor, limitedSuggestion, elderBizBreakdown, catStagger } = require('../services/lifeShared');
 const { buildIsochrone } = require('../services/isochrone');
 const standards = require('../services/standards');
 
@@ -65,6 +65,8 @@ async function localDiagnose({ lng, lat, radius = 1200, city = '' }) {
         types: hitTypes,
         nearest: items[0] ? { name: items[0].name, distance: items[0].distance } : null,
         samples: (items || []).slice(0, 5).map((i) => ({ name: i.name, distance: i.distance, address: i.address })),
+        // V1.1 养老业态级细分：助餐 / 照料 / 康养 三层各自的数量与最近设施
+        ...(c.key === 'elder' ? { biz: elderBizBreakdown(items) } : {}),
       };
     })
   );
@@ -198,6 +200,7 @@ module.exports = {
         lat,
         minutes: numOr(q.minutes, 15),
         grid: q.grid ? numOr(q.grid, 5) : undefined, // 缺省走网格密度自适应（≤10min→7×7）
+        mode: String(q.mode || 'walking'), // V1.1 多出行方式：walking / riding
       });
       // 安全升级(2026-10-06):百度静态图改为本服务代理,这里把代理路径拼成完整 URL
       // (协议/域名取请求头,兼容本地 IP、局域网与云托管域名;端上 <image> 用法不变)

@@ -1,6 +1,6 @@
 {
   "name": "lihui-server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "鲤慧 LiHui 服务端 —— 百度地图 AK 中转 / IP 自动锚定 / MCP Hub / Agent(MCP Client) / Token 计量（零外部依赖）",
   "main": "src/app.js",

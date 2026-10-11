@@ -28,9 +28,10 @@ try {
   bmapSite = null;
   logger.warn('app', `百度底图站点模块缺失，/map-home 与瓦片代理已停用: ${e.message}`);
 }
+const audit = require('./services/audit');
 
 /* ---------------- 路由表 ---------------- */
-const modules = ['./routes/system', './routes/ip', './routes/map', './routes/life', './routes/agent', './routes/mcp', './routes/model', './routes/voice', './routes/token', './routes/feedback', './routes/action', './routes/shop', './routes/order', './routes/profile', './routes/security', './routes/memory', './routes/privacy', './routes/auth'];
+const modules = ['./routes/system', './routes/ip', './routes/map', './routes/life', './routes/agent', './routes/mcp', './routes/model', './routes/voice', './routes/token', './routes/feedback', './routes/action', './routes/shop', './routes/order', './routes/profile', './routes/security', './routes/memory', './routes/privacy', './routes/auth', './routes/admin'];
 const ROUTES = {};
 for (const m of modules) {
   try {
@@ -72,6 +73,11 @@ const ROUTE_ROLE = {
   // 隐私合规：同意/导出/删除是用户对自己的权利，保持 guest 可用（设备维度自证）
   'GET /auth/me': auth.ROLE.user,
   'POST /auth/profile': auth.ROLE.user,
+  // 管理端用户管理 + 审计日志（V1.1，admin 专属）
+  'GET /admin/users': auth.ROLE.admin,
+  'POST /admin/users/disable': auth.ROLE.admin,
+  'POST /admin/users/delete': auth.ROLE.admin,
+  'GET /admin/audit': auth.ROLE.admin,
 };
 
 /* ---------------- 限流：角色感知令牌桶 + 标准响应头（2026-10-09 升级） ----------------
@@ -326,6 +332,15 @@ const server = http.createServer(async (req, res) => {
     } else {
       return fail(res, 4031, `权限不足（需要 ${auth.ROLE_NAME[needRole] || '更高'} 角色）`, 403, { traceId });
     }
+    // V1.1 RBAC 审计：admin 级端点每次放行访问都落一条 access（配合 /admin/audit 查询）
+    if (needRole >= auth.ROLE.admin) {
+      audit.log('access', {
+        actor: (req.auth && req.auth.username) || 'anonymous',
+        actorRole: auth.ROLE_NAME[(req.auth && req.auth.role) || 0],
+        route: routeKey,
+        ip: clientIp(req).ip,
+      });
+    }
   }
 
   // ===== 限流（角色感知令牌桶 + 标准响应头；探活与静态不限） =====
@@ -396,6 +411,13 @@ async function bootstrap() {
       auth.bootstrapSeed();
     } catch (e) {
       logger.warn('app', `RBAC 播种失败（不影响启动）: ${e.message}`);
+    }
+    // V1.1 开机自检：遗留测试账号（uitest_/e2euser_/smoke/tester）——
+    // LH_CLEANUP_TEST_USERS=true 自动清理，否则告警提示清理命令
+    try {
+      require('./scripts/clean-test-users').checkTestUsers();
+    } catch (e) {
+      logger.warn('app', `测试账号自检失败（不影响启动）: ${e.message}`);
     }
 
     // ★ 启动自检：静态数据文件必须在镜像里，否则接口会「静默返回空」，

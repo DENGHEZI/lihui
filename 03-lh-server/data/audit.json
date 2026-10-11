@@ -1,0 +1,68 @@
+[
+  {
+    "ts": "2026-10-11T01:07:03.823Z",
+    "action": "access",
+    "actor": "admin",
+    "actorRole": "admin",
+    "route": "GET /admin/users",
+    "ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-10-11T01:07:03.832Z",
+    "action": "user.list",
+    "actor": "admin",
+    "actorRole": "admin",
+    "route": "GET /admin/users",
+    "ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-10-11T01:07:05.345Z",
+    "action": "access",
+    "actor": "admin",
+    "actorRole": "admin",
+    "route": "GET /admin/audit",
+    "ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-10-11T01:07:59.130Z",
+    "action": "access",
+    "actor": "admin",
+    "actorRole": "admin",
+    "route": "POST /admin/users/disable",
+    "ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-10-11T01:07:59.143Z",
+    "action": "user.disable",
+    "actor": "admin",
+    "actorRole": "admin",
+    "target": "uitest_tmp01(u_mv34j8n0n2axko)",
+    "route": "POST /admin/users/disable",
+    "ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-10-11T01:08:00.730Z",
+    "action": "access",
+    "actor": "admin",
+    "actorRole": "admin",
+    "route": "POST /admin/users/delete",
+    "ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-10-11T01:08:00.743Z",
+    "action": "user.delete",
+    "actor": "admin",
+    "actorRole": "admin",
+    "target": "uitest_tmp01(u_mv34j8n0n2axko)",
+    "route": "POST /admin/users/delete",
+    "ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-10-11T01:08:01.450Z",
+    "action": "access",
+    "actor": "admin",
+    "actorRole": "admin",
+    "route": "POST /admin/users/delete",
+    "ip": "127.0.0.1"
+  }
+]

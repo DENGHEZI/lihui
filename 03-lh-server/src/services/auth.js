@@ -184,8 +184,44 @@ function authenticate(username, password) {
   if (!u || !verifyPassword(password, u.passwordHash)) {
     return { error: '用户名或密码错误' };
   }
+  if (u.disabled) return { error: '账号已被停用，请联系管理员' };
   const token = issueToken({ uid: u.id, username: u.username, role: u.role });
   return { token, user: publicUser(u) };
+}
+
+/* ---------------- 用户管理（V1.1 · admin 专属，/admin/users 端点配套） ---------------- */
+/** 全量用户列表（含停用状态；绝不外泄 passwordHash） */
+function listUsers() {
+  return users()
+    .all()
+    .map((u) => ({
+      ...publicUser(u),
+      disabled: !!u.disabled,
+      seeded: !!u.seeded,
+    }));
+}
+
+/** 停用 / 恢复账号。返回 { error } 或 { user }。 */
+function setUserDisabled(id, disabled) {
+  const u = getUserById(id);
+  if (!u) return { error: '用户不存在' };
+  if (u.seeded) return { error: '播种管理员不可停用（如需回收请改口令）' };
+  const out = users().update(id, { disabled: !!disabled });
+  return { user: publicUser(out || u) };
+}
+
+/** 删除账号。守卫：不能删自己、不能删播种管理员、不能删最后一个 admin。 */
+function deleteUser(id, actorId) {
+  const u = getUserById(id);
+  if (!u) return { error: '用户不存在' };
+  if (actorId && id === actorId) return { error: '不能删除当前登录的自己' };
+  if (u.seeded) return { error: '播种管理员不可删除' };
+  if (u.role === ROLE.admin) {
+    const admins = users().all().filter((x) => x.role === ROLE.admin && !x.disabled);
+    if (admins.length <= 1) return { error: '不能删除最后一个可用管理员' };
+  }
+  users().remove(id);
+  return { removed: u.username };
 }
 
 /* ---------------- 启动播种（默认管理员） ---------------- */
@@ -283,6 +319,9 @@ module.exports = {
   createUser,
   updateProfile,
   authenticate,
+  listUsers,
+  setUserDisabled,
+  deleteUser,
   getUserByName,
   getUserById,
   publicUser,

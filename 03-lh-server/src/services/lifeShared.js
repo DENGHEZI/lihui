@@ -22,6 +22,33 @@ const CATEGORIES = [
   { key: 'elder', name: '养老', weight: 0.1, keywords: ['养老', '敬老院', '老年公寓', '老年食堂', '日间照料'], need: 1 },
 ];
 
+/* 养老业态级细分（V1.1）：把「养老」一大类拆成三层业态，逐层给数量与最近设施。
+ *  · 助餐：社区食堂/长者饭堂 —— 高频刚需，步行可达性最重要
+ *  · 照料：日间照料/养老服务站点 —— 社区依托型
+ *  · 康养：机构养老（敬老院/养老院/老年公寓/康养）—— 低频长周期
+ * 按 POI 名称/地址关键词归类（一条 POI 可能命中多层，各层独立计数）。 */
+const ELDER_BIZ = [
+  { key: 'meal', name: '助餐', keywords: ['食堂', '助餐', '饭堂', '餐'] },
+  { key: 'care', name: '照料', keywords: ['照料', '养老服务中心', '养老服务站', '护理站'] },
+  { key: 'wellness', name: '康养', keywords: ['敬老院', '养老院', '老年公寓', '康养', '福利院', '养老'] },
+];
+
+/** 养老业态细分：入参该类 POI 列表，出参 [{key,name,count,nearest}]（无命中的业态 count=0） */
+function elderBizBreakdown(items) {
+  return ELDER_BIZ.map((b) => {
+    const hit = (items || []).filter((it) => {
+      const s = `${it.name || ''}${it.address || ''}`;
+      return b.keywords.some((k) => s.includes(k));
+    });
+    return {
+      key: b.key,
+      name: b.name,
+      count: hit.length,
+      nearest: hit[0] ? { name: hit[0].name, distance: hit[0].distance } : null,
+    };
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /* 配额熔断：百度 302/401 限流类错误后短路易过                             */
 /* V1.0.27：401 → 45 秒短熔断（瞬时并发风暴）。                           */
@@ -296,4 +323,4 @@ function limitedSuggestion(cat) {
   ];
 }
 
-module.exports = { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, fetchCategory, dedupePOIs, scoreCategory, scoreSummary, suggestionFor, limitedSuggestion, catStagger, CAT_STAGGER_MS };
+module.exports = { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, fetchCategory, dedupePOIs, scoreCategory, scoreSummary, suggestionFor, limitedSuggestion, elderBizBreakdown, catStagger, CAT_STAGGER_MS };
