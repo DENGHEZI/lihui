@@ -18,6 +18,10 @@
       <view class="score-right">
         <text class="lh-cap">短板 {{report.shortboards.length}} 项</text>
         <text class="lh-mini">预计步行 {{report.walkMinutes}} 分钟可达</text>
+        <view class="exp-row">
+          <button class="lh-btn mini-btn exp-btn" bindtap="exportReportImage">保存长图</button>
+          <button class="lh-btn mini-btn exp-btn exp-pdf" bindtap="exportReportPdf">导出 PDF</button>
+        </view>
         <button class="lh-btn mini-btn" bindtap="customize">生成我的生活圈方案</button>
       </view>
     </view>
@@ -270,3 +274,5 @@
 
   <view style="height: 64rpx"></view>
 </view>
+<!-- 体检长图离屏画布（type=2d 尺寸由 JS 设定；不能 display:none，iOS 会绘制失败） -->
+<canvas type="2d" id="reportCard" class="report-canvas"></canvas>

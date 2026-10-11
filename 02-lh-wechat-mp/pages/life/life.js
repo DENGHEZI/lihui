@@ -4,11 +4,25 @@ const { getCareMode, setCareMode } = require('../../utils/token.js')
 const theme = require('../../utils/theme.js')
 const voice = require('../../utils/voice.js')
 
+const WEB_HOME = 'https://lihui-landing.app.workbuddy.host/' // 网页版入口（PDF 导出走网页版）
+
 function colorOf(s) {
   if (s >= 85) return '#00B96B'
   if (s >= 60) return '#1677FF'
   if (s >= 40) return '#FF8A00'
   return '#F5222D'
+}
+
+/** canvas 圆角矩形路径（roundRect 兼容垫片：基础库 canvas 不一定带原生 roundRect） */
+function roundRect(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2)
+  ctx.beginPath()
+  ctx.moveTo(x + rr, y)
+  ctx.arcTo(x + w, y, x + w, y + h, rr)
+  ctx.arcTo(x + w, y + h, x, y + h, rr)
+  ctx.arcTo(x, y + h, x, y, rr)
+  ctx.arcTo(x, y, x + w, y, rr)
+  ctx.closePath()
 }
 
 Page({
@@ -470,6 +484,234 @@ Page({
   fmtDist(d) {
     if (d === null || d === undefined) return ''
     return Number(d) >= 1000 ? (Number(d) / 1000).toFixed(1) + 'km' : Math.round(Number(d)) + 'm'
+  },
+
+  /* ---------------- 体检报告导出（长图 canvas / PDF 网页版引导） ---------------- */
+  /** CJK 逐字换行：measureText 超宽即断行，maxLines 截断加省略号 */
+  rcWrap(ctx, text, maxWidth, maxLines) {
+    const lines = []
+    let cur = ''
+    for (const ch of String(text || '')) {
+      if (ctx.measureText(cur + ch).width > maxWidth) {
+        lines.push(cur)
+        cur = ch
+        if (lines.length >= maxLines) {
+          while (ctx.measureText(cur + '…').width > maxWidth && cur.length > 1) cur = cur.slice(0, -1)
+          return lines.concat(cur + '…')
+        }
+      } else cur += ch
+    }
+    if (cur) lines.push(cur)
+    return lines
+  },
+
+  /** 用 canvas 2d 绘制体检长图卡片（与网页端 V1.1.1 排版同风格：卡片化+自动换行+受限灰条） */
+  drawReportCard() {
+    const r = this.data.report
+    if (!r) return Promise.reject(new Error('报告未就绪'))
+    const cats = r.categories || []
+    const sugs = (r.suggestions || []).map((t) => String(t).replace(/^怎么补：/, ''))
+    return new Promise((resolve, reject) => {
+      wx.createSelectorQuery().in(this)
+        .select('#reportCard').fields({ node: true })
+        .exec((res) => {
+          if (!res || !res[0] || !res[0].node) return reject(new Error('画布未就绪'))
+          const canvas = res[0].node
+          const W = 750
+          const PAD = 44
+          const CW = W - PAD * 2 // 卡片内容宽
+          const dark = theme.get() === 'dark'
+          const PAPER = dark ? '#23262B' : '#F7F5EF'
+          const CARD = dark ? '#2B2F36' : '#FFFFFF'
+          const INK = dark ? '#E8EAED' : '#2E2A20'
+          const SUB = dark ? '#A9B0B8' : '#6B6B60'
+          const LINE = dark ? 'rgba(255,255,255,.10)' : '#EFEBE0'
+          const GOLD = '#B98629'
+
+          // —— 第一次布局：先给一个够高的画布量文本，算出真实高度 ——
+          canvas.width = W * 2
+          canvas.height = 4000
+          let ctx = canvas.getContext('2d')
+          ctx.scale(2, 2)
+          const font = (s, b) => { ctx.font = (b ? 'bold ' : '') + s + 'px sans-serif' }
+          font(28); const nameW = CW - 180
+          const catRows = cats.map((c) => {
+            const descLines = rcWrap(ctx, (c.desc || '') + ' · 可达 ' + (c.count || 0) + ' 处' + (c.nearestText || ''), CW - 8, 2)
+            const bizLines = c.bizText ? rcWrap(ctx, '业态：' + c.bizText, CW - 8, 2) : []
+            return { c, descLines, bizLines }
+          })
+          const sugRows = sugs.map((t) => rcWrap(ctx, t, CW - 60, 4))
+          const sbRows = (r.shortboards || []).map((t) => rcWrap(ctx, t, CW - 40, 3))
+
+          let H = 0
+          H += 150 // 头部
+          H += 128 // 总分带
+          catRows.forEach((row) => { H += 96 + row.descLines.length * 36 + row.bizLines.length * 34 + 18 }) // 类目卡
+          if (sbRows.length) H += 56 + sbRows.reduce((a, b) => a + b.length * 36, 0) + 16 // 短板
+          if (sugRows.length) H += 56 + sugRows.reduce((a, b) => a + b.length * 36 + 10, 0) // 建议
+          H += 110 // 落款
+          canvas.height = H * 2
+          ctx = canvas.getContext('2d')
+          ctx.scale(2, 2)
+
+          // 背景
+          ctx.fillStyle = PAPER
+          ctx.fillRect(0, 0, W, H)
+          let y = 0
+
+          // 头部
+          y = 64
+          ctx.fillStyle = INK
+          font(38, true); ctx.fillText('15 分钟生活圈体检报告', PAD, y + 34)
+          font(24); ctx.fillStyle = SUB
+          ctx.fillText(this.data.centerText + ' · 检索半径 ' + this.fmtDist(this.data.radius) + ' · ' + new Date().toLocaleDateString('zh-CN'), PAD, y + 74)
+          y += 108
+
+          // 总分带（白卡 + 金色左竖条）
+          const drawCard = (h) => { roundRect(ctx, PAD, y, W - PAD * 2, h, 18); ctx.fillStyle = CARD; ctx.fill() }
+          drawCard(104)
+          ctx.fillStyle = GOLD
+          roundRect(ctx, PAD, y, 6, 104, 3); ctx.fill()
+          ctx.fillStyle = colorOf(Number(r.score) || 0)
+          font(72, true)
+          const scoreStr = String(r.score)
+          ctx.fillText(scoreStr, PAD + 34, y + 78)
+          const scoreW = ctx.measureText(scoreStr).width
+          ctx.fillStyle = INK
+          font(26); ctx.fillText('分 · ' + (r.level || '生活圈体检'), PAD + 34 + scoreW + 16, y + 74)
+          font(24); ctx.fillStyle = SUB
+          ctx.fillText('短板 ' + (r.shortboards || []).length + ' 项 · 预计步行 ' + (r.walkMinutes || 15) + ' 分钟可达', PAD + 184, y + 40)
+          y += 104 + 24
+
+          // 七类卡片
+          for (const row of catRows) {
+            const c = row.c
+            const failed = c.failed || c.score === '—'
+            const ch = 78 + row.descLines.length * 36 + row.bizLines.length * 34 + 14
+            drawCard(ch)
+            ctx.fillStyle = INK; font(30, true)
+            ctx.fillText(c.name, PAD + 28, y + 44)
+            ctx.textAlign = 'right'
+            if (failed) {
+              ctx.fillStyle = SUB; font(24)
+              ctx.fillText(c.failedText ? '检索受限 · 未评估' : '—', PAD + CW - 28, y + 42)
+            } else {
+              ctx.fillStyle = c.color || colorOf(Number(c.score) || 0); font(34, true)
+              ctx.fillText(c.score + ' 分', PAD + CW - 28, y + 44)
+            }
+            ctx.textAlign = 'left'
+            // 进度条
+            const barY = y + 62
+            ctx.fillStyle = LINE; roundRect(ctx, PAD + 28, barY, CW - 56, 12, 6); ctx.fill()
+            if (!failed) {
+              ctx.fillStyle = c.color || '#1677FF'
+              roundRect(ctx, PAD + 28, barY, Math.max(12, (CW - 56) * (Number(c.score) || 0) / 100), 12, 6); ctx.fill()
+            }
+            let ly = y + 96
+            font(24); ctx.fillStyle = SUB
+            for (const ln of row.descLines) { ctx.fillText(ln, PAD + 28, ly + 24); ly += 36 }
+            ctx.fillStyle = dark ? '#8E96A0' : '#8A8574'
+            for (const ln of row.bizLines) { ctx.fillText(ln, PAD + 28, ly + 22); ly += 34 }
+            y += ch + 18
+          }
+
+          // 短板提醒
+          if (sbRows.length) {
+            ctx.fillStyle = INK; font(30, true)
+            ctx.fillText('短板提醒', PAD, y + 30); y += 56
+            for (const lines of sbRows) {
+              ctx.fillStyle = '#F5222D'; font(24)
+              ctx.fillText('●', PAD + 6, y + 22)
+              ctx.fillStyle = SUB
+              lines.forEach((ln, k) => { ctx.fillText(ln, PAD + 34, y + 22 + k * 36) })
+              y += lines.length * 36 + 16
+            }
+            y += 8
+          }
+
+          // 补齐建议
+          if (sugRows.length) {
+            ctx.fillStyle = INK; font(30, true)
+            ctx.fillText('怎么补 · 短板解决方案', PAD, y + 30); y += 56
+            let idx = 1
+            for (const lines of sugRows) {
+              ctx.fillStyle = '#0FA693'; font(24, true)
+              ctx.fillText(String(idx) + '.', PAD + 4, y + 22)
+              ctx.fillStyle = SUB; font(24)
+              lines.forEach((ln, k) => { ctx.fillText(ln, PAD + 44, y + 22 + k * 36) })
+              y += lines.length * 36 + 10
+              idx++
+            }
+          }
+
+          // 落款
+          y = H - 64
+          ctx.strokeStyle = LINE; ctx.beginPath(); ctx.moveTo(PAD, y - 22); ctx.lineTo(W - PAD, y - 22); ctx.stroke()
+          ctx.fillStyle = SUB; font(22)
+          ctx.fillText('鲤慧 LiHui · 15 分钟生活圈智能体检', PAD, y + 4)
+          ctx.textAlign = 'right'
+          ctx.fillText('数据源：百度地图开放平台', W - PAD, y + 4)
+          ctx.textAlign = 'left'
+
+          resolve({ canvas, W, H })
+        })
+    })
+  },
+
+  /** 长图导出：绘制 → 临时文件 → 分享图片菜单（老基础库回退保存相册） */
+  async exportReportImage() {
+    if (this._exporting) return
+    if (!this.data.report) { wx.showToast({ title: '请先完成体检', icon: 'none' }); return }
+    this._exporting = true
+    wx.showLoading({ title: '正在生成长图…', mask: true })
+    try {
+      const { canvas } = await this.drawReportCard()
+      const tmp = await new Promise((resolve, reject) =>
+        wx.canvasToTempFilePath({ canvas, fileType: 'png', success: resolve, fail: reject })
+      )
+      wx.hideLoading()
+      const path = tmp.tempFilePath || (tmp.tempFiles && tmp.tempFiles[0] && tmp.tempFiles[0].tempFilePath)
+      if (wx.showShareImageMenu) {
+        wx.showShareImageMenu({ path, fail: () => this.saveReportAlbum(path) })
+      } else {
+        this.saveReportAlbum(path)
+      }
+    } catch (e) {
+      wx.hideLoading()
+      wx.showToast({ title: (e && e.message) || '生成长图失败', icon: 'none' })
+    } finally {
+      this._exporting = false
+    }
+  },
+
+  saveReportAlbum(path) {
+    wx.saveImageToPhotosAlbum({
+      filePath: path,
+      success: () => wx.showToast({ title: '已保存到相册', icon: 'success' }),
+      fail: (e) => {
+        if (e && /auth|deny|denied/.test(e.errMsg || '')) {
+          wx.showModal({
+            title: '需要相册权限',
+            content: '保存长图需要「添加到相册」权限，请在设置中开启',
+            confirmText: '去设置',
+            success: (r) => { if (r.confirm) wx.openSetting() }
+          })
+        }
+      }
+    })
+  },
+
+  /** PDF：小程序生态无法直接生成 PDF（诚实口径），引导到网页版一键导出 */
+  exportReportPdf() {
+    wx.setClipboardData({
+      data: WEB_HOME,
+      success: () => wx.showModal({
+        title: '导出 PDF',
+        content: '小程序暂不支持直接生成 PDF。已复制网页版地址，用浏览器打开后点「🖨 PDF」按钮即可一键导出（与小程序数据同源）。',
+        confirmText: '知道了',
+        showCancel: false
+      })
+    })
   },
 
   onShareAppMessage() {
