@@ -591,3 +591,70 @@
   font-size: 22rpx;
   color: var(--lh-text-3, #8F959E);
 }
+
+/* ---- hero 精简：等级徽章 ---- */
+.score-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+.score-chip-num {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #0B7A47;
+  background: rgba(0, 185, 107, .12);
+  border: 2rpx solid rgba(0, 185, 107, .35);
+  border-radius: 999rpx;
+  padding: 4rpx 18rpx;
+}
+
+/* ---- 报告操作区（七类设施覆盖卡底部）：三宫格动线 ---- */
+.report-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+.ra-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  padding: 24rpx 12rpx;
+  border-radius: 20rpx;
+  background: var(--lh-bg-soft, #F6F7F9);
+  border: 2rpx solid var(--lh-line, #E5E7EB);
+  transition: transform .12s ease;
+}
+.ra-item:active {
+  transform: scale(.96);
+}
+.ra-primary {
+  background: linear-gradient(135deg, #0FA693, #0C8F80);
+  border-color: transparent;
+}
+.ra-primary .ra-title,
+.ra-primary .ra-sub {
+  color: #fff;
+}
+.ra-ico {
+  font-size: 40rpx;
+  line-height: 1;
+}
+.ra-txt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+.ra-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--lh-text, #2E2A20);
+}
+.ra-sub {
+  font-size: 20rpx;
+  color: var(--lh-text-3, #8F959E);
+  text-align: center;
+}

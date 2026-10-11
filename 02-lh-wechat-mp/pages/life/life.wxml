@@ -16,13 +16,8 @@
         </view>
       </view>
       <view class="score-right">
-        <text class="lh-cap">短板 {{report.shortboards.length}} 项</text>
+        <view class="score-chip"><text class="score-chip-num">{{report.score >= 85 ? '优' : report.score >= 60 ? '良' : '待改善'}}</text><text class="lh-cap">短板 {{report.shortboards.length}} 项</text></view>
         <text class="lh-mini">预计步行 {{report.walkMinutes}} 分钟可达</text>
-        <view class="exp-row">
-          <button class="lh-btn mini-btn exp-btn" bindtap="exportReportImage">保存长图</button>
-          <button class="lh-btn mini-btn exp-btn exp-pdf" bindtap="exportReportPdf">导出 PDF</button>
-        </view>
-        <button class="lh-btn mini-btn" bindtap="customize">生成我的生活圈方案</button>
       </view>
     </view>
     <view class="score-box loading-box" wx:else>
@@ -53,6 +48,23 @@
       </view>
       <text class="cat-desc">{{item.desc}} · 可达 {{item.count}} 处{{item.nearestText}}</text>
       <text class="cat-desc biz-desc" wx:if="{{item.bizText}}">业态：{{item.bizText}}</text>
+    </view>
+
+    <!-- 报告操作区：生成长图 / PDF / 个性化方案 -->
+    <view class="lh-divider mt24"></view>
+    <view class="report-actions">
+      <view class="ra-item ra-primary" bindtap="exportReportImage">
+        <text class="ra-ico">🖼</text>
+        <view class="ra-txt"><text class="ra-title">保存长图</text><text class="ra-sub">生成体检卡片 · 分享/存相册</text></view>
+      </view>
+      <view class="ra-item" bindtap="exportReportPdf">
+        <text class="ra-ico">📄</text>
+        <view class="ra-txt"><text class="ra-title">导出 PDF</text><text class="ra-sub">网页版一键导出</text></view>
+      </view>
+      <view class="ra-item" bindtap="customize">
+        <text class="ra-ico">🧭</text>
+        <view class="ra-txt"><text class="ra-title">生成我的方案</text><text class="ra-sub">按预算/老人/停车偏好定制</text></view>
+      </view>
     </view>
   </view>
 
