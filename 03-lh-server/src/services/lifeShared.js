@@ -281,4 +281,19 @@ function suggestionFor(cat) {
   ];
 }
 
-module.exports = { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, fetchCategory, dedupePOIs, scoreCategory, scoreSummary, suggestionFor, catStagger, CAT_STAGGER_MS };
+/** 检索受限类的定制方案（V1.0.34）：受限 ≠ 周边没有，明确告知 + 先行解决办法。
+ *  用户反馈：医疗/交通/休闲等受限类此前一条方案都不出，对着「检索受限」发呆。 */
+function limitedSuggestion(cat) {
+  const c = cat || {};
+  const tpl = PLAN_TPL[c.key] || {
+    alt: '用共享单车把出行半径扩展到 3 公里',
+    feedback: '向 12345 反映配套缺口',
+    tip: '沿主干道方向步行扩大搜索半径',
+  };
+  return [
+    `${c.name}：本次被百度检索限流，未完成评估（不代表周边没有该类设施），约 1 分钟后自动重试。`,
+    `先这么解决：${tpl.alt}；${tpl.feedback}。`,
+  ];
+}
+
+module.exports = { CATEGORIES, isQuotaBlocked, noteQuotaError, poiCacheGet, poiCacheSet, fetchCategory, dedupePOIs, scoreCategory, scoreSummary, suggestionFor, limitedSuggestion, catStagger, CAT_STAGGER_MS };

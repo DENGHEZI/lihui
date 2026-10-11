@@ -6,7 +6,7 @@
 const { ok, fail } = require('../utils/http');
 const hub = require('../mcp/hub');
 const logger = require('../utils/logger');
-const { CATEGORIES, isQuotaBlocked, noteQuotaError, fetchCategory, scoreCategory, scoreSummary, suggestionFor, catStagger } = require('../services/lifeShared');
+const { CATEGORIES, isQuotaBlocked, noteQuotaError, fetchCategory, scoreCategory, scoreSummary, suggestionFor, limitedSuggestion, catStagger } = require('../services/lifeShared');
 const { buildIsochrone } = require('../services/isochrone');
 const standards = require('../services/standards');
 
@@ -73,9 +73,10 @@ async function localDiagnose({ lng, lat, radius = 1200, city = '' }) {
   const { score, level, shortboards } = scoreSummary(cats);
   // V1.0.32：短板解决方案 —— 按类定制（现状 + 最近设施步行分钟 + 替代方案/反馈渠道/生活技巧），
   // 替换原先千篇一律的模板话术；agent 兜底回复与端上 tip-row 同步受益
+  // V1.0.34：检索受限的类也必须给方案（受限 ≠ 没有）——否则用户对着「检索受限」拿不到任何可行动建议
   const suggestions = cats
-    .filter((c) => c.score !== null && c.score !== undefined && c.score < 60)
-    .flatMap((c) => suggestionFor(c));
+    .filter((c) => (c.score !== null && c.score !== undefined && c.score < 60) || c.failed)
+    .flatMap((c) => (c.failed ? limitedSuggestion(c) : suggestionFor(c)));
 
   return {
     score,
@@ -158,9 +159,12 @@ module.exports = {
     const hit = reportCache.get(ck);
     if (hit) {
       const age = Date.now() - hit.at;
-      if (age < REPORT_TTL) return ok(res, hit.val);
-      // stale-while-revalidate：宽限期内回旧值 + 后台重建（不阻塞响应）
-      if (age < REPORT_TTL + REPORT_GRACE) {
+      // V1.0.34：降级报告（含「检索受限」类目）只缓存 60s —— 否则限流恢复后 10 分钟内
+      // 一直回吐失败快照，端上「约 1 分钟自动重试」的承诺就是空头支票
+      const ttl = hit.val && hit.val.degraded ? 60 * 1000 : REPORT_TTL;
+      if (age < ttl) return ok(res, hit.val);
+      // stale-while-revalidate：宽限期内回旧值 + 后台重建（不阻塞响应）；降级报告不享受宽限
+      if (!hit.val.degraded && age < REPORT_TTL + REPORT_GRACE) {
         if (!reportInflight.has(ck)) buildReportJob(lng, lat, radius, ck, city);
         return ok(res, { ...hit.val, stale: true });
       }
