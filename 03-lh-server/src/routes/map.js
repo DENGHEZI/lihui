@@ -108,7 +108,11 @@ module.exports = {
       '&zoom=' + zoom + '&width=' + w + '&height=' + h +
       (markers ? '&markers=' + markers : '') +
       '&paths=' + paths +
-      '&pathStyles=' + pathStyles;
+      '&pathStyles=' + pathStyles +
+      // ⚠️ 静态图 v2 默认 coordtype=bd09ll：我们下发的 center/markers/paths 全是 GCJ-02
+      //    （wx.getLocation gcj02 + directionlite ret_coord_type=gcj02），不声明会被按百度坐标解释，
+      //    整张图（起点标记+路线折线）整体偏移 500~900m，表现为「位置和规划不一致」。2026-10-11 修复。
+      '&coordtype=gcj02ll';
     if (!bmapSite || !bmapSite.fetchUrl) return fail(res, 5002, '静态图代理不可用');
     try {
       await security.baiduBucket.take(); // 与其他百度出站共享 QPS 令牌桶
