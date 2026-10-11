@@ -530,138 +530,185 @@ Page({
           const canvas = res[0].node
           const W = 750
           const PAD = 44
-          const CW = W - PAD * 2 // 卡片内容宽
-          const dark = theme.get() === 'dark'
-          const PAPER = dark ? '#23262B' : '#F7F5EF'
-          const CARD = dark ? '#2B2F36' : '#FFFFFF'
-          const INK = dark ? '#E8EAED' : '#2E2A20'
-          const SUB = dark ? '#A9B0B8' : '#6B6B60'
-          const LINE = dark ? 'rgba(255,255,255,.10)' : '#EFEBE0'
+          const CW = W - PAD * 2
+          const TEAL = '#0FA693'
+          const TEAL_DK = '#0C8F80'
           const GOLD = '#B98629'
+          // 分享卡片固定浅色纸面：不受 App 深色模式影响（转发聊天/打印场景一致可读）
+          const PAPER = '#F6F4EC'
+          const CARD = '#FFFFFF'
+          const INK = '#2E2A20'
+          const SUB = '#6B6B60'
+          const FAINT = '#8A8574'
+          const LINE = '#EFEBE0'
 
-          // —— 第一次布局：先给一个够高的画布量文本，算出真实高度 ——
+          // —— 第一次布局：量文本算真实高度 ——
           canvas.width = W * 2
           canvas.height = 4000
           let ctx = canvas.getContext('2d')
           ctx.scale(2, 2)
-          const font = (s, b) => { ctx.font = (b ? 'bold ' : '') + s + 'px sans-serif' }
-          font(28); const nameW = CW - 180
+          const font = (sz, b) => { ctx.font = (b ? 'bold ' : '') + sz + 'px sans-serif' }
+          font(26)
           const catRows = cats.map((c) => {
-            const descLines = rcWrap(ctx, (c.desc || '') + ' · 可达 ' + (c.count || 0) + ' 处' + (c.nearestText || ''), CW - 8, 2)
-            const bizLines = c.bizText ? rcWrap(ctx, '业态：' + c.bizText, CW - 8, 2) : []
+            const descLines = rcWrap(ctx, (c.desc || '') + ' · 可达 ' + (c.count || 0) + ' 处' + (c.nearestText || ''), CW - 64, 2)
+            const bizLines = c.bizText ? rcWrap(ctx, '业态：' + c.bizText, CW - 64, 2) : []
             return { c, descLines, bizLines }
           })
-          const sugRows = sugs.map((t) => rcWrap(ctx, t, CW - 60, 4))
-          const sbRows = (r.shortboards || []).map((t) => rcWrap(ctx, t, CW - 40, 3))
+          const sugRows = sugs.map((t) => rcWrap(ctx, t, CW - 72, 4))
+          const sbRows = (r.shortboards || []).map((t) => rcWrap(ctx, t, CW - 52, 3))
 
-          let H = 0
-          H += 150 // 头部
-          H += 128 // 总分带
-          catRows.forEach((row) => { H += 96 + row.descLines.length * 36 + row.bizLines.length * 34 + 18 }) // 类目卡
-          if (sbRows.length) H += 56 + sbRows.reduce((a, b) => a + b.length * 36, 0) + 16 // 短板
-          if (sugRows.length) H += 56 + sugRows.reduce((a, b) => a + b.length * 36 + 10, 0) // 建议
-          H += 110 // 落款
+          let H = 176 // 品牌头带
+          H += 150 // 总分带
+          catRows.forEach((row) => { H += 100 + row.descLines.length * 36 + row.bizLines.length * 34 + 22 })
+          if (sbRows.length) H += 64 + sbRows.reduce((a, b) => a + b.length * 36 + 14, 0) + 18
+          if (sugRows.length) H += 64 + sugRows.reduce((a, b) => a + b.length * 36 + 12, 0)
+          H += 128 // 落款
           canvas.height = H * 2
           ctx = canvas.getContext('2d')
           ctx.scale(2, 2)
 
-          // 背景
+          // 背景纸面
           ctx.fillStyle = PAPER
           ctx.fillRect(0, 0, W, H)
-          let y = 0
 
-          // 头部
-          y = 64
-          ctx.fillStyle = INK
-          font(38, true); ctx.fillText('15 分钟生活圈体检报告', PAD, y + 34)
-          font(24); ctx.fillStyle = SUB
-          ctx.fillText(this.data.centerText + ' · 检索半径 ' + this.fmtDist(this.data.radius) + ' · ' + new Date().toLocaleDateString('zh-CN'), PAD, y + 74)
-          y += 108
+          // 卡片（带柔和投影）
+          const drawCard = (yy, h, r2) => {
+            ctx.save()
+            ctx.shadowColor = 'rgba(46,42,32,.07)'
+            ctx.shadowBlur = 18
+            ctx.shadowOffsetY = 6
+            roundRect(ctx, PAD, yy, W - PAD * 2, h, r2 || 20)
+            ctx.fillStyle = CARD
+            ctx.fill()
+            ctx.restore()
+          }
+          // 节标题（绿色竖条 + 粗体，与网页端同语言）
+          const sectionTitle = (txt, yy) => {
+            ctx.fillStyle = TEAL
+            roundRect(ctx, PAD, yy, 8, 34, 4); ctx.fill()
+            ctx.fillStyle = INK
+            font(32, true)
+            ctx.fillText(txt, PAD + 26, yy + 27)
+          }
+          // 彩色得分徽章
+          const scorePill = (txt, color, xx, yy) => {
+            font(24, true)
+            const tw = ctx.measureText(txt).width
+            roundRect(ctx, xx - tw - 36, yy, tw + 36, 42, 21)
+            ctx.fillStyle = color + '1F' // 8 位 hex 透明底
+            ctx.fill()
+            ctx.fillStyle = color
+            ctx.fillText(txt, xx - tw - 18, yy + 29)
+          }
 
-          // 总分带（白卡 + 金色左竖条）
-          const drawCard = (h) => { roundRect(ctx, PAD, y, W - PAD * 2, h, 18); ctx.fillStyle = CARD; ctx.fill() }
-          drawCard(104)
+          // —— 品牌头带（青绿渐变 + 白字）——
+          const grad = ctx.createLinearGradient(PAD, 0, W - PAD, 0)
+          grad.addColorStop(0, TEAL)
+          grad.addColorStop(1, TEAL_DK)
+          roundRect(ctx, PAD, 36, W - PAD * 2, 108, 22)
+          ctx.fillStyle = grad
+          ctx.fill()
+          ctx.fillStyle = '#fff'
+          font(40, true)
+          ctx.fillText('15 分钟生活圈体检报告', PAD + 34, 90)
+          font(23)
+          ctx.fillStyle = 'rgba(255,255,255,.85)'
+          const sub = this.data.centerText + ' · 检索半径 ' + this.fmtDist(this.data.radius)
+          ctx.fillText(sub, PAD + 34, 124)
+          ctx.textAlign = 'right'
+          ctx.fillText(new Date().toLocaleDateString('zh-CN'), W - PAD - 30, 90)
+          ctx.textAlign = 'left'
+          let y = 176
+
+          // —— 总分带 ——
+          drawCard(y, 118)
           ctx.fillStyle = GOLD
-          roundRect(ctx, PAD, y, 6, 104, 3); ctx.fill()
-          ctx.fillStyle = colorOf(Number(r.score) || 0)
-          font(72, true)
+          roundRect(ctx, PAD, y, 6, 118, 3); ctx.fill()
           const scoreStr = String(r.score)
-          ctx.fillText(scoreStr, PAD + 34, y + 78)
+          ctx.fillStyle = colorOf(Number(r.score) || 0)
+          font(80, true)
+          ctx.fillText(scoreStr, PAD + 36, y + 82)
           const scoreW = ctx.measureText(scoreStr).width
           ctx.fillStyle = INK
-          font(26); ctx.fillText('分 · ' + (r.level || '生活圈体检'), PAD + 34 + scoreW + 16, y + 74)
-          font(24); ctx.fillStyle = SUB
-          ctx.fillText('短板 ' + (r.shortboards || []).length + ' 项 · 预计步行 ' + (r.walkMinutes || 15) + ' 分钟可达', PAD + 184, y + 40)
-          y += 104 + 24
+          font(27, true)
+          ctx.fillText('分 · ' + (r.level || '生活圈体检'), PAD + 36 + scoreW + 18, y + 80)
+          font(23)
+          ctx.fillStyle = SUB
+          ctx.textAlign = 'right'
+          ctx.fillText('短板 ' + (r.shortboards || []).length + ' 项 · 步行 ' + (r.walkMinutes || 15) + ' 分钟可达', W - PAD - 30, y + 70)
+          ctx.textAlign = 'left'
+          y += 118 + 28
 
-          // 七类卡片
+          // —— 七类卡片 ——
           for (const row of catRows) {
             const c = row.c
             const failed = c.failed || c.score === '—'
-            const ch = 78 + row.descLines.length * 36 + row.bizLines.length * 34 + 14
-            drawCard(ch)
-            ctx.fillStyle = INK; font(30, true)
-            ctx.fillText(c.name, PAD + 28, y + 44)
-            ctx.textAlign = 'right'
-            if (failed) {
-              ctx.fillStyle = SUB; font(24)
-              ctx.fillText(c.failedText ? '检索受限 · 未评估' : '—', PAD + CW - 28, y + 42)
-            } else {
-              ctx.fillStyle = c.color || colorOf(Number(c.score) || 0); font(34, true)
-              ctx.fillText(c.score + ' 分', PAD + CW - 28, y + 44)
-            }
+            const ch = 86 + row.descLines.length * 36 + row.bizLines.length * 34 + 16
+            drawCard(y, ch)
+            ctx.fillStyle = INK; font(31, true)
+            ctx.fillText(c.name, PAD + 30, y + 48)
             ctx.textAlign = 'left'
-            // 进度条
-            const barY = y + 62
-            ctx.fillStyle = LINE; roundRect(ctx, PAD + 28, barY, CW - 56, 12, 6); ctx.fill()
+            if (failed) {
+              scorePill('检索受限 · 未评估', '#8F959E', W - PAD - 30, y + 26)
+            } else {
+              scorePill(c.score + ' 分', c.color || colorOf(Number(c.score) || 0), W - PAD - 30, y + 26)
+            }
+            const barY = y + 70
+            ctx.fillStyle = '#F0EDE4'
+            roundRect(ctx, PAD + 30, barY, CW - 60, 14, 7); ctx.fill()
             if (!failed) {
               ctx.fillStyle = c.color || '#1677FF'
-              roundRect(ctx, PAD + 28, barY, Math.max(12, (CW - 56) * (Number(c.score) || 0) / 100), 12, 6); ctx.fill()
+              roundRect(ctx, PAD + 30, barY, Math.max(14, (CW - 60) * (Number(c.score) || 0) / 100), 14, 7); ctx.fill()
             }
-            let ly = y + 96
+            let ly = y + 106
             font(24); ctx.fillStyle = SUB
-            for (const ln of row.descLines) { ctx.fillText(ln, PAD + 28, ly + 24); ly += 36 }
-            ctx.fillStyle = dark ? '#8E96A0' : '#8A8574'
-            for (const ln of row.bizLines) { ctx.fillText(ln, PAD + 28, ly + 22); ly += 34 }
-            y += ch + 18
+            for (const ln of row.descLines) { ctx.fillText(ln, PAD + 30, ly + 24); ly += 36 }
+            ctx.fillStyle = FAINT
+            for (const ln of row.bizLines) { ctx.fillText(ln, PAD + 30, ly + 22); ly += 34 }
+            y += ch + 22
           }
 
-          // 短板提醒
+          // —— 短板提醒 ——
           if (sbRows.length) {
-            ctx.fillStyle = INK; font(30, true)
-            ctx.fillText('短板提醒', PAD, y + 30); y += 56
+            y += 16
+            sectionTitle('短板提醒', y); y += 64
             for (const lines of sbRows) {
-              ctx.fillStyle = '#F5222D'; font(24)
-              ctx.fillText('●', PAD + 6, y + 22)
-              ctx.fillStyle = SUB
-              lines.forEach((ln, k) => { ctx.fillText(ln, PAD + 34, y + 22 + k * 36) })
-              y += lines.length * 36 + 16
+              ctx.fillStyle = '#F5222D'; font(22)
+              ctx.fillText('●', PAD + 8, y + 22)
+              ctx.fillStyle = SUB; font(24)
+              lines.forEach((ln, k) => { ctx.fillText(ln, PAD + 36, y + 23 + k * 36) })
+              y += lines.length * 36 + 14
             }
-            y += 8
+            y += 18
           }
 
-          // 补齐建议
+          // —— 补齐建议 ——
           if (sugRows.length) {
-            ctx.fillStyle = INK; font(30, true)
-            ctx.fillText('怎么补 · 短板解决方案', PAD, y + 30); y += 56
+            y += 6
+            sectionTitle('怎么补 · 短板解决方案', y); y += 64
             let idx = 1
             for (const lines of sugRows) {
-              ctx.fillStyle = '#0FA693'; font(24, true)
-              ctx.fillText(String(idx) + '.', PAD + 4, y + 22)
+              ctx.fillStyle = TEAL; font(22, true)
+              const numStr = String(idx)
+              roundRect(ctx, PAD + 4, y + 2, 34, 34, 17)
+              ctx.fillStyle = TEAL + '1A'; ctx.fill()
+              ctx.fillStyle = TEAL
+              ctx.fillText(numStr, PAD + 4 + (34 - ctx.measureText(numStr).width) / 2, y + 26)
               ctx.fillStyle = SUB; font(24)
-              lines.forEach((ln, k) => { ctx.fillText(ln, PAD + 44, y + 22 + k * 36) })
-              y += lines.length * 36 + 10
+              lines.forEach((ln, k) => { ctx.fillText(ln, PAD + 54, y + 25 + k * 36) })
+              y += lines.length * 36 + 12
               idx++
             }
           }
 
-          // 落款
-          y = H - 64
-          ctx.strokeStyle = LINE; ctx.beginPath(); ctx.moveTo(PAD, y - 22); ctx.lineTo(W - PAD, y - 22); ctx.stroke()
-          ctx.fillStyle = SUB; font(22)
-          ctx.fillText('鲤慧 LiHui · 15 分钟生活圈智能体检', PAD, y + 4)
+          // —— 落款 ——
+          y = H - 74
+          ctx.strokeStyle = LINE
+          ctx.beginPath(); ctx.moveTo(PAD, y - 26); ctx.lineTo(W - PAD, y - 26); ctx.stroke()
+          ctx.fillStyle = FAINT; font(22)
+          ctx.fillText('鲤慧 LiHui · 15 分钟生活圈智能体检', PAD, y)
           ctx.textAlign = 'right'
-          ctx.fillText('数据源：百度地图开放平台', W - PAD, y + 4)
+          ctx.fillText('数据源：百度地图开放平台', W - PAD, y)
           ctx.textAlign = 'left'
 
           resolve({ canvas, W, H })
