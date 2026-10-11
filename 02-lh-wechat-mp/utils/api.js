@@ -34,7 +34,7 @@ const addrFixList = (q) => get('/map/addr-fix/list', q || {})
 const lifeReport = (lng, lat, radius) => get('/life/report', { lng, lat, radius: radius || 1200 }, { cacheTtl: 3 * 60 * 1000 })
 const customizePlan = (lng, lat, preference) => post('/life/customize', { lng, lat, preference: preference || {} })
 // 步行等时圈 + 服务盲区（真实路网批量算路，非直线圆）
-const lifeIsochrone = (lng, lat, minutes, grid) => get('/life/isochrone', { lng, lat, minutes: minutes || 15, grid: grid || 5 }, { cacheTtl: 10 * 60 * 1000 })
+const lifeIsochrone = (lng, lat, minutes, grid, mode) => get('/life/isochrone', { lng, lat, minutes: minutes || 15, grid: grid || 5, mode: mode || 'walking' }, { cacheTtl: 10 * 60 * 1000 })
 // 各地生活圈管理规范（评分依据）：本地缓存 + 云端存储，7 天刷新
 const lifeStandards = (city) => get('/life/standards', { city: city || '' }, { cacheTtl: 7 * 24 * 60 * 60 * 1000 })
 

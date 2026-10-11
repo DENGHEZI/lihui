@@ -59,7 +59,7 @@
   <!-- 步行等时圈 + 服务盲区 -->
   <view class="lh-card iso-card">
     <view class="iso-head">
-      <text class="lh-h2">步行等时圈 · 服务盲区</text>
+      <text class="lh-h2">{{isoMode === 'riding' ? '骑行等时圈 · 服务盲区' : '步行等时圈 · 服务盲区'}}</text>
       <view class="iso-mins">
         <text
           class="iso-min {{isoMinutes === item ? 'on' : ''}}"
@@ -69,6 +69,13 @@
           data-m="{{item}}"
         >{{item}}分</text>
       </view>
+    </view>
+
+    <view class="iso-mode-row">
+      <text class="lh-mini">方式</text>
+      <text class="iso-min {{isoMode === 'walking' ? 'on' : ''}}" bindtap="onIsoMode" data-mode="walking">步行</text>
+      <text class="iso-min {{isoMode === 'riding' ? 'on' : ''}}" bindtap="onIsoMode" data-mode="riding">骑行</text>
+      <text class="iso-mode-hint">公交无批量矩阵接口，暂不提供</text>
     </view>
 
     <view wx:if="{{isoLoading}}" class="iso-loading">
@@ -149,7 +156,7 @@
       </view>
 
       <view class="iso-legend">
-        <view class="lg-row"><view class="lg-sw lg-iso"></view><text class="lh-mini">步行等时圈（步速 {{iso.walkSpeed}}m/min × 路网弯曲 {{iso.detourFactor}}）</text></view>
+        <view class="lg-row"><view class="lg-sw lg-iso"></view><text class="lh-mini">{{isoMode === 'riding' ? '骑行' : '步行'}}等时圈（速度 {{iso.walkSpeed}}m/min × 路网弯曲 {{iso.detourFactor}}）</text></view>
         <view class="lg-row"><view class="lg-sw lg-blind"></view><text class="lh-mini">服务盲区格（覆盖分 &lt; 40，矩阵实测复核）</text></view>
         <view class="lg-row"><view class="lg-sw lg-eng {{iso.degraded ? 'warn' : ''}}"></view><text class="lh-mini">引擎：{{iso.engine}}{{iso.hint ? ' · ' + iso.hint : ''}}</text></view>
       </view>
@@ -200,7 +207,7 @@
 
     <view wx:if="{{!iso && !isoLoading}}" class="iso-entry">
       <text class="lh-cap">不止直线圆 —— 沿真实路网算出你步行 {{isoMinutes}} 分钟能到哪，并标出设施覆盖不到的盲区</text>
-      <button class="lh-btn iso-go" bindtap="loadIsochrone">生成我的步行等时圈</button>
+      <button class="lh-btn iso-go" bindtap="loadIsochrone">生成我的{{isoMode === 'riding' ? '骑行' : '步行'}}等时圈</button>
     </view>
   </view>
 

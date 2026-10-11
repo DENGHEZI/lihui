@@ -578,3 +578,16 @@
   height: 2000px;
   pointer-events: none;
 }
+
+/* ---- 等时圈出行方式切换 ---- */
+.iso-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+.iso-mode-hint {
+  margin-left: auto;
+  font-size: 22rpx;
+  color: var(--lh-text-3, #8F959E);
+}

@@ -49,6 +49,7 @@ Page({
     isoLoading: false,
     isoEstimated: false,
     isoMinutes: 15,
+    isoMode: 'walking', // V1.1 多出行方式：walking / riding（公交无批量矩阵接口，诚实不提供）
     baiduBase: false,
     gapRows: [],
     standardName: '',
@@ -251,7 +252,8 @@ Page({
    *  真实路网圈到达后自动替换 —— 首屏即刻有图，不再干等 5~8s 白屏 */
   previewIso() {
     const c = this.data.center
-    const R = this.data.isoMinutes * 80 * 1.3
+    const SPD = this.data.isoMode === 'riding' ? 200 : 80 // 骑行 12km/h，与服务端 TRAVEL_MODES 口径一致
+    const R = this.data.isoMinutes * SPD * 1.3
     const pts = []
     for (let i = 0; i <= 36; i++) {
       const th = (Math.PI * 2 * i) / 36
@@ -286,7 +288,8 @@ Page({
         this.data.center.lng,
         this.data.center.lat,
         this.data.isoMinutes,
-        5
+        5,
+        this.data.isoMode
       )
       const { polygons, markers } = this.buildIsoShapes(d)
       const reachKm = (d.summary && d.summary.maxReachM ? d.summary.maxReachM : 1500) * 2 / 1000
@@ -370,6 +373,14 @@ Page({
     this.loadIsochrone()
   },
 
+  /** 切换出行方式（步行/骑行）：清掉旧圈让理论估算圆按新速度重画，再重算真实路网圈 */
+  onIsoMode(e) {
+    const m = e.currentTarget.dataset.mode === 'riding' ? 'riding' : 'walking'
+    if (m === this.data.isoMode) return
+    this.setData({ isoMode: m, iso: null })
+    this.loadIsochrone()
+  },
+
   /* 底图切换：微信 map 组件固定腾讯渲染；百度底图走静态图 API */
   setBaseTencent() {
     this.setData({ baiduBase: false })
@@ -388,7 +399,7 @@ Page({
       latitude: Number(c.lat),
       longitude: Number(c.lng),
       name: '我的 ' + this.data.isoMinutes + ' 分钟生活圈',
-      address: '步行等时圈中心 · 数据源：百度地图开放平台',
+      address: (this.data.isoMode === 'riding' ? '骑行' : '步行') + '等时圈中心 · 数据源：百度地图开放平台',
       scale: this.data.iso.baiduStatic ? this.data.iso.baiduStatic.zoom : 14
     })
   },
