@@ -886,6 +886,7 @@ async function buildIsochrone({ lng, lat, minutes = 15, grid, mode = 'walking' }
       circleAreaKm2: Math.round((polygonArea(polygon, center.lat) / 1e6) * 100) / 100,
       maxReachM: Math.round(maxR),
       verifiedCells,
+      verifiedAway: cells.filter((c) => c.outsideVerified).length, // 实测超时改判圈外的格数（多边形插值偏乐观的修正量）
     },
     engine,
     degraded: isoDegraded,

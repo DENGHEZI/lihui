@@ -1666,9 +1666,9 @@ function isoStatsHtml(d) {
   radar += '</svg>';
 
   const legend =
-    '<div class="li"><span class="sw" style="background:rgba(185,134,41,.14);border-color:#b98629"></span>步行等时圈（' + esc(String(d.minutes)) + ' 分钟 · 步速 ' + d.walkSpeed + 'm/min · 弯曲系数 ' + d.detourFactor + '）</div>' +
+    '<div class="li"><span class="sw" style="background:rgba(185,134,41,.14);border-color:#b98629"></span>' + esc(d.modeName || '步行') + '等时圈（' + esc(String(d.minutes)) + ' 分钟 · 速度 ' + d.walkSpeed + 'm/min · 弯曲系数 ' + d.detourFactor + '）</div>' +
     '<div class="li"><span class="sw" style="background:rgba(185,134,41,.10)"></span>圈内正常格（各类设施步行可达）</div>' +
-    '<div class="li"><span class="sw" style="background:rgba(229,72,77,.30);border-color:#E5484D"></span>服务盲区格（加权覆盖分 &lt; 40，已实测复核 ' + (s.verifiedCells || 0) + ' 格）</div>' +
+    '<div class="li"><span class="sw" style="background:rgba(229,72,77,.30);border-color:#E5484D"></span>服务盲区格（加权覆盖分 &lt; 40，已实测复核 ' + (s.verifiedCells || 0) + ' 格' + (s.verifiedAway ? '，其中 ' + s.verifiedAway + ' 格实测超时改判圈外' : '') + '）</div>' +
     '<div class="li"><span class="sw" style="background:#fff;border-style:dashed;border-color:#C9D4CE"></span>直线距离参考圈（500m 步进）</div>' +
     '<div class="li" style="margin-top:6px">' + engineBadge + ' <span style="color:var(--text-3)">耗时约 ' + d.minutes + ' 分钟口径 · ' + (d.bearings || []).length + ' 方向采样 · Catmull-Rom 平滑</span></div>' +
     (d.hint ? '<div class="li" style="color:var(--warn-text);margin-top:6px">⚠️ ' + esc(d.hint) + '</div>' : '');
