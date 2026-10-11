@@ -1371,53 +1371,108 @@ async function loadLife() {
 function fmtM(m) { return m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m) + ' m'; }
 
 /* ================= V1.1 体检报告长图导出（SVG → Canvas → PNG） =================
- * 同一张 750 宽 SVG 卡片：网页端下载为长图， ALSO 可直接作为小程序分享卡片底图（比例 5:4 裁切安全）。
- * 零依赖：不用 html2canvas，中文字形由系统字体栅格化。 */
+ * 同一张 800 宽 SVG 卡片：网页端下载为长图，也可直接作为小程序分享卡片底图。
+ * 零依赖：不用 html2canvas，中文字形由系统字体栅格化。
+ * V1.1.1 排版重构（用户反馈「有些子看不懂」）：
+ *  · 每个类目一张圆角底卡，名称/得分左右对齐，条形图与「最近」行不再和下一类挤在一起；
+ *  · 建议（怎么补）逐条编号 + 自动换行（每行按字数断行，不再 slice 截断丢内容）；
+ *  · 去掉 SVG 里的 emoji（部分系统栅格化为乱码方块），改用色块/文字标识；
+ *  · 受限类画斜纹灰条 + 「检索受限」徽标，不再悬空灰字。 */
+function svgWrap(text, maxChars) {
+  // 简单按字数断行（中文等宽近似），返回行数组
+  const t = String(text || '');
+  const lines = [];
+  for (let i = 0; i < t.length; i += maxChars) lines.push(t.slice(i, i + maxChars));
+  return lines.slice(0, 3); // 最多 3 行，防卡片无限高
+}
+
 function buildReportSvg(r) {
-  const W = 750, pad = 48;
+  const W = 800, pad = 52, innerW = W - pad * 2;
   const cats = r.categories || [];
   const sugs = (r.suggestions || []).slice(0, 4);
-  const rowH = 78, sugH = 42;
-  const H = Math.round(pad + 168 + cats.length * rowH + (sugs.length ? sugs.length * sugH + 66 : 0) + 96);
+
+  // 预计算每条建议的换行行数，得出卡片总高
+  const sugLines = sugs.map((t, i) => svgWrap((i + 1) + '. ' + String(t).replace(/^怎么补：/, ''), 30));
+  const catCardH = 118, catGap = 18;
+  const sugHeadH = 76;
+  const sugBlockH = sugLines.reduce((a, ls) => a + ls.length * 40 + 26, 0);
+  const H = Math.round(pad + 150 + 40 + cats.length * (catCardH + catGap) + (sugs.length ? sugHeadH + sugBlockH : 0) + 108);
+
   let y = pad;
   let s = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">';
-  s += '<rect width="100%" height="100%" fill="#FBF9F4"/>';
-  s += '<rect x="0" y="0" width="' + W + '" height="10" fill="#b98629"/>';
-  s += '<text x="' + pad + '" y="' + (y + 40) + '" font-size="38" font-weight="700" fill="#1f2937">鲤慧 · 15 分钟生活圈体检报告</text>';
-  y += 74;
-  s += '<text x="' + pad + '" y="' + y + '" font-size="22" fill="#6b7280">' + new Date().toLocaleString('zh-CN', { hour12: false }) + ' · 步行圈半径约 ' + (r.walkMinutes || 15) + ' 分钟</text>';
-  y += 64;
-  s += '<text x="' + pad + '" y="' + (y + 34) + '" font-size="84" font-weight="800" fill="#b98629">' + (r.score == null ? '--' : r.score) + '</text>';
-  s += '<text x="' + (pad + 168) + '" y="' + (y + 6) + '" font-size="30" fill="#374151">总分 / 100 · ' + esc(r.level || '') + '</text>';
-  s += '<text x="' + (pad + 168) + '" y="' + (y + 44) + '" font-size="22" fill="#6b7280">七类加权 · 达标线 60' + (r.weightSource ? ' · ' + esc(String(r.weightSource).slice(0, 16)) : '') + '</text>';
-  y += 104;
+  s += '<defs><pattern id="hatch" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#E7E2D6"/><line x1="0" y1="0" x2="0" y2="10" stroke="#C9C2B2" stroke-width="4"/></pattern></defs>';
+  s += '<rect width="100%" height="100%" fill="#F7F4EC"/>';
+  s += '<rect x="0" y="0" width="' + W + '" height="12" fill="#b98629"/>';
+
+  /* —— 头部：标题 + 日期 —— */
+  s += '<text x="' + pad + '" y="' + (y + 42) + '" font-size="36" font-weight="700" fill="#1f2937">鲤慧 · 15 分钟生活圈体检报告</text>';
+  y += 72;
+  s += '<text x="' + pad + '" y="' + y + '" font-size="21" fill="#6b7280">' + new Date().toLocaleString('zh-CN', { hour12: false }) + ' · 步行 ' + (r.walkMinutes || 15) + ' 分钟可达圈</text>';
+  y += 34;
+
+  /* —— 总分带（左侧色块大分数，右侧等级与口径） —— */
+  s += '<rect x="' + pad + '" y="' + y + '" width="' + innerW + '" height="104" rx="16" fill="#FFFFFF" stroke="#E7E2D6"/>';
+  s += '<rect x="' + pad + '" y="' + y + '" width="8" height="104" rx="4" fill="#b98629"/>';
+  s += '<text x="' + (pad + 36) + '" y="' + (y + 72) + '" font-size="66" font-weight="800" fill="#b98629">' + (r.score == null ? '--' : r.score) + '</text>';
+  s += '<text x="' + (pad + 190) + '" y="' + (y + 44) + '" font-size="28" font-weight="650" fill="#374151">总分 / 100 · ' + esc(r.level || '') + '</text>';
+  s += '<text x="' + (pad + 190) + '" y="' + (y + 80) + '" font-size="20" fill="#6b7280">七类加权评分 · 达标线 60' + (r.weightSource ? ' · ' + esc(String(r.weightSource).slice(0, 14)) : '') + '</text>';
+  y += 140;
+
+  /* —— 七类：逐类一张底卡 —— */
   for (const c of cats) {
-    const pct = c.score == null ? 0 : Math.max(0, Math.min(100, c.score));
-    s += '<text x="' + pad + '" y="' + (y + 18) + '" font-size="27" fill="#1f2937">' + esc(c.name) + '</text>';
-    s += '<text x="' + (pad + 110) + '" y="' + (y + 18) + '" font-size="23" fill="#6b7280">' + (c.failed ? '检索受限 · 未评估' : c.score + ' 分 · ' + c.count + ' 处') + '</text>';
-    s += '<rect x="' + pad + '" y="' + (y + 28) + '" width="' + (W - pad * 2) + '" height="13" rx="6" fill="#E7E2D6"/>';
-    s += '<rect x="' + pad + '" y="' + (y + 28) + '" width="' + ((W - pad * 2) * pct / 100) + '" height="13" rx="6" fill="' + (c.failed ? '#E5B566' : '#5FB8A6') + '"/>';
-    const nearTxt = c.nearest && c.nearest.name ? '最近：' + String(c.nearest.name).slice(0, 20) + (c.nearest.distance ? ' · ' + fmtM(c.nearest.distance) : '') : (c.failed ? '受限未评估' : '周边未检出');
-    s += '<text x="' + pad + '" y="' + (y + 66) + '" font-size="21" fill="#9ca3af">' + esc(nearTxt) + '</text>';
-    y += rowH;
+    const failed = !!c.failed;
+    const pct = failed || c.score == null ? 0 : Math.max(0, Math.min(100, c.score));
+    s += '<rect x="' + pad + '" y="' + y + '" width="' + innerW + '" height="' + catCardH + '" rx="14" fill="#FFFFFF" stroke="#E7E2D6"/>';
+    // 行 1：类目名（左）· 得分与数量（右对齐）
+    s += '<text x="' + (pad + 26) + '" y="' + (y + 40) + '" font-size="27" font-weight="650" fill="#1f2937">' + esc(c.name) + '</text>';
+    s += '<text x="' + (W - pad - 26) + '" y="' + (y + 40) + '" font-size="24" text-anchor="end" fill="' + (failed ? '#AD6800' : '#374151') + '" font-weight="650">' +
+      (failed ? '检索受限 · 未评估' : c.score + ' 分 · ' + c.count + ' 处') + '</text>';
+    // 行 2：条形图（受限画斜纹灰条）
+    const barY = y + 56, barH = 14;
+    s += '<rect x="' + (pad + 26) + '" y="' + barY + '" width="' + (innerW - 52) + '" height="' + barH + '" rx="7" fill="#EDE9DE"/>';
+    if (failed) {
+      s += '<rect x="' + (pad + 26) + '" y="' + barY + '" width="' + (innerW - 52) + '" height="' + barH + '" rx="7" fill="url(#hatch)"/>';
+    } else if (pct > 0) {
+      s += '<rect x="' + (pad + 26) + '" y="' + barY + '" width="' + ((innerW - 52) * pct / 100) + '" height="' + barH + '" rx="7" fill="#5FB8A6"/>';
+    }
+    // 行 3：最近设施（含养老业态细分，逐段拼一行）
+    let nearTxt;
+    if (failed) nearTxt = '本次未评估 · 约 1 分钟后自动重试';
+    else if (c.nearest && c.nearest.name) nearTxt = '最近：' + String(c.nearest.name).slice(0, 18) + (c.nearest.distance ? ' · ' + fmtM(c.nearest.distance) : '');
+    else nearTxt = '周边未检出';
+    s += '<text x="' + (pad + 26) + '" y="' + (y + 98) + '" font-size="20" fill="#8a9199">' + esc(nearTxt) + '</text>';
+    if (c.biz && c.biz.length) {
+      const bizTxt = c.biz.map((b) => b.name + ' ×' + b.count).join('　');
+      s += '<text x="' + (W - pad - 26) + '" y="' + (y + 98) + '" font-size="20" text-anchor="end" fill="#8a9199">' + esc(bizTxt) + '</text>';
+    }
+    y += catCardH + catGap;
   }
-  if (sugs.length) {
-    s += '<text x="' + pad + '" y="' + (y + 12) + '" font-size="26" font-weight="650" fill="#1f2937">🛠 怎么补</text>';
-    y += 50;
-    for (const t of sugs) {
-      s += '<text x="' + pad + '" y="' + y + '" font-size="22" fill="#4b5563">' + esc(String(t).slice(0, 38)) + '</text>';
-      y += sugH;
+
+  /* —— 怎么补：编号 + 自动换行（不再截断） —— */
+  if (sugLines.length) {
+    y += 18;
+    s += '<rect x="' + pad + '" y="' + (y - 26) + '" width="6" height="30" rx="3" fill="#5FB8A6"/>';
+    s += '<text x="' + (pad + 18) + '" y="' + y + '" font-size="27" font-weight="700" fill="#1f2937">怎么补 · 短板解决方案</text>';
+    y += 24;
+    for (const ls of sugLines) {
+      for (const ln of ls) {
+        s += '<text x="' + (pad + 6) + '" y="' + (y + 26) + '" font-size="22" fill="#4b5563">' + esc(ln) + '</text>';
+        y += 40;
+      }
+      y += 26;
     }
   }
-  s += '<line x1="' + pad + '" y1="' + (H - 56) + '" x2="' + (W - pad) + '" y2="' + (H - 56) + '" stroke="#E7E2D6"/>';
-  s += '<text x="' + pad + '" y="' + (H - 22) + '" font-size="20" fill="#9ca3af">鲤慧 LiHui · 15 分钟生活圈智能体检与规划助手</text>';
+
+  /* —— 落款 —— */
+  s += '<line x1="' + pad + '" y1="' + (H - 62) + '" x2="' + (W - pad) + '" y2="' + (H - 62) + '" stroke="#E0DACC"/>';
+  s += '<text x="' + pad + '" y="' + (H - 26) + '" font-size="20" fill="#9ca3af">鲤慧 LiHui · 15 分钟生活圈智能体检与规划助手</text>';
   s += '</svg>';
   return s;
 }
 
 function exportReportImage(r) {
   try {
-    const W = 750;
+    const W = 800;
     const svg = buildReportSvg(r);
     const img = new Image();
     img.onload = () => {
