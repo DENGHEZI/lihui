@@ -10,6 +10,7 @@
 - **实测 bug**：路线规划页静态图上「我的位置」起点标记与路线折线整体偏离真实位置 500~900m，看起来像规划错了地方。
 - **根因**：百度静态图 v2 默认 `coordtype=bd09ll`，而下发的 center/markers/paths 全是 GCJ-02（wx.getLocation gcj02 + directionlite `ret_coord_type=gcj02`），被误按百度坐标解释 → 整图系统性偏移。
 - **修复**：`routes/map.js` staticimg 代理统一追加 `coordtype=gcj02ll`（已实测百度接受，200 image/png）；唯一调用方路线页全 GCJ-02，无兼容风险。
+- **第二根因（加双 AK 后引入）**：staticimg 代理直接用 `config.baidu.ak` 拼 URL——`BAIDU_AK` 支持多把逗号分隔后，`ak=ak1%2Cak2` 被百度判无效、返回 HTML 错误页（日志 `上游异常 200 text/html`），静态图整图失效。改为 `baiduMap.currentAk()` 取 AK 池当前在用钥匙（无池回退第一把）。
 
 ## [V1.0.32] · 2026-10-10 · 体检短板解决方案（按类定制）
 

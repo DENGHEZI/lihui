@@ -461,5 +461,6 @@ module.exports = {
   fallbackLocate,
   FALLBACK_CITIES,
   akHealth: () => akPool.health(), // AK 池健康状态（/map/ak-status 诊断用）
+  currentAk: () => akPool.current(), // 当前在用的 AK（staticimg 等不走 call() 的直拼 URL 场景必须用它，不能拿 config.baidu.ak 原始串——多 AK 时含逗号，百度判无效）
   _cache: cache,
 };

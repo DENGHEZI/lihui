@@ -81,7 +81,12 @@ module.exports = {
    * 现在端上只拿到本端点路径,AK 由这里在服务端注入后拉图回传二进制,密钥永不出门。
    * 参数全部走白名单校验(数值/受限字符),防止参数注入拼出非预期请求。 */
   'GET /map/staticimg': async (req, res, q) => {
-    if (!config.baidu.ak) return fail(res, 5002, '百度 AK 未配置');
+    // ⚠️ 不能直接用 config.baidu.ak：BAIDU_AK 支持多把逗号分隔（AK 池），原始串拼进 URL
+    //    百度判 AK 无效 → 返回错误页/占位图，静态图整图失效（V1.0.33 修复，加第二把 AK 后引入）。
+    let ak = '';
+    try { ak = baiduMap.currentAk(); } catch (_) {}
+    if (!ak) ak = String(config.baidu.ak || '').split(',')[0].trim();
+    if (!ak) return fail(res, 5002, '百度 AK 未配置');
     const geoRe = /^-?\d{1,3}(\.\d+)?,-?\d{1,3}(\.\d+)?$/;
     const center = String(q.center || '').match(geoRe);
     if (!center) return fail(res, 1001, 'center 必填,格式 lng,lat');
@@ -103,7 +108,7 @@ module.exports = {
     // ⚠️ markers/paths 百度要求 ; 与 | 裸放 URL(encodeURIComponent 会编成 %3B/%7C 导致返回空白占位图)。
     //    两参数均已过白名单(纯数字/逗号/分号/竖线/负号),可安全裸拼;center/zoom 等仍走编码。
     const url =
-      'https://api.map.baidu.com/staticimage/v2?ak=' + encodeURIComponent(config.baidu.ak) +
+      'https://api.map.baidu.com/staticimage/v2?ak=' + encodeURIComponent(ak) +
       '&center=' + encodeURIComponent(center[0]) +
       '&zoom=' + zoom + '&width=' + w + '&height=' + h +
       (markers ? '&markers=' + markers : '') +
