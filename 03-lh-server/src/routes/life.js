@@ -9,6 +9,7 @@ const logger = require('../utils/logger');
 const { CATEGORIES, isQuotaBlocked, noteQuotaError, fetchCategory, scoreCategory, scoreSummary, suggestionFor, limitedSuggestion, elderBizBreakdown, catStagger } = require('../services/lifeShared');
 const { buildIsochrone } = require('../services/isochrone');
 const standards = require('../services/standards');
+const imgpdf = require('../services/imgpdf');
 
 function numOr(v, d) {
   const n = Number(v);
@@ -228,9 +229,33 @@ module.exports = {
     return ok(res, standards.resolve(q && q.city));
   },
 
+  /** POST /api/v1/life/report/pdf
+   *  小程序端体检长图 → 真·PDF：端上 canvas 导出 JPEG（base64）上传，服务端零依赖包装成单页 PDF 回传。
+   *  小程序生态无法本地生成 PDF（wx.openDocument 只能打开现成文件），此端点是移动端 PDF 出口的唯一通路。
+   *  限额：base64 ≤ 4MB（对应 JPEG ≈ 3MB，1500px 宽 @2x 长图富余），防御滥用。 */
+  'POST /life/report/pdf': async (req, res, q, body) => {
+    const b64 = String((body || {}).img || '').replace(/^data:image\/\w+;base64,/, '');
+    if (!b64) return fail(res, 1001, 'img（JPEG base64）必填');
+    if (b64.length > 4 * 1024 * 1024) return fail(res, 1002, '图片过大，请缩短报告内容后重试');
+    let jpeg;
+    try {
+      jpeg = Buffer.from(b64, 'base64');
+    } catch (e) {
+      return fail(res, 1002, 'img base64 非法');
+    }
+    if (imgpdf.jpegSize(jpeg) === null) return fail(res, 1002, '仅支持 JPEG 格式');
+    try {
+      const pdf = imgpdf.jpegToPdf(jpeg);
+      logger.info('life', `report/pdf: jpeg=${jpeg.length}B -> pdf=${pdf.length}B`);
+      return ok(res, { pdf: pdf.toString('base64'), size: pdf.length });
+    } catch (e) {
+      logger.warn('life', `report/pdf failed: ${e.message}`);
+      return fail(res, 5001, 'PDF 生成失败：' + e.message);
+    }
+  },
+
   /** POST /api/v1/life/customize */
-  'POST /life/customize': async (req, res, q, body) => {
-    const lng = numOr((body || {}).lng, NaN);
+  'POST /life/customize': async (req, res, q, body) => {    const lng = numOr((body || {}).lng, NaN);
     const lat = numOr((body || {}).lat, NaN);
     if (!Number.isFinite(lng) || !Number.isFinite(lat)) return fail(res, 1001, 'lng/lat 必填');
     try {

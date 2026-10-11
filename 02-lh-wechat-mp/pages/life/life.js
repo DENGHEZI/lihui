@@ -542,11 +542,10 @@ Page({
           const FAINT = '#8A8574'
           const LINE = '#EFEBE0'
 
-          // —— 第一次布局：量文本算真实高度 ——
-          canvas.width = W * 2
-          canvas.height = 4000
+          // —— 第一次布局：量文本算真实高度（1x 低清量版即可，量完再开 2x 正式绘制，省一半光栅时间）——
+          canvas.width = W
+          canvas.height = 3000
           let ctx = canvas.getContext('2d')
-          ctx.scale(2, 2)
           const font = (sz, b) => { ctx.font = (b ? 'bold ' : '') + sz + 'px sans-serif' }
           font(26)
           const catRows = cats.map((c) => {
@@ -573,14 +572,13 @@ Page({
 
           // 卡片（带柔和投影）
           const drawCard = (yy, h, r2) => {
-            ctx.save()
-            ctx.shadowColor = 'rgba(46,42,32,.07)'
-            ctx.shadowBlur = 18
-            ctx.shadowOffsetY = 6
+            // 性能口径：不用 shadowBlur（真机 canvas 最重开销），用细边框 + 描边保持卡片层次
             roundRect(ctx, PAD, yy, W - PAD * 2, h, r2 || 20)
             ctx.fillStyle = CARD
             ctx.fill()
-            ctx.restore()
+            ctx.strokeStyle = 'rgba(46,42,32,.08)'
+            ctx.lineWidth = 1
+            ctx.stroke()
           }
           // 节标题（绿色竖条 + 粗体，与网页端同语言）
           const sectionTitle = (txt, yy) => {
@@ -759,17 +757,40 @@ Page({
     })
   },
 
-  /** PDF：小程序生态无法直接生成 PDF（诚实口径），引导到网页版一键导出 */
-  exportReportPdf() {
-    wx.setClipboardData({
-      data: WEB_HOME,
-      success: () => wx.showModal({
-        title: '导出 PDF',
-        content: '小程序暂不支持直接生成 PDF。已复制网页版地址，用浏览器打开后点「🖨 PDF」按钮即可一键导出（与小程序数据同源）。',
-        confirmText: '知道了',
-        showCancel: false
+  /** 真·PDF 导出：长图 canvas → JPEG → 服务端零依赖包装成 PDF → 落盘 → 原生文档查看器打开（可转发/打印） */
+  async exportReportPdf() {
+    if (this._pdfBusy) return
+    if (!this.data.report) { wx.showToast({ title: '请先完成体检', icon: 'none' }); return }
+    this._pdfBusy = true
+    wx.showLoading({ title: '正在生成 PDF…', mask: true })
+    try {
+      const { canvas } = await this.drawReportCard()
+      const shot = await new Promise((resolve, reject) =>
+        wx.canvasToTempFilePath({ canvas, fileType: 'jpg', quality: 0.85, success: resolve, fail: reject })
+      )
+      const imgPath = shot.tempFilePath || (shot.tempFiles && shot.tempFiles[0] && shot.tempFiles[0].tempFilePath)
+      const fsm = wx.getFileSystemManager()
+      const b64 = await new Promise((resolve, reject) =>
+        fsm.readFile({ filePath: imgPath, encoding: 'base64', success: (r) => resolve(r.data), fail: reject })
+      )
+      const resp = await api.reportPdf(b64)
+      const pdfPath = wx.env.USER_DATA_PATH + '/life-report-' + Date.now() + '.pdf'
+      await new Promise((resolve, reject) =>
+        fsm.writeFile({ filePath: pdfPath, data: resp.pdf, encoding: 'base64', success: resolve, fail: reject })
+      )
+      wx.hideLoading()
+      wx.openDocument({
+        filePath: pdfPath,
+        fileType: 'pdf',
+        showMenu: true, // 右上角菜单可转发/另存
+        fail: () => wx.showToast({ title: 'PDF 已生成，但打开失败', icon: 'none' })
       })
-    })
+    } catch (e) {
+      wx.hideLoading()
+      wx.showToast({ title: (e && (e.msg || e.message)) || 'PDF 生成失败', icon: 'none' })
+    } finally {
+      this._pdfBusy = false
+    }
   },
 
   onShareAppMessage() {

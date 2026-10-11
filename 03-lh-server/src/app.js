@@ -415,7 +415,7 @@ async function bootstrap() {
     // V1.1 开机自检：遗留测试账号（uitest_/e2euser_/smoke/tester）——
     // LH_CLEANUP_TEST_USERS=true 自动清理，否则告警提示清理命令
     try {
-      require('./scripts/clean-test-users').checkTestUsers();
+      require('../scripts/clean-test-users').checkTestUsers();
     } catch (e) {
       logger.warn('app', `测试账号自检失败（不影响启动）: ${e.message}`);
     }

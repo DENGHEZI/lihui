@@ -33,6 +33,8 @@ const addrFixList = (q) => get('/map/addr-fix/list', q || {})
 /* ---------------- 生活圈 ---------------- */
 const lifeReport = (lng, lat, radius) => get('/life/report', { lng, lat, radius: radius || 1200 }, { cacheTtl: 3 * 60 * 1000 })
 const customizePlan = (lng, lat, preference) => post('/life/customize', { lng, lat, preference: preference || {} })
+// 体检长图 → 服务端零依赖包装成真 PDF（小程序无法本地生成 PDF，wx.openDocument 只能打开现成文件）
+const reportPdf = (imgBase64) => post('/life/report/pdf', { img: imgBase64 })
 // 步行等时圈 + 服务盲区（真实路网批量算路，非直线圆）
 const lifeIsochrone = (lng, lat, minutes, grid, mode) => get('/life/isochrone', { lng, lat, minutes: minutes || 15, grid: grid || 5, mode: mode || 'walking' }, { cacheTtl: 10 * 60 * 1000 })
 // 各地生活圈管理规范（评分依据）：本地缓存 + 云端存储，7 天刷新
@@ -139,6 +141,7 @@ module.exports = {
   addrFixList,
   lifeReport,
   customizePlan,
+  reportPdf,
   lifeIsochrone,
   lifeStandards,
   shopItems,
